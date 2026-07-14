@@ -4,112 +4,112 @@
     {
       "license": "project-authored synthetic fixture",
       "origin": "checked-in-profile",
-      "path": "backend/app/fixtures/reference_profiles/log_templates.yaml",
+      "path": "backend\\app\\fixtures\\reference_profiles\\log_templates.yaml",
       "record_count": null,
       "sha256": "4508414fa6393e82104c522fb0e546218e04846214b9c6c5947eb8fd2f42682e"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "checked-in-profile",
-      "path": "backend/app/fixtures/reference_profiles/network_profile.json",
+      "path": "backend\\app\\fixtures\\reference_profiles\\network_profile.json",
       "record_count": null,
       "sha256": "6f7ca4b2e7ec44ece9d7e7f44075157e5415f9f8cd73e474b943e36e67a8eb90"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/alerts.jsonl",
+      "path": "backend\\app\\fixtures\\scenarios\\gateway_rate_limit\\inputs\\alerts.jsonl",
       "record_count": 2,
       "sha256": "4d188a45afabc21991bd2d978100f7d5f0e8fac21cd19d8382316f9a7649cf53"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/config_changes.jsonl",
+      "path": "backend\\app\\fixtures\\scenarios\\gateway_rate_limit\\inputs\\config_changes.jsonl",
       "record_count": 1,
       "sha256": "729a201d97ae27092695fe1eafd71f0d61920dfebd115343a8cf63275cefebf1"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/logs.jsonl",
+      "path": "backend\\app\\fixtures\\scenarios\\gateway_rate_limit\\inputs\\logs.jsonl",
       "record_count": 3,
       "sha256": "3368f260cc4573f5c947b6243b85d80346e9d4846eefd2052fcfcc645f736777"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/metrics.jsonl",
+      "path": "backend\\app\\fixtures\\scenarios\\gateway_rate_limit\\inputs\\metrics.jsonl",
       "record_count": 248,
       "sha256": "3b7f9026339cec00bf8e6c0d19a71e3f9b9f1d03f54a5b8617f5a7d8bc3de774"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/golden_anomalies.json",
+      "path": "backend\\tests\\fixtures\\golden_anomalies.json",
       "record_count": null,
       "sha256": "fa57ab8b3052648592ef1c48d281905cba3b38e8ff12a905168e966ff362eb8f"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/golden_events.jsonl",
+      "path": "backend\\tests\\fixtures\\golden_events.jsonl",
       "record_count": 254,
       "sha256": "06612568cea892f214b245d95f2ebff0c04d659d1c931c2b74e26df82f60659a"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/invalid_alertmanager_alert.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\invalid_alertmanager_alert.json",
       "record_count": null,
       "sha256": "0fb69259703c84b612c207c2c73f232a684f79626a6f46b5b84d6c958d22ac99"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/invalid_config_audit.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\invalid_config_audit.json",
       "record_count": null,
       "sha256": "0cadbe985f56954077d4fbf1c35de8ef0ba7af698b3a399d61323c04a3f80bcc"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/invalid_prometheus_sample.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\invalid_prometheus_sample.json",
       "record_count": null,
       "sha256": "fe795c005327109efa346d33c391778b6ae8829e86a6507b379cea169170e759"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/invalid_syslog_record.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\invalid_syslog_record.json",
       "record_count": null,
       "sha256": "4deb1341df6352c7581a10e23041731ae5e2a46fb8365d06b831f465cefd2457"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/valid_alertmanager_alert.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\valid_alertmanager_alert.json",
       "record_count": null,
       "sha256": "3fbce8491be766c8d15a187ed1d65dea753be9d8d861e1478ce36e82cd60bae7"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/valid_config_audit.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\valid_config_audit.json",
       "record_count": null,
       "sha256": "741c09afd06dd32624020cc52316d8f72c35dc9eaf0bcdb99a9c2b8591469518"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/valid_prometheus_sample.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\valid_prometheus_sample.json",
       "record_count": null,
       "sha256": "aee1a060432f46096f07cb11a282638c7e1ebc3ff11dd20079f9e4001d05a619"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
-      "path": "backend/tests/fixtures/source_adapters/valid_syslog_record.json",
+      "path": "backend\\tests\\fixtures\\source_adapters\\valid_syslog_record.json",
       "record_count": null,
       "sha256": "6de261fcfe468c388a90139569d0b1bf8e50d4a6a759a2ca2daaf3dab06403c3"
     }

@@ -25,4 +25,4 @@ competing copies.
 | `backend/tests/fixtures/golden_review_examples.json` | `e43586e25df9f8d63db59294f066c5a29ebbf420adfb71a9f35e76b2a778f963` |
 | `backend/tests/fixtures/golden_audit_examples.json` | `586294cf61944e2ebeadc0dd6e51397ffc1e4e28f65b24d3b432b467e8dbac6f` |
 | `frontend/src/routes.ts` | `03063934eaca8276bb85d47785d23ec2f5698f12bcb4ca824c76d674aaa15560` |
-| `frontend/src/test-fixtures/testid-manifest.ts` | `39c3caee0dd17a2c4ee66df079178dcffbb5c9450f39e97256c276fc0dac7f4f` |
+| `frontend/src/test-fixtures/testid-manifest.ts` | `9207b6b1a819d4525e5e9030881318af5bc1d92289ce52643eb88e9cc9ebbd6b` |

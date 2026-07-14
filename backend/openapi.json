@@ -2028,6 +2028,25 @@
     "/api/v1/topology": {
       "get": {
         "operationId": "topology_api_v1_topology_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "incident_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Incident Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -2038,6 +2057,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Topology",
@@ -2057,6 +2086,31 @@
             "schema": {
               "title": "Entity Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": true,
+            "schema": {
+              "enum": [
+                "dependency",
+                "traffic"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_hops",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Max Hops",
+              "type": "integer"
             }
           }
         ],
@@ -2092,6 +2146,49 @@
     "/api/v1/topology/path": {
       "get": {
         "operationId": "path_api_v1_topology_path_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Target",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "relation_type",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TopologyRelation"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": true,
+            "schema": {
+              "enum": [
+                "forward",
+                "reverse"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -2103,6 +2200,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Path",

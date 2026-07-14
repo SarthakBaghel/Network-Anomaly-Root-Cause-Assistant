@@ -1483,7 +1483,9 @@ export interface operations {
     };
     topology_api_v1_topology_get: {
         parameters: {
-            query?: never;
+            query?: {
+                incident_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1499,11 +1501,23 @@ export interface operations {
                     "application/json": components["schemas"]["TopologySnapshot"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     blast_radius_api_v1_topology_blast_radius__entity_id__get: {
         parameters: {
-            query?: never;
+            query: {
+                mode: "dependency" | "traffic";
+                max_hops?: number;
+            };
             header?: never;
             path: {
                 entity_id: string;
@@ -1534,7 +1548,12 @@ export interface operations {
     };
     path_api_v1_topology_path_get: {
         parameters: {
-            query?: never;
+            query: {
+                source: string;
+                target: string;
+                relation_type: components["schemas"]["TopologyRelation"];
+                direction: "forward" | "reverse";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1548,6 +1567,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

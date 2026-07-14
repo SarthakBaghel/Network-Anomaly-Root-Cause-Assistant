@@ -121,7 +121,7 @@ class InvestigationResponse(UtcModel):
             raise ValueError("analysis_run does not match response envelope")
         if self.incident.current_analysis_run_id != self.analysis_run_id:
             raise ValueError("incident does not point to response analysis run")
-        run_scoped: list[Any] = [*self.hypotheses]
+        run_scoped: list[Any] = [*self.hypotheses, *self.reviews]
         run_scoped.extend(item for items in self.evidence_by_hypothesis.values() for item in items)
         run_scoped.extend(
             item for items in self.recommendations_by_hypothesis.values() for item in items

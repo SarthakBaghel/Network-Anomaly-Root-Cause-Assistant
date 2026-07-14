@@ -303,7 +303,7 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_001",
         "incident_id": "inc_001",
-        "instructions": "Compare current and last-known-good rate-limit configuration.",
+        "instructions": "Compare the current rate-limit configuration with the last known-good version.\nIdentify changes made immediately before the incident window.",
         "rationale": "Catalogue-backed recommendation; not automatically executed.",
         "recommendation_id": "rec_001",
         "requires_human_approval": true,
@@ -316,7 +316,7 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_001",
         "incident_id": "inc_001",
-        "instructions": "Prepare re-enabling the rate limiter for human approval.",
+        "instructions": "Prepare a change to re-enable the gateway rate limiter.\nPresent the proposed change and validation plan for human approval; never execute it automatically.",
         "rationale": "Catalogue-backed recommendation; not automatically executed.",
         "recommendation_id": "rec_002",
         "requires_human_approval": true,
@@ -331,7 +331,7 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_002",
         "incident_id": "inc_001",
-        "instructions": "Compare raw ingress and source distribution with baseline.",
+        "instructions": "Compare source distribution and raw ingress with the incident baseline.\nIdentify abnormal clients, ASNs, geographies, or request paths.",
         "rationale": "Catalogue-backed recommendation; not automatically executed.",
         "recommendation_id": "rec_003",
         "requires_human_approval": true,
@@ -346,14 +346,14 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_003",
         "incident_id": "inc_001",
-        "instructions": "Inspect active connections, waits, and rejected leases.",
+        "instructions": "Inspect active connections, pool waits, and rejected leases.\nCompare connection utilization with the configured pool limit.",
         "rationale": "Catalogue-backed recommendation; not automatically executed.",
         "recommendation_id": "rec_004",
         "requires_human_approval": true,
         "risk_level": "low",
         "step_id": "inspect-db-pool",
         "step_type": "diagnostic",
-        "title": "Inspect database pool"
+        "title": "Inspect database connection pool"
       }
     ]
   },
@@ -407,7 +407,11 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": null
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_001": [
+          "PRECEDING_RELEVANT_CHANGE"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -458,7 +462,14 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "requests/s"
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_001": [
+          "METRIC_THRESHOLD_EXCEEDED"
+        ],
+        "hyp_002": [
+          "FORWARDED_TRAFFIC_SPIKE"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -560,7 +571,11 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "requests/s"
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_002": [
+          "STABLE_RAW_INGRESS"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -611,7 +626,11 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "ratio"
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_001": [
+          "CONNECTION_UTILIZATION_HIGH"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -766,7 +785,14 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": null
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_001": [
+          "ALTERNATIVE_CAUSE_SIGNAL"
+        ],
+        "hyp_002": [
+          "TRAFFIC_ALERT_CORRELATED"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -817,7 +843,11 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "ms"
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_003": [
+          "DEPENDENCY_PATH_LATENCY"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -868,7 +898,11 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": null
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_003": [
+          "DEPENDENCY_TIMEOUT_LOG"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -971,7 +1005,11 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "ratio"
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_003": [
+          "NORMAL_DB_UTILIZATION"
+        ]
+      }
     },
     {
       "attachment_decision": "excluded",

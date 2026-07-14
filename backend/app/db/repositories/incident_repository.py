@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.db import models
@@ -118,8 +118,53 @@ class IncidentRepository:
         stmt = select(models.Incident)
         if status:
             stmt = stmt.where(models.Incident.status == status)
-        stmt = stmt.order_by(models.Incident.started_at.desc()).limit(limit).offset(offset)
+        stmt = stmt.order_by(
+            models.Incident.started_at.desc(), models.Incident.id.desc()
+        ).limit(limit).offset(offset)
         return list(self.session.execute(stmt).scalars())
+
+    def list_page(
+        self,
+        *,
+        status: str | None = None,
+        primary_entity_id: str | None = None,
+        min_severity: float | None = None,
+        before_started_at: datetime | None = None,
+        before_incident_id: str | None = None,
+        limit: int = 50,
+    ) -> list[models.Incident]:
+        """Return one cursor page ordered by ``(started_at DESC, id DESC)``.
+
+        The API owns opaque cursor encoding; this repository owns incident
+        filtering and ordering so feature routes do not duplicate incident SQL.
+        """
+
+        stmt = select(models.Incident)
+        if status is not None:
+            stmt = stmt.where(models.Incident.status == status)
+        if primary_entity_id is not None:
+            stmt = stmt.where(models.Incident.primary_entity_id == primary_entity_id)
+        if min_severity is not None:
+            stmt = stmt.where(models.Incident.severity >= min_severity)
+        if before_started_at is not None:
+            if before_incident_id is None:
+                raise ValueError("before_incident_id is required with before_started_at")
+            stmt = stmt.where(
+                or_(
+                    models.Incident.started_at < before_started_at,
+                    and_(
+                        models.Incident.started_at == before_started_at,
+                        models.Incident.id < before_incident_id,
+                    ),
+                )
+            )
+        return list(
+            self.session.execute(
+                stmt.order_by(
+                    models.Incident.started_at.desc(), models.Incident.id.desc()
+                ).limit(limit)
+            ).scalars()
+        )
 
     def get_attached_events(self, incident_id: str) -> list[models.IncidentEvent]:
         stmt = select(models.IncidentEvent).where(

@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 PLAYBOOKS_FILE = FIXTURES_DIR / "playbooks.yaml"
@@ -22,43 +22,46 @@ class PlaybookValidationError(Exception):
 
 
 class PlaybookRecommendation(BaseModel):
+    """A human-approved, catalogue-backed diagnostic or remediation step."""
+
+    model_config = ConfigDict(extra="forbid")
+
     step_id: str
     title: str
     step_type: Literal["diagnostic", "remediation"]
-    applicable_hypothesis_types: list[str]
-    applicable_entity_types: list[str]
-    preconditions: list[str] = []
-    instructions: list[str]
-    risk_level: str
-    rollback_note: str | None = None
+    applicable_hypothesis_types: list[str] = Field(min_length=1)
+    applicable_entity_types: list[str] = Field(min_length=1)
+    preconditions: list[str]
+    instructions: list[str] = Field(min_length=1)
+    risk_level: Literal["low", "medium", "high"]
+    rollback_note: str | None
     requires_human_approval: bool
 
 
 def _load_raw() -> dict:
     with open(PLAYBOOKS_FILE, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        raw = yaml.safe_load(f)
+    if not isinstance(raw, dict):
+        raise PlaybookValidationError(["playbooks fixture must contain a YAML mapping"])
+    return raw
 
 
-# ---------------------------------------------------------------------------
-# Legacy helpers (consumed by app.explanation.service). Preserved for
-# backward compatibility; they read the top-level ``playbooks`` block.
-# ---------------------------------------------------------------------------
+# Compatibility helpers for catalogue consumers that need a raw dictionary.
 def load_playbooks() -> list[dict]:
-    return _load_raw().get("playbooks", [])
+    return [recommendation.model_dump(mode="json") for recommendation in load_recommendations()]
 
 
 def find_playbook_for_entity(candidate_entity: str) -> dict | None:
     for playbook in load_playbooks():
-        if playbook["matches_entity"] == candidate_entity:
+        if candidate_entity in playbook["applicable_entity_types"]:
             return playbook
     return None
 
 
 def get_step(playbook_step_id: str) -> dict | None:
     for playbook in load_playbooks():
-        for step in playbook["steps"]:
-            if step["step_id"] == playbook_step_id:
-                return step
+        if playbook["step_id"] == playbook_step_id:
+            return playbook
     return None
 
 
@@ -70,7 +73,7 @@ def _validate_recommendations(recommendations: list[PlaybookRecommendation]) -> 
 
     Invariants:
     - step_type must be one of VALID_STEP_TYPES.
-    - every remediation step MUST require human approval.
+    - every catalogue step MUST require human approval.
     """
     errors: list[str] = []
     for rec in recommendations:
@@ -78,9 +81,9 @@ def _validate_recommendations(recommendations: list[PlaybookRecommendation]) -> 
             errors.append(
                 f"step '{rec.step_id}' has unknown step_type '{rec.step_type}'"
             )
-        if rec.step_type == REMEDIATION_STEP_TYPE and not rec.requires_human_approval:
+        if not rec.requires_human_approval:
             errors.append(
-                f"remediation step '{rec.step_id}' must set "
+                f"playbook step '{rec.step_id}' must set "
                 f"requires_human_approval=true"
             )
     if errors:
@@ -91,11 +94,17 @@ def _validate_recommendations(recommendations: list[PlaybookRecommendation]) -> 
 def load_recommendations() -> tuple[PlaybookRecommendation, ...]:
     """Load, validate, and cache the structured recommendation steps.
 
-    Raises ``PlaybookValidationError`` if any remediation step is missing
-    human-approval gating.
+    Raises ``PlaybookValidationError`` when the fixture is malformed or any
+    catalogue step is missing human-approval gating.
     """
-    raw = _load_raw().get("recommendations", []) or []
-    recommendations = [PlaybookRecommendation(**entry) for entry in raw]
+    raw = _load_raw().get("steps")
+    if not isinstance(raw, list) or not raw:
+        raise PlaybookValidationError(["playbooks fixture must contain a non-empty 'steps' list"])
+
+    try:
+        recommendations = [PlaybookRecommendation(**entry) for entry in raw]
+    except (TypeError, ValidationError) as exc:
+        raise PlaybookValidationError([f"invalid playbook step: {exc}"]) from exc
     _validate_recommendations(recommendations)
     return tuple(recommendations)
 

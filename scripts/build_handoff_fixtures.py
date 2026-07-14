@@ -7,11 +7,14 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_FIXTURES = ROOT / "backend" / "tests" / "fixtures"
 GOLDEN_EVENTS = BACKEND_FIXTURES / "golden_events.jsonl"
 TOPOLOGY = ROOT / "backend" / "app" / "fixtures" / "topology.json"
+PLAYBOOKS = ROOT / "backend" / "app" / "fixtures" / "playbooks.yaml"
 FRONTEND_MOCK = ROOT / "frontend" / "src" / "test-fixtures" / "golden-investigation-response.json"
 FRONTEND_EVENTS = ROOT / "frontend" / "src" / "test-fixtures" / "golden-events.json"
 RUN_ID = "run_007"
@@ -226,22 +229,20 @@ def recommendation(
     recommendation_id: str,
     hypothesis_id: str,
     step_id: str,
-    title: str,
-    step_type: str,
-    risk: str,
-    instructions: str,
 ) -> dict[str, Any]:
+    catalogue = yaml.safe_load(PLAYBOOKS.read_text(encoding="utf-8"))
+    step = next(item for item in catalogue["steps"] if item["step_id"] == step_id)
     return {
         "recommendation_id": recommendation_id,
         "analysis_run_id": RUN_ID,
         "incident_id": INCIDENT_ID,
         "hypothesis_id": hypothesis_id,
         "step_id": step_id,
-        "title": title,
-        "step_type": step_type,
-        "risk_level": risk,
-        "requires_human_approval": True,
-        "instructions": instructions,
+        "title": step["title"],
+        "step_type": step["step_type"],
+        "risk_level": step["risk_level"],
+        "requires_human_approval": step["requires_human_approval"],
+        "instructions": "\n".join(step["instructions"]),
         "rationale": "Catalogue-backed recommendation; not automatically executed.",
     }
 
@@ -249,11 +250,11 @@ def recommendation(
 def build_recommendations() -> dict[str, list[dict[str, Any]]]:
     return {
         "hyp_001": [
-            recommendation("rec_001", "hyp_001", "inspect-config-diff", "Inspect configuration diff", "diagnostic", "low", "Compare current and last-known-good rate-limit configuration."),
-            recommendation("rec_002", "hyp_001", "propose-config-rollback", "Propose rate-limit rollback", "remediation", "low", "Prepare re-enabling the rate limiter for human approval."),
+            recommendation("rec_001", "hyp_001", "inspect-config-diff"),
+            recommendation("rec_002", "hyp_001", "propose-config-rollback"),
         ],
-        "hyp_002": [recommendation("rec_003", "hyp_002", "inspect-ingress-distribution", "Inspect ingress distribution", "diagnostic", "low", "Compare raw ingress and source distribution with baseline.")],
-        "hyp_003": [recommendation("rec_004", "hyp_003", "inspect-db-pool", "Inspect database pool", "diagnostic", "low", "Inspect active connections, waits, and rejected leases.")],
+        "hyp_002": [recommendation("rec_003", "hyp_002", "inspect-ingress-distribution")],
+        "hyp_003": [recommendation("rec_004", "hyp_003", "inspect-db-pool")],
     }
 
 
@@ -295,6 +296,16 @@ def build_investigation(
     incident_bundle: dict[str, Any],
     hypotheses: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    evidence = build_evidence(by_source)
+    relevance_by_event: dict[str, dict[str, list[str]]] = {}
+    for hypothesis_id, items in evidence.items():
+        for item in items:
+            source_event_id = item["source_event_id"]
+            if source_event_id is None:
+                continue
+            by_hypothesis = relevance_by_event.setdefault(source_event_id, {})
+            by_hypothesis.setdefault(hypothesis_id, []).append(item["reason_code"])
+
     evaluation_by_event = {
         evaluation["event_id"]: evaluation
         for group in (incident_bundle["attached_events"], incident_bundle["excluded_events"])
@@ -311,7 +322,9 @@ def build_investigation(
                 "attachment_decision": evaluation_data["decision"],
                 "attachment_score": evaluation_data["attachment_score"],
                 "attachment_reasons": evaluation_data["attachment_reasons"],
-                "hypothesis_relevance": {},
+                "hypothesis_relevance": relevance_by_event.get(event["event_id"], {})
+                if evaluation_data["decision"] == "attached"
+                else {},
             }
         )
     fingerprint_source = "|".join(
@@ -320,7 +333,6 @@ def build_investigation(
         if item["attachment_decision"] == "attached"
     )
     fingerprint = hashlib.sha256(fingerprint_source.encode()).hexdigest()
-    evidence = build_evidence(by_source)
     recommendations = build_recommendations()
     return {
         "generated_at": "2026-07-14T09:31:41.500Z",

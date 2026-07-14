@@ -131,6 +131,36 @@ class EventRepository:
         )
         return list(self.session.execute(stmt).scalars())
 
+    def list_accepted_in_window(
+        self,
+        window_start: datetime,
+        window_end: datetime,
+        *,
+        end_inclusive: bool = True,
+    ) -> list[models.Event]:
+        """Return accepted events across every entity and modality.
+
+        Incident lookback uses an exclusive end so records sharing the opening
+        timestamp are handled in committed ingestion order rather than being
+        pulled into the incident before their own pipeline turn.
+        """
+
+        end_predicate = (
+            models.Event.timestamp <= window_end
+            if end_inclusive
+            else models.Event.timestamp < window_end
+        )
+        stmt = (
+            select(models.Event)
+            .where(
+                models.Event.status == "accepted",
+                models.Event.timestamp >= window_start,
+                end_predicate,
+            )
+            .order_by(models.Event.timestamp.asc(), models.Event.id.asc())
+        )
+        return list(self.session.execute(stmt).scalars())
+
     def get_events_by_ids(self, event_ids: list[str]) -> list[models.Event]:
         if not event_ids:
             return []

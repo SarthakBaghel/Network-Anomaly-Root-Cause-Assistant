@@ -258,7 +258,7 @@ class AnalysisOrchestrator:
         session: Session,
     ) -> models.Incident | None:
         """Call the incident manager."""
-        if self._incident_manager is None or not anomalies:
+        if self._incident_manager is None:
             return None
 
         incident = self._incident_manager.process_anomalies(

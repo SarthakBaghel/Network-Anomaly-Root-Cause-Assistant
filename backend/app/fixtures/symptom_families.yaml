@@ -1,14 +1,17 @@
 schema_version: "1.0"
-version: symptom-families-1.0
+version: symptom-families-1.1
 families:
   traffic_saturation:
+    incident_title: Checkout degradation through API gateway
     event_types:
+      - RAW_INGRESS_RATE
       - FORWARDED_REQUEST_RATE
       - ACTIVE_CONNECTIONS
       - CONNECTION_UTILIZATION
       - TCP_RESETS
       - TCP_RETRANSMISSIONS
       - HIGH_FORWARDED_REQUEST_RATE
+      - HIGH_FORWARDED_REQUEST_AND_CONNECTION_RATE
       - CHECKOUT_P95_LATENCY
       - UPSTREAM_CONNECTION_TIMEOUT
       - HIGH_CHECKOUT_ERROR_RATE
@@ -24,3 +27,19 @@ incompatibilities:
     right: traffic_saturation
     reason_code: INCOMPATIBLE_MAINTENANCE_SYMPTOM
 
+# Normal records may attach only when they match one of these observable,
+# catalogue-backed evidence rules. They still need an identity/topology/trace
+# relationship and must meet the ordinary attachment threshold.
+attachment_evidence_rules:
+  - rule_id: STABLE_RAW_INGRESS
+    incident_families: [traffic_saturation]
+    event_types: [RAW_INGRESS_RATE]
+    conditions:
+      at_or_after_opening_symptom: true
+  - rule_id: NORMAL_DB_UTILIZATION
+    incident_families: [traffic_saturation]
+    event_types: [DB_CONNECTION_UTILIZATION]
+    conditions:
+      at_or_after_opening_symptom: true
+      signal_value_lte: 0.75
+    attachment_reason_code: CONFLICTING_DB_EVIDENCE

@@ -1,0 +1,38 @@
+{
+  "records": [
+    {
+      "action": "EVENT_EXCLUDED",
+      "actor_id": null,
+      "actor_type": "system",
+      "analysis_run_id": "run_007",
+      "audit_id": "audit_excluded_auth_001",
+      "object_id": "evt_1d99bedd627abe8ef1dca5d6",
+      "object_type": "event",
+      "payload": {
+        "reason_codes": [
+          "INCOMPATIBLE_MAINTENANCE_SYMPTOM",
+          "EXPLICIT_DIFFERENT_TRACE"
+        ]
+      },
+      "request_id": "req_batch_t120",
+      "timestamp": "2026-07-14T09:32:00.200Z"
+    },
+    {
+      "action": "ANALYSIS_PUBLISHED",
+      "actor_id": null,
+      "actor_type": "system",
+      "analysis_run_id": "run_007",
+      "audit_id": "audit_published_007",
+      "object_id": "run_007",
+      "object_type": "analysis_run",
+      "payload": {
+        "revision": 7,
+        "top_hypothesis_id": "hyp_001"
+      },
+      "request_id": "req_batch_t100",
+      "timestamp": "2026-07-14T09:31:41.320Z"
+    }
+  ],
+  "schema_version": "1.0",
+  "version": "audit-examples-1.0"
+}

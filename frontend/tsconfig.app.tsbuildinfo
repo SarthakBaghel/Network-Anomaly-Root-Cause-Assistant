@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/routes.ts","./src/vite-env.d.ts","./src/api/client.ts","./src/contracts/openapi.d.ts","./src/pages/investigationpage.tsx","./src/pages/overviewpage.tsx","./src/test-fixtures/handlers.ts","./src/test-fixtures/testid-manifest.ts","./tests/contracts.test.ts","./tests/setup.ts"],"version":"5.9.3"}

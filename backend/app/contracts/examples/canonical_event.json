@@ -1,0 +1,24 @@
+{
+  "event_id": "evt_forwarded_rps_001",
+  "timestamp": "2026-07-14T09:30:30.000Z",
+  "ingested_at": "2026-07-14T09:30:30.120Z",
+  "entity_id": "api-gateway-01",
+  "modality": "metric",
+  "event_type": "FORWARDED_REQUEST_RATE",
+  "severity": 0.0,
+  "signal_name": "forwarded_requests_per_second",
+  "signal_value": 7800.0,
+  "unit": "requests/s",
+  "trace_or_session_id": "scenario_gateway_rate_limit_001",
+  "source": "simulator.prometheus",
+  "source_record_id": "prom-forwarded-rps-001",
+  "schema_version": "1.0",
+  "quality_flags": ["SIMULATED"],
+  "raw_payload": {
+    "scenario_id": "gateway_rate_limit_disabled",
+    "baseline": 2400.0,
+    "threshold": 5000.0,
+    "provenance": {"origin": "deterministic-simulator", "seed": 20260714}
+  }
+}
+

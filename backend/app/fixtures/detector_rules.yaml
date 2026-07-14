@@ -1,0 +1,20 @@
+schema_version: "1.0"
+version: detector-rules-1.0
+log_rules:
+  - template_id: payment_upstream_timeout
+    event_code: UPSTREAM_CONNECTION_TIMEOUT
+    anomaly_type: UPSTREAM_TIMEOUT
+    normalized_severity: 0.88
+    anomaly_score: 0.86
+    repeatable: true
+  - template_id: auth_certificate_expiry
+    event_code: CERTIFICATE_EXPIRY_WARNING
+    anomaly_type: CERTIFICATE_MAINTENANCE_WARNING
+    normalized_severity: 0.35
+    anomaly_score: 0.30
+    repeatable: true
+alert_severity:
+  info: 0.25
+  warning: 0.60
+  critical: 0.95
+

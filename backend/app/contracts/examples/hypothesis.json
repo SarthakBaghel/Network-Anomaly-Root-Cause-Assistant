@@ -1,0 +1,22 @@
+{
+  "hypothesis_id": "hyp_001",
+  "analysis_run_id": "run_007",
+  "incident_id": "inc_001",
+  "hypothesis_type": "configuration_regression",
+  "candidate_entity_id": "api-gateway-01",
+  "rank": 1,
+  "evidence_score": 92.1,
+  "evidence_coverage": {"available": 6, "expected": 7},
+  "factor_scores": {
+    "symptom_compatibility": 1.0,
+    "topology_relevance": 1.0,
+    "direct_logs_alerts": 0.6,
+    "propagation_consistency": 1.0,
+    "metric_anomaly": 0.91,
+    "change_causal_fit": 1.0,
+    "temporal_proximity": 1.0,
+    "historical_similarity": 0.5
+  },
+  "summary": "A gateway rate-limit change is the highest-ranked explanation for the observed traffic and downstream errors."
+}
+

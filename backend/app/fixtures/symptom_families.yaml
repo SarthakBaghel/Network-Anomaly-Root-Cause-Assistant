@@ -1,0 +1,26 @@
+schema_version: "1.0"
+version: symptom-families-1.0
+families:
+  traffic_saturation:
+    event_types:
+      - FORWARDED_REQUEST_RATE
+      - ACTIVE_CONNECTIONS
+      - CONNECTION_UTILIZATION
+      - TCP_RESETS
+      - TCP_RETRANSMISSIONS
+      - HIGH_FORWARDED_REQUEST_RATE
+      - CHECKOUT_P95_LATENCY
+      - UPSTREAM_CONNECTION_TIMEOUT
+      - HIGH_CHECKOUT_ERROR_RATE
+  database_pressure:
+    event_types:
+      - DB_CONNECTION_UTILIZATION
+      - DB_POOL_EXHAUSTED
+  maintenance_warning:
+    event_types:
+      - CERTIFICATE_EXPIRY_WARNING
+incompatibilities:
+  - left: maintenance_warning
+    right: traffic_saturation
+    reason_code: INCOMPATIBLE_MAINTENANCE_SYMPTOM
+

@@ -1,0 +1,88 @@
+schema_version: "1.0"
+version: hypotheses-1.1
+hypotheses:
+  - hypothesis_type: configuration_regression
+    entity_types: [gateway, service, database]
+    traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
+    required_symptoms: [forwarded_traffic_spike, downstream_degradation]
+    expected_propagation: [gateway_pressure, checkout_latency, payment_timeout]
+    expected_evidence:
+      config_diff: "Obtain the gateway rate-limit configuration diff."
+      forwarded_rate: "Obtain gateway forwarded-request metrics."
+      stable_raw_ingress: "Obtain raw-ingress volume and source-distribution metrics."
+      connection_pressure: "Obtain gateway connection-utilization metrics."
+      downstream_latency: "Obtain checkout latency metrics."
+      timeout_log: "Obtain payment upstream-timeout logs."
+      waf_decision_logs: "Obtain WAF decision logs for 09:25–09:35 UTC."
+    conflict_patterns: []
+    diagnostic_step_ids: [inspect-config-diff, compare-pre-post-metrics]
+    remediation_step_ids: [propose-config-rollback]
+  - hypothesis_type: dos_or_traffic_surge
+    entity_types: [gateway]
+    traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
+    required_symptoms: [raw_ingress_surge, changed_source_distribution]
+    expected_propagation: [gateway_pressure, checkout_latency, payment_timeout]
+    expected_evidence:
+      raw_ingress: "Obtain gateway raw-ingress metrics."
+      source_distribution: "Obtain client/source-distribution metrics."
+      waf_decisions: "Obtain WAF decision logs."
+    conflict_patterns:
+      - pattern_id: STABLE_RAW_INGRESS
+        factor: symptom_compatibility
+        operation: cap
+        value: 0.5
+    diagnostic_step_ids: [inspect-ingress-distribution]
+    remediation_step_ids: [propose-edge-rate-limit]
+  - hypothesis_type: database_connection_exhaustion
+    entity_types: [database]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    required_symptoms: [payment_timeout, database_utilization_high]
+    expected_propagation: [database_pressure, payment_timeout, checkout_failure]
+    expected_evidence:
+      db_utilization: "Obtain database connection-utilization metrics."
+      pool_waits: "Obtain database pool-wait metrics."
+      dependency_timeout: "Obtain dependency timeout logs."
+    conflict_patterns:
+      - pattern_id: NORMAL_DB_UTILIZATION
+        factor: metric_anomaly
+        operation: cap
+        value: 0.0
+    diagnostic_step_ids: [inspect-db-pool]
+    remediation_step_ids: [propose-db-pool-tuning]
+  - hypothesis_type: network_path_congestion
+    entity_types: [gateway, service]
+    traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
+    required_symptoms: [packet_loss, retransmissions]
+    expected_propagation: [gateway_pressure, downstream_latency]
+    expected_evidence: {path_telemetry: "Obtain packet loss and path telemetry."}
+    conflict_patterns: []
+    diagnostic_step_ids: [inspect-network-path]
+    remediation_step_ids: []
+  - hypothesis_type: upstream_service_failure
+    entity_types: [service]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    required_symptoms: [upstream_errors]
+    expected_propagation: [upstream_error, caller_failure]
+    expected_evidence: {upstream_health: "Obtain upstream health-check results."}
+    conflict_patterns: []
+    diagnostic_step_ids: [inspect-upstream-health]
+    remediation_step_ids: []
+  - hypothesis_type: dns_resolution_failure
+    entity_types: [service, gateway]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    required_symptoms: [dns_errors]
+    expected_propagation: [dns_error, connection_failure]
+    expected_evidence: {dns_queries: "Obtain DNS query and resolver logs."}
+    conflict_patterns: []
+    diagnostic_step_ids: [inspect-dns-resolution]
+    remediation_step_ids: []
+  - hypothesis_type: certificate_or_tls_failure
+    entity_types: [service, gateway]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    required_symptoms: [tls_handshake_errors]
+    expected_propagation: [tls_error, request_failure]
+    expected_evidence: {certificate_state: "Obtain certificate validity and TLS handshake details."}
+    conflict_patterns: []
+    diagnostic_step_ids: [inspect-certificate-state]
+    remediation_step_ids: []
+

@@ -1,0 +1,2115 @@
+{
+  "components": {
+    "schemas": {
+      "AnalysisRun": {
+        "additionalProperties": false,
+        "properties": {
+          "algorithm_version": {
+            "minLength": 1,
+            "title": "Algorithm Version",
+            "type": "string"
+          },
+          "analysis_run_id": {
+            "minLength": 1,
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "incident_id": {
+            "minLength": 1,
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "input_fingerprint": {
+            "pattern": "^sha256:[0-9a-f]+$",
+            "title": "Input Fingerprint",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AnalysisRunStatus"
+          },
+          "trigger_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Event Id"
+          }
+        },
+        "required": [
+          "analysis_run_id",
+          "incident_id",
+          "revision",
+          "status",
+          "trigger_event_id",
+          "input_fingerprint",
+          "created_at",
+          "completed_at",
+          "algorithm_version"
+        ],
+        "title": "AnalysisRun",
+        "type": "object"
+      },
+      "AnalysisRunStatus": {
+        "enum": [
+          "building",
+          "current",
+          "superseded",
+          "failed"
+        ],
+        "title": "AnalysisRunStatus",
+        "type": "string"
+      },
+      "AuditActorType": {
+        "enum": [
+          "system",
+          "user",
+          "llm"
+        ],
+        "title": "AuditActorType",
+        "type": "string"
+      },
+      "AuditRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "actor_type": {
+            "$ref": "#/components/schemas/AuditActorType"
+          },
+          "analysis_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Run Id"
+          },
+          "audit_id": {
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "object_id": {
+            "title": "Object Id",
+            "type": "string"
+          },
+          "object_type": {
+            "title": "Object Type",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_id",
+          "timestamp",
+          "actor_type",
+          "actor_id",
+          "action",
+          "object_type",
+          "object_id",
+          "request_id",
+          "analysis_run_id",
+          "payload"
+        ],
+        "title": "AuditRecord",
+        "type": "object"
+      },
+      "CanonicalEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "event_id": {
+            "minLength": 1,
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "minLength": 1,
+            "title": "Event Type",
+            "type": "string"
+          },
+          "ingested_at": {
+            "format": "date-time",
+            "title": "Ingested At",
+            "type": "string"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/Modality"
+          },
+          "quality_flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quality Flags",
+            "type": "array"
+          },
+          "raw_payload": {
+            "title": "Raw Payload",
+            "type": "object"
+          },
+          "schema_version": {
+            "minLength": 1,
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "severity": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Severity",
+            "type": "number"
+          },
+          "signal_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Name"
+          },
+          "signal_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Value"
+          },
+          "source": {
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "source_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Record Id"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "trace_or_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Or Session Id"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "event_id",
+          "timestamp",
+          "ingested_at",
+          "entity_id",
+          "modality",
+          "event_type",
+          "severity",
+          "source",
+          "schema_version"
+        ],
+        "title": "CanonicalEvent",
+        "type": "object"
+      },
+      "EvidenceCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "minimum": 0.0,
+            "title": "Available",
+            "type": "integer"
+          },
+          "expected": {
+            "minimum": 0.0,
+            "title": "Expected",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "available",
+          "expected"
+        ],
+        "title": "EvidenceCoverage",
+        "type": "object"
+      },
+      "EvidenceItem": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_run_id": {
+            "minLength": 1,
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence_id": {
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "hypothesis_id": {
+            "minLength": 1,
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "incident_id": {
+            "minLength": 1,
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EvidenceKind"
+          },
+          "reason_code": {
+            "minLength": 1,
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "relevance": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Relevance",
+            "type": "number"
+          },
+          "source_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Event Id"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "analysis_run_id",
+          "incident_id",
+          "hypothesis_id",
+          "kind",
+          "source_event_id",
+          "statement",
+          "relevance",
+          "reason_code",
+          "created_at"
+        ],
+        "title": "EvidenceItem",
+        "type": "object"
+      },
+      "EvidenceKind": {
+        "enum": [
+          "observed",
+          "correlated",
+          "conflicting",
+          "missing"
+        ],
+        "title": "EvidenceKind",
+        "type": "string"
+      },
+      "ExplanationClaim": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claim",
+          "evidence_ids"
+        ],
+        "title": "ExplanationClaim",
+        "type": "object"
+      },
+      "ExplanationOutput": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_run_id": {
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationClaim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "diagnostic_step_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Diagnostic Step Ids",
+            "type": "array"
+          },
+          "generator": {
+            "enum": [
+              "template",
+              "llm"
+            ],
+            "title": "Generator",
+            "type": "string"
+          },
+          "hypothesis_id": {
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "remediation_step_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Remediation Step Ids",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_run_id",
+          "incident_id",
+          "hypothesis_id",
+          "generator",
+          "summary",
+          "claims",
+          "diagnostic_step_ids",
+          "remediation_step_ids"
+        ],
+        "title": "ExplanationOutput",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Hypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_run_id": {
+            "minLength": 1,
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "candidate_entity_id": {
+            "minLength": 1,
+            "title": "Candidate Entity Id",
+            "type": "string"
+          },
+          "evidence_coverage": {
+            "$ref": "#/components/schemas/EvidenceCoverage"
+          },
+          "evidence_score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Evidence Score",
+            "type": "number"
+          },
+          "factor_scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Factor Scores",
+            "type": "object"
+          },
+          "hypothesis_id": {
+            "minLength": 1,
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "hypothesis_type": {
+            "minLength": 1,
+            "title": "Hypothesis Type",
+            "type": "string"
+          },
+          "incident_id": {
+            "minLength": 1,
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "rank": {
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "summary": {
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hypothesis_id",
+          "analysis_run_id",
+          "incident_id",
+          "hypothesis_type",
+          "candidate_entity_id",
+          "rank",
+          "evidence_score",
+          "evidence_coverage",
+          "factor_scores",
+          "summary"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      },
+      "IncidentStatus": {
+        "enum": [
+          "open",
+          "investigating",
+          "resolved",
+          "rejected"
+        ],
+        "title": "IncidentStatus",
+        "type": "string"
+      },
+      "IncidentSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_entity_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Entity Ids",
+            "type": "array"
+          },
+          "anomaly_count": {
+            "minimum": 0.0,
+            "title": "Anomaly Count",
+            "type": "integer"
+          },
+          "confirmed_hypothesis_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed Hypothesis Id"
+          },
+          "current_analysis_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Analysis Run Id"
+          },
+          "incident_id": {
+            "minLength": 1,
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "last_event_at": {
+            "format": "date-time",
+            "title": "Last Event At",
+            "type": "string"
+          },
+          "primary_entity_id": {
+            "minLength": 1,
+            "title": "Primary Entity Id",
+            "type": "string"
+          },
+          "severity": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Severity",
+            "type": "number"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IncidentStatus"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "top_hypothesis_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Hypothesis Id"
+          }
+        },
+        "required": [
+          "incident_id",
+          "current_analysis_run_id",
+          "title",
+          "status",
+          "severity",
+          "started_at",
+          "last_event_at",
+          "primary_entity_id",
+          "affected_entity_ids",
+          "anomaly_count",
+          "top_hypothesis_id",
+          "confirmed_hypothesis_id"
+        ],
+        "title": "IncidentSummary",
+        "type": "object"
+      },
+      "InvestigationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_run": {
+            "$ref": "#/components/schemas/AnalysisRun"
+          },
+          "analysis_run_id": {
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "evidence_by_hypothesis": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/EvidenceItem"
+              },
+              "type": "array"
+            },
+            "title": "Evidence By Hypothesis",
+            "type": "object"
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/ExplanationOutput"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "hypotheses": {
+            "items": {
+              "$ref": "#/components/schemas/Hypothesis"
+            },
+            "title": "Hypotheses",
+            "type": "array"
+          },
+          "incident": {
+            "$ref": "#/components/schemas/IncidentSummary"
+          },
+          "recommendations_by_hypothesis": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/PlaybookRecommendation"
+              },
+              "type": "array"
+            },
+            "title": "Recommendations By Hypothesis",
+            "type": "object"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewRecord"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineItem"
+            },
+            "title": "Timeline",
+            "type": "array"
+          },
+          "topology": {
+            "$ref": "#/components/schemas/TopologySnapshot"
+          }
+        },
+        "required": [
+          "generated_at",
+          "analysis_run_id",
+          "analysis_run",
+          "incident",
+          "timeline",
+          "topology",
+          "hypotheses",
+          "evidence_by_hypothesis",
+          "recommendations_by_hypothesis",
+          "explanation",
+          "reviews"
+        ],
+        "title": "InvestigationResponse",
+        "type": "object"
+      },
+      "Modality": {
+        "enum": [
+          "metric",
+          "log",
+          "alert",
+          "config_change"
+        ],
+        "title": "Modality",
+        "type": "string"
+      },
+      "PlaybookRecommendation": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_run_id": {
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "hypothesis_id": {
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "instructions": {
+            "title": "Instructions",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "recommendation_id": {
+            "title": "Recommendation Id",
+            "type": "string"
+          },
+          "requires_human_approval": {
+            "title": "Requires Human Approval",
+            "type": "boolean"
+          },
+          "risk_level": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level",
+            "type": "string"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          },
+          "step_type": {
+            "enum": [
+              "diagnostic",
+              "remediation"
+            ],
+            "title": "Step Type",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recommendation_id",
+          "analysis_run_id",
+          "incident_id",
+          "hypothesis_id",
+          "step_id",
+          "title",
+          "step_type",
+          "risk_level",
+          "requires_human_approval",
+          "instructions",
+          "rationale"
+        ],
+        "title": "PlaybookRecommendation",
+        "type": "object"
+      },
+      "ReviewDecision": {
+        "enum": [
+          "confirmed",
+          "rejected",
+          "evidence_requested"
+        ],
+        "title": "ReviewDecision",
+        "type": "string"
+      },
+      "ReviewRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_run_id": {
+            "minLength": 1,
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "client_action_id": {
+            "minLength": 1,
+            "title": "Client Action Id",
+            "type": "string"
+          },
+          "comment": {
+            "title": "Comment",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "hypothesis_id": {
+            "minLength": 1,
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "incident_id": {
+            "minLength": 1,
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "requested_evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Evidence Id"
+          },
+          "review_id": {
+            "minLength": 1,
+            "title": "Review Id",
+            "type": "string"
+          },
+          "reviewer": {
+            "minLength": 1,
+            "title": "Reviewer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_id",
+          "incident_id",
+          "analysis_run_id",
+          "hypothesis_id",
+          "decision",
+          "client_action_id",
+          "requested_evidence_id",
+          "reviewer",
+          "comment",
+          "created_at"
+        ],
+        "title": "ReviewRecord",
+        "type": "object"
+      },
+      "ReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_run_id": {
+            "minLength": 1,
+            "title": "Analysis Run Id",
+            "type": "string"
+          },
+          "client_action_id": {
+            "minLength": 1,
+            "title": "Client Action Id",
+            "type": "string"
+          },
+          "comment": {
+            "default": "",
+            "title": "Comment",
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "hypothesis_id": {
+            "minLength": 1,
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "requested_evidence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Evidence Id"
+          },
+          "reviewer": {
+            "minLength": 1,
+            "title": "Reviewer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_run_id",
+          "hypothesis_id",
+          "decision",
+          "client_action_id",
+          "reviewer"
+        ],
+        "title": "ReviewRequest",
+        "type": "object"
+      },
+      "TimelineItem": {
+        "additionalProperties": false,
+        "properties": {
+          "attachment_decision": {
+            "enum": [
+              "attached",
+              "excluded"
+            ],
+            "title": "Attachment Decision",
+            "type": "string"
+          },
+          "attachment_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Attachment Reasons",
+            "type": "array"
+          },
+          "attachment_score": {
+            "title": "Attachment Score",
+            "type": "number"
+          },
+          "event": {
+            "$ref": "#/components/schemas/CanonicalEvent"
+          },
+          "hypothesis_relevance": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Hypothesis Relevance",
+            "type": "object"
+          }
+        },
+        "required": [
+          "event",
+          "attachment_decision",
+          "attachment_score",
+          "attachment_reasons"
+        ],
+        "title": "TimelineItem",
+        "type": "object"
+      },
+      "TopologyEdge": {
+        "additionalProperties": false,
+        "properties": {
+          "relation_type": {
+            "$ref": "#/components/schemas/TopologyRelation"
+          },
+          "relationship": {
+            "title": "Relationship",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "impact_path",
+                  "blast_radius"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "relation_type",
+          "relationship"
+        ],
+        "title": "TopologyEdge",
+        "type": "object"
+      },
+      "TopologyNode": {
+        "additionalProperties": false,
+        "properties": {
+          "criticality": {
+            "title": "Criticality",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "suspected_root",
+                  "primary_affected",
+                  "impact_path",
+                  "blast_radius"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "service",
+          "criticality"
+        ],
+        "title": "TopologyNode",
+        "type": "object"
+      },
+      "TopologyRelation": {
+        "enum": [
+          "depends_on",
+          "sends_traffic_to"
+        ],
+        "title": "TopologyRelation",
+        "type": "string"
+      },
+      "TopologySnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/TopologyEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "fixture_version": {
+            "title": "Fixture Version",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/TopologyNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fixture_version",
+          "nodes",
+          "edges"
+        ],
+        "title": "TopologySnapshot",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Milestone-0 contract API; feature routes are owner-labelled stubs.",
+    "title": "Network Anomaly Root-Cause Assistant",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/events": {
+      "get": {
+        "operationId": "list_events_api_v1_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CanonicalEvent"
+                  },
+                  "title": "Response List Events Api V1 Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "operationId": "ingest_event_api_v1_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CanonicalEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Ingest Event Api V1 Events Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ingest Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/events/batch": {
+      "post": {
+        "operationId": "ingest_batch_api_v1_events_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/CanonicalEvent"
+                },
+                "title": " Events",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Ingest Batch Api V1 Events Batch Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ingest Batch",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/events/{event_id}": {
+      "get": {
+        "operationId": "get_event_api_v1_events__event_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CanonicalEvent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Api V1 Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/v1/incidents": {
+      "get": {
+        "operationId": "list_incidents_api_v1_incidents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response List Incidents Api V1 Incidents Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Incidents",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}": {
+      "get": {
+        "operationId": "incident_summary_api_v1_incidents__incident_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Incident Summary",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/audit": {
+      "get": {
+        "operationId": "audit_api_v1_incidents__incident_id__audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditRecord"
+                  },
+                  "title": "Response Audit Api V1 Incidents  Incident Id  Audit Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/evidence": {
+      "get": {
+        "operationId": "evidence_api_v1_incidents__incident_id__evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "$ref": "#/components/schemas/EvidenceItem"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Evidence Api V1 Incidents  Incident Id  Evidence Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evidence",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/explanation": {
+      "get": {
+        "operationId": "explanation_api_v1_incidents__incident_id__explanation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplanationOutput"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Explanation",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/hypotheses": {
+      "get": {
+        "operationId": "hypotheses_api_v1_incidents__incident_id__hypotheses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Hypothesis"
+                  },
+                  "title": "Response Hypotheses Api V1 Incidents  Incident Id  Hypotheses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hypotheses",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/investigation": {
+      "get": {
+        "operationId": "investigation_api_v1_incidents__incident_id__investigation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestigationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Investigation",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/recommendations": {
+      "get": {
+        "operationId": "recommendations_api_v1_incidents__incident_id__recommendations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "$ref": "#/components/schemas/PlaybookRecommendation"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Recommendations Api V1 Incidents  Incident Id  Recommendations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recommendations",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/recompute": {
+      "post": {
+        "operationId": "recompute_api_v1_incidents__incident_id__recompute_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Recompute Api V1 Incidents  Incident Id  Recompute Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recompute",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/review": {
+      "post": {
+        "operationId": "review_api_v1_incidents__incident_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{incident_id}/timeline": {
+      "get": {
+        "operationId": "timeline_api_v1_incidents__incident_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Timeline Api V1 Incidents  Incident Id  Timeline Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Timeline",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/quarantine": {
+      "get": {
+        "operationId": "list_quarantine_api_v1_quarantine_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response List Quarantine Api V1 Quarantine Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Quarantine",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/ready": {
+      "get": {
+        "operationId": "ready_api_v1_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Ready Api V1 Ready Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/v1/simulator/reset": {
+      "post": {
+        "operationId": "reset_api_v1_simulator_reset_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Reset Api V1 Simulator Reset Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reset",
+        "tags": [
+          "simulator"
+        ]
+      }
+    },
+    "/api/v1/simulator/scenarios/{scenario_id}/trigger": {
+      "post": {
+        "operationId": "trigger_api_v1_simulator_scenarios__scenario_id__trigger_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Trigger Api V1 Simulator Scenarios  Scenario Id  Trigger Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trigger",
+        "tags": [
+          "simulator"
+        ]
+      }
+    },
+    "/api/v1/simulator/start": {
+      "post": {
+        "operationId": "start_api_v1_simulator_start_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Start Api V1 Simulator Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "simulator"
+        ]
+      }
+    },
+    "/api/v1/simulator/status": {
+      "get": {
+        "operationId": "status_api_v1_simulator_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Status Api V1 Simulator Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "simulator"
+        ]
+      }
+    },
+    "/api/v1/simulator/stop": {
+      "post": {
+        "operationId": "stop_api_v1_simulator_stop_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Stop Api V1 Simulator Stop Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stop",
+        "tags": [
+          "simulator"
+        ]
+      }
+    },
+    "/api/v1/topology": {
+      "get": {
+        "operationId": "topology_api_v1_topology_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologySnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Topology",
+        "tags": [
+          "topology"
+        ]
+      }
+    },
+    "/api/v1/topology/blast-radius/{entity_id}": {
+      "get": {
+        "operationId": "blast_radius_api_v1_topology_blast_radius__entity_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Blast Radius Api V1 Topology Blast Radius  Entity Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Blast Radius",
+        "tags": [
+          "topology"
+        ]
+      }
+    },
+    "/api/v1/topology/path": {
+      "get": {
+        "operationId": "path_api_v1_topology_path_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Path Api V1 Topology Path Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Path",
+        "tags": [
+          "topology"
+        ]
+      }
+    }
+  }
+}

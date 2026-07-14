@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+:root {
+  color: #171717;
+  background: #f8fafc;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+button {
+  border-radius: 0.5rem;
+  background: #b91c1c;
+  color: white;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+}
+

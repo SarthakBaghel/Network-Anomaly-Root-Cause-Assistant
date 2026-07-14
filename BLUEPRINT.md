@@ -1,10 +1,10 @@
 # Network Anomaly Root-Cause Assistant — Prototype Blueprint
 
 **Document status:** Final team implementation guide and contract authority  
-**Version:** 1.2  
+**Version:** 1.5  
 **Target:** Hackathon working prototype  
 **Design lineage:** `Ideation.md`; this blueprint is the implementation authority  
-**Dataset policy:** NSL-KDD, UNSW-NB15, HDFS, and BGL are reference material only. They are not runtime dependencies and are not presented as one correlated production environment.
+**Dataset policy:** NSL-KDD, UNSW-NB15, Loghub HDFS/BGL, GAIA MicroSS, and the distributed-trace sample dataset are reference material only. They are not runtime dependencies and are not presented as one correlated production environment.
 
 ---
 
@@ -46,7 +46,7 @@ Contract changes use this sequence:
 4. Update shared fixtures and contract tests in the same change.
 5. Obtain review from the foundation owner and every affected feature owner.
 
-Version 1.2 preserves the version 1.1 causal and consistency guarantees and adds the final team-execution layer: exact source-adapter inputs, an explicit P0/P1 cut line, frontend route ownership, cross-workstream handoff artifacts, mandatory CI gates, and a relative two-day integration schedule.
+Version 1.5 incorporates the expanded Drive dataset inventory and closes dataset-specific leakage/semantics risks. It preserves the v1.4 runtime architecture: reference data informs bounded profiles/templates, while a deterministic scenario bundle supplies coherent cross-modal causal truth.
 
 ### 1.4 How every teammate uses this guide
 
@@ -108,14 +108,99 @@ Before writing feature code, each teammate must read §§1–7, their owned work
 
 ### 3.3 Dataset boundary
 
-Reference-dataset metadata and the local Challenge 2 archive are maintained outside this implementation repository at:
+The expanded reference inventory is documented in `DatasetDescription.md` distributed with the Drive dataset. It currently describes NSL-KDD, UNSW-NB15, Loghub HDFS, Loghub BGL, GAIA MicroSS, and a small distributed-trace sample dataset. The Drive URL and local extraction directory are environment-specific and are not frozen application paths. Optional tooling receives a user-supplied local manifest; production/runtime code contains no Drive URL or absolute dataset path.
 
-```text
-../Data_sets_hackathon/challenge-2-network-anomaly-rca/README.md
-../Data_sets_hackathon/zipped-datasets/challenge-2-network-anomaly-rca.zip
+These datasets may inform event names, feature ranges, anomaly categories, log structures, trace schemas, topology modelling, and future evaluation. They are not committed to the application repository, loaded by bootstrap/CI, or needed by the live prototype. The MVP must start and complete its golden-path demo without opening them.
+
+| Reference | Approved role | Explicit limitation |
+|---|---|---|
+| NSL-KDD | Legacy network feature vocabulary and normal-range study | Not timestamped service telemetry; several proposed operational metrics are only rough proxies |
+| UNSW-NB15 | Modern flow/connection distributions and network anomaly vocabulary | Labels and attack categories are offline evaluation metadata only |
+| Loghub HDFS | Distributed-application log grammar and template examples | Historical HDFS events do not belong to the prototype topology/timeline |
+| Loghub BGL | System/kernel severity and fault-pattern examples | HPC node IDs and minute buckets are not service identities or traces |
+| GAIA MicroSS | Microservice topology/anomaly-injection structure reference | Cannot silently replace frozen entity IDs or become the golden incident timeline |
+| Sample trace dataset | Trace/span schema, operation/service dictionaries, latency reference | Requires ID decoding, trace-ID composition, and timezone normalization before use |
+
+#### 3.3.1 Approved reference and augmentation strategy
+
+Use the following order of preference:
+
+1. Use the supplied NSL-KDD and UNSW-NB15 files for network-feature names, plausible value ranges, traffic classes, and anomaly vocabulary.
+2. Use the supplied HDFS/BGL logs for a small, attributed log-template catalogue; do not replay their historical identifiers or timestamps as if they belonged to the prototype incident.
+3. Use GAIA MicroSS and the sample trace dataset to review topology, injection-record, trace, operation/status, and latency schemas. Adapt concepts through explicit mapping tables without changing frozen entity IDs.
+4. If another real log source is needed, obtain a small licensed sample from the official [Loghub repository](https://github.com/logpai/loghub). Record the exact source URL, subset, checksum, license/usage terms, and retrieval date in a manifest.
+5. For a naturally coherent multi-signal example, optionally study or run the official [OpenTelemetry Demo](https://opentelemetry.io/docs/demo/). Do not make this large environment a P0 runtime dependency.
+6. Where required fields remain absent, generate them through the checked-in deterministic simulator or offline enrichment tooling. Synthetic values must be tagged and reproducible from a fixed seed.
+
+These sources are complementary, not row-joinable. Never align an NSL-KDD/UNSW network row with an unrelated Loghub line merely because their timestamps or labels look compatible, and never present that combination as observed causation. The golden incident's causal relationships come from the controlled simulator scenario; external data contributes realistic distributions, wording, templates, and optional detector-evaluation samples.
+
+#### 3.3.2 Provenance contract for enriched samples
+
+Any optional converter/enrichment output must carry a sidecar manifest or a `raw_payload.provenance` object containing:
+
+```json
+{
+  "origin": "loghub/HDFS_v1",
+  "origin_record_id": "blk_-1608999687919862906:17",
+  "origin_checksum_sha256": "sha256-of-source-file-or-record",
+  "retrieved_at": "2026-07-14",
+  "license_reference": "https://github.com/logpai/loghub",
+  "transformation_version": "reference-enrichment-1.0",
+  "synthetic_fields": ["entity_id", "trace_or_session_id", "scenario_relative_time"],
+  "seed": 20260714,
+  "output_checksum_sha256": "sha256-of-derived-artifact"
+}
 ```
 
-The catalogue lists NSL-KDD, UNSW-NB15, and LogHub HDFS/BGL, but team members must inspect the archive manifest before assuming a listed dataset is materialized locally; LogHub is a separate source if it is absent from the archive. These datasets may inform event names, feature ranges, anomaly categories, log structures, and future evaluation. They are not committed to the application repository, loaded by CI, or needed by the prototype. The MVP must start and complete its golden-path demo without opening them.
+Enrichment rules:
+
+- Preserve the original record and checksum; transformed output is a derived fixture, never a replacement for source data.
+- Mark each generated field explicitly. A generated field may support demo correlation only inside the documented simulator scenario.
+- Map every `entity_id` to the frozen topology and every scenario timestamp to a deterministic time offset.
+- Keep labels such as `attack_cat`, `label`, anomaly status, or known root cause out of detector/RCA input features. They may appear only in expected-test results to prevent target leakage.
+- Include at least one unrelated but temporally close decoy event, so the system proves it uses compatibility/topology/trace evidence rather than time alone.
+- Validate schema, timestamp order, topology references, redaction, record counts, and reproducibility before accepting a derived fixture.
+- Commit only small redistributable derived fixtures when permitted. Large/raw downloads remain outside Git and CI.
+- The UI labels generated records as `simulated` or `reference-derived`; it must not call them live production telemetry.
+
+#### 3.3.3 Frozen prototype data decision
+
+The team will **not** edit NSL-KDD or UNSW-NB15 in place and will **not** wait for the missing LogHub download. P0 uses a checked-in, bounded, deterministic multimodal scenario bundle:
+
+```text
+Untouched reference data
+  -> offline feature-range/template study
+  -> versioned reference profile and log-template catalogue
+  -> deterministic scenario builder
+  -> separate raw metric, log, alert, and config-change streams
+  -> normal source adapters
+  -> CanonicalEvent pipeline
+```
+
+This is a deliberate prototype-data product, not a claim that the original datasets contain a shared incident. It is sufficient for the challenge because it visibly exercises every required modality, preserves realistic values and log structure, and supplies a controlled ground truth against which ranking and explanations can be verified.
+
+The selected compromise is:
+
+- NSL-KDD/UNSW-NB15 inform field names, network-value ranges, attack vocabulary, and the optional network reference profile.
+- A checked-in LogHub-style template catalogue supplies realistic component, level, event-code, and message shapes. It may be authored from generic operational patterns; copied external templates require attribution and redistribution permission.
+- The simulator adds the fields absent from historical network-flow data: scenario-relative timestamps, topology entity IDs, trace/session IDs, configuration changes, alerts, and cross-service propagation.
+- The expected cause and ranks live only under `expected/`; runtime ingestion, detection, incident, RCA, evidence, and explanation modules may not import that directory.
+- The application demo consumes the generated raw streams through the four adapters. It may not load precomputed canonical events directly into analysis tables.
+
+#### 3.3.4 Dataset-specific interpretation rules
+
+These rules override any conflicting transformation suggestion in `DatasetDescription.md`:
+
+- `class`, `label`, `attack_cat`, `difficulty_level`, anomaly-injection labels, and trace anomaly labels may be used only for offline sampling/evaluation and test expectations. They may not derive runtime `severity`, `hypothesis_type`, alert state, detector score, RCA factor, or incident membership.
+- Runtime severity comes from observed metric deviation/threshold logic or checked-in log/alert catalogues. It is never `0 for normal, high for labelled attack`.
+- Do not map UNSW `Exploits` or `Backdoors` to `configuration_regression`. A configuration regression candidate requires an actual configuration-audit event plus compatible later symptoms.
+- NSL `count / duration`, byte/packet estimates, and UNSW inter-packet-time multipliers are uncalibrated proxies. If retained for exploratory profiling, name them with a `_proxy` suffix and record the formula; do not present them as measured RPS or p95 latency. Prefer the sample dataset's latency ranges and hand-reviewed scenario values for P0.
+- `wrong_fragment + urgent` is not a TCP-reset count, and UNSW `sloss` is not a TCP-reset count. Use those only as fragment/loss signals or generate a clearly synthetic `tcp_resets_total` scenario metric.
+- A trace/session ID must come from a real trace/block/request identifier or the deterministic scenario. Never derive it solely from a timestamp/minute bucket; doing so would manufacture time-based correlation.
+- HDFS/BGL host/component IDs map through an explicit versioned mapping table. “Closest entity” inference is forbidden.
+- GAIA may inform edge types and injection-record shape, but the frozen entities remain `api-gateway-01`, `checkout-api-01`, `payment-api-01`, `payment-db-01`, and `auth-api-01` unless §1.3 contract review changes every dependent fixture.
+- The sample trace dataset is not transformation-free: combine high/low trace parts deterministically, decode service/operation/status dictionaries, declare timestamp timezone, normalize to UTC, and tag every mapped field.
+- Dataset-derived vocabulary may propose catalogue entries, but Person 3/4 must review their operational meaning; labels never auto-generate a production hypothesis catalogue.
 
 ### 3.4 Delivery priority and cut line
 
@@ -124,6 +209,7 @@ Every item is classified before development so time pressure does not cause team
 #### P0 — mandatory working prototype
 
 - Five visible logical sources: metric, log, alert, configuration audit, and topology/CMDB.
+- One checked-in, provenance-tagged multimodal scenario bundle generated from a fixed seed; original reference files remain untouched.
 - Canonical validation, UTC normalization, redaction, quarantine, and alarm-storm handling.
 - Deterministic baseline and golden scenario with reset.
 - Metric/log/alert anomaly detection and context-only configuration markers.
@@ -138,6 +224,7 @@ Every item is classified before development so time pressure does not cause team
 
 #### P1 — implement only after P0 passes end to end
 
+- Optional provenance-preserving reference-data converter/enrichment utility and one small derived fixture.
 - Optional LLM narration mode.
 - Seeded historical-similarity contribution.
 - Optional second incident scenario.
@@ -341,7 +428,19 @@ network-anomaly-rca/
 │   │   │   └── session.py
 │   │   └── fixtures/
 │   │       ├── topology.json
+│   │       ├── reference_profiles/
+│   │       │   ├── network_profile.json
+│   │       │   └── log_templates.yaml
 │   │       ├── scenarios/
+│   │       │   └── gateway_rate_limit/
+│   │       │       ├── inputs/
+│   │       │       │   ├── metrics.jsonl
+│   │       │       │   ├── logs.jsonl
+│   │       │       │   ├── alerts.jsonl
+│   │       │       │   └── config_changes.jsonl
+│   │       │       ├── provenance.json
+│   │       │       └── expected/          # tests only; forbidden to runtime analysis
+│   │       │           └── ground_truth.json
 │   │       ├── detector_rules.yaml
 │   │       ├── symptom_families.yaml
 │   │       ├── hypotheses.yaml
@@ -371,6 +470,7 @@ network-anomaly-rca/
 └── scripts/
     ├── bootstrap.sh
     ├── dev.sh
+    ├── build_reference_fixtures.py       # optional P1; manifest + fixed seed required
     ├── seed_demo.py
     └── verify_demo.py
 ```
@@ -386,6 +486,14 @@ cp .env.example .env        # optional; defaults work unchanged
 python3 scripts/seed_demo.py # load/reset deterministic fixture state
 python3 scripts/verify_demo.py
 ```
+
+The optional P1 reference converter is run explicitly, never by bootstrap or CI:
+
+```text
+python3 scripts/build_reference_fixtures.py --manifest reference-data.local.json --seed 20260714
+```
+
+It fails if the manifest lacks provenance/license fields, writes only bounded derived fixtures, and produces a reproducibility report with input checksums and output counts.
 
 Backend dependency metadata lives in `pyproject.toml` and exact deploy/test versions are committed in `requirements.lock`; bootstrap installs that lock file. Frontend uses committed `package-lock.json` and `npm ci`. `bootstrap.sh` is idempotent and fails with actionable version messages unless Python 3.12+ and Node 20 LTS are available. `verify_demo.py` checks health, source adapters, topology version, scenario trigger, top score/rank, review, audit, and reset without internet access.
 
@@ -780,6 +888,17 @@ Topology/CMDB snapshot:
 
 Every adapter must expose `ready|error`, last successful ingest time, and accepted/collapsed/quarantined counters. Mapping failure enters quarantine with a stable source-specific reason code. Tests assert the resulting canonical values; they do not merely assert that validation succeeded.
 
+#### 9.1.3 Adapter provenance handling
+
+Each raw input may carry a `provenance` object or resolve one through the scenario's `provenance.json`. The adapter copies it into `CanonicalEvent.raw_payload.provenance` and adds one of these quality flags:
+
+```text
+SIMULATED
+REFERENCE_DERIVED
+```
+
+`source` continues to identify the adapter, such as `simulator.prometheus`; provenance identifies how the values were produced. Detectors and RCA may use ordinary signal/entity/trace fields but must ignore provenance, original labels, and expected ground truth. The API may expose provenance for drill-down and honest UI labelling, but it never treats provenance as evidence for or against a cause.
+
 ### 9.2 Ingestion flow
 
 1. Receive raw event.
@@ -911,6 +1030,32 @@ Golden fixtures freeze event IDs, timestamps relative to trigger, source record 
 ### 10.4 Optional second scenario
 
 Network congestion or DoS against `api-gateway-01`, with a changed client/source distribution and no preceding relevant configuration change. This proves that the system does not always blame changes. Do not implement it until the golden scenario passes repeatedly.
+
+### 10.5 Multimodal scenario-bundle construction
+
+The golden scenario is stored as separate raw source streams, not as extra columns appended to a network table:
+
+| Bundle artifact | Construction rule | Minimum useful content |
+|---|---|---|
+| `reference_profiles/network_profile.json` | Store bounded ranges/quantiles or hand-reviewed plausible defaults; never copy labels into detector inputs | Raw/forwarded RPS, connections, retransmissions, latency, error rate, DB utilization |
+| `reference_profiles/log_templates.yaml` | Catalogue-backed templates with `template_id`, component, level, event code, text slots, and repeatability policy | 10–20 templates covering normal startup, timeouts, pool pressure, packet loss, health checks, rate limiting, authentication, DNS, and configuration reload |
+| `inputs/metrics.jsonl` | Generate at least 20 baseline points per scored signal, then deterministic changed values from the frozen profile | Baseline plus the T+30, T+40, T+60, and T+100 signals in §10.3 |
+| `inputs/logs.jsonl` | Emit logs only for meaningful state transitions or failures; do not create one log per flow row | Normal baseline logs, payment timeout at T+75, unrelated auth warning at T+120 |
+| `inputs/alerts.jsonl` | Generate from sustained detector conditions, not directly from a class label | Gateway alert at T+45 and checkout alert at T+90 |
+| `inputs/config_changes.jsonl` | Author controlled audit records with actor, key, old/new values, and ticket | Rate-limit change at T+0 |
+| `provenance.json` | Record seed, generator/profile versions, source references, checksums, synthetic fields, licenses, and counts | One entry for every input file/profile |
+| `expected/ground_truth.json` | Store expected included/excluded events, cause, factor inputs, ranking, score, and relative ordering | Golden expectations only; test code may read it, runtime feature code may not |
+
+Scenario-builder invariants:
+
+1. Original reference files are read-only inputs and remain outside the application repository.
+2. Rebuilding with the same input checksums, builder version, and seed produces byte-identical ordered streams.
+3. Logs occur because scenario state changes or thresholds are crossed, not because a dataset label says `anomaly`.
+4. Alerts aggregate preceding signals and therefore occur after their supporting observations.
+5. Every event entity exists in `topology.json`; cross-service events follow a permitted traffic/dependency path.
+6. The unrelated auth warning is close in time but has an incompatible trace/symptom, providing a negative correlation test.
+7. Ground-truth files are inaccessible through production package imports and are excluded from runtime containers/builds where practical.
+8. Reset replays these raw streams through adapters and yields the exact frozen analysis result.
 
 ---
 
@@ -1579,7 +1724,7 @@ Assign one owner per workstream. Owners may have helpers, but one person resolve
 
 ### WS1 — Simulator and ingestion
 
-**Owns:** scenario engine, modality emitters, validation pipeline, quarantine, duplicate collapse, simulator API.  
+**Owns:** scenario engine, modality emitters, validation pipeline, quarantine, duplicate collapse, simulator API, and the optional P1 provenance-preserving reference converter.  
 **Directories:** `backend/app/simulator`, `backend/app/ingestion`, simulator API.  
 **Works against:** repository interfaces and frozen `CanonicalEvent`.  
 **Mock strategy:** in-memory fake event repository until WS0 merges.
@@ -1656,7 +1801,7 @@ Every producer checks the named artifact into the repository. Consumers build ag
 | Producer | Consumer(s) | Frozen handoff artifact | Acceptance condition |
 |---|---|---|---|
 | WS0 / Person 1 | All | Pydantic contracts, initial migration, generated OpenAPI, shared IDs and error examples | Fresh database upgrades; all fixtures validate; frontend types regenerate without manual edits |
-| WS1 / Person 3 | WS2A, WS2B, WS6 | `golden_events.jsonl` plus one valid and one invalid raw fixture per source adapter | Canonical mappings, quarantine reasons, relative order, and source counters match the frozen scenario |
+| WS1 / Person 3 | WS2A, WS2B, WS6 | Scenario bundle from §10.5, generated `golden_events.jsonl`, plus one invalid raw fixture per source adapter | Provenance/schema checks pass; canonical mappings, quarantine reasons, relative order, and source counters match the frozen scenario |
 | WS2A / Person 3 | WS2B, WS3, WS6 | `golden_anomalies.json` | Context-only flags, opening eligibility, windows, scores, and detector IDs validate |
 | WS2B / Person 4 | WS3, WS4, WS6 | `golden_incident_bundle.json` | Included and excluded events carry stable attachment scores and reason codes |
 | WS3 / Person 4 | WS4, WS5, WS6 | `golden_expected_analysis.json` | Typed paths, factor inputs, top-three ranks, and displayed `92.1` score match deterministic tests |
@@ -1664,6 +1809,21 @@ Every producer checks the named artifact into the repository. Consumers build ag
 | WS5 / Person 2 | WS6 | Route list and stable `data-testid` manifest for golden-path controls/panels | Playwright can execute the demo without CSS selectors or timing assumptions |
 
 Artifact names are contracts, not suggestions. A producer may refactor internal code without coordination only while its emitted artifact and semantics remain unchanged. A required artifact change follows §1.3 and updates producer tests, consumer tests, generated types, and the blueprint in the same pull request.
+
+### 22.3 Reference-dataset responsibility
+
+Reference-data work does not transfer feature ownership:
+
+| Responsibility | Accountable owner | Required review |
+|---|---|---|
+| Local/Drive manifest, checksum/provenance schema, converter interface | Person 3 | Person 1 for schema/CI boundary |
+| `network_profile.json`, `log_templates.yaml`, detector-rule content, scenario raw inputs | Person 3 | Person 4 for semantics used by attachment/RCA |
+| Frozen topology IDs/edges and hypothesis/symptom catalogue meaning | Person 4 | Person 1 for schema validity; Person 3 for source mappings |
+| Fixture/catalogue loaders and validation infrastructure | Person 1 | Producing owner for content errors |
+| UI provenance labels and raw-record presentation | Person 2 | Person 3 for provenance semantics |
+| Evidence wording derived from log/metric records | Person 5 | Person 3/4 for source and causal meaning |
+
+No owner may regenerate another owner's checked-in artifact directly from dataset labels. Proposed catalogue/profile changes arrive as a reviewed diff plus provenance report, then the accountable owner accepts or rejects them.
 
 ---
 
@@ -1681,6 +1841,7 @@ Before feature work begins, merge:
 6. Versioned typed-topology fixture.
 7. `golden_events.jsonl`, `golden_expected_analysis.json`, and investigation-response fixture.
 8. Symptom-family, hypothesis, conflict-effect, and playbook catalogues validated at startup.
+9. The §10.5 raw scenario bundle, provenance manifest, and runtime-import guard for `expected/`.
 
 ### 23.2 Ownership rule
 
@@ -1709,6 +1870,7 @@ contract/canonical-event-v1
 - Database changes include migration.
 - Sample payload updated when API changes.
 - No dataset files or secrets committed.
+- Any reference-derived fixture includes provenance, license/usage reference, checksums, seed, and declared synthetic fields.
 - Demo reset still works.
 - No unsupported causal wording introduced.
 
@@ -1763,6 +1925,7 @@ At every exit gate, merge the smallest working vertical increments and run the g
 - API stubs return example payloads.
 - Typed topology fixture loads and invalid edges fail fast.
 - Golden score fixture calculates `92.1` from frozen factor inputs.
+- Raw multimodal scenario bundle validates, provenance is complete, and runtime code cannot import test-only ground truth.
 
 ### Milestone 1 — Event pipeline
 
@@ -1821,6 +1984,8 @@ At every exit gate, merge the smallest working vertical increments and run the g
 - Invalid timestamp and severity rejected.
 - Backend example JSON matches frontend TypeScript type.
 - Explanation IDs belong to correct incident/hypothesis.
+- Optional reference conversion preserves origin IDs/checksums, tags every synthetic field, is identical for the same seed, and rejects label leakage into detector/RCA input features.
+- Dataset manifest validation requires source/output SHA-256, license reference, retrieval date, transformation version, seed, synthetic fields, and explicit source-to-entity mapping where applicable.
 
 ### 25.2 Unit tests
 
@@ -1837,6 +2002,10 @@ At every exit gate, merge the smallest working vertical increments and run the g
 - Catalogue conflict operations reduce the named factor and emit matching conflicting evidence.
 - Missing and conflicting evidence generation.
 - Playbook applicability.
+- Scenario builder is byte-identical for the same seed and changes output when the declared seed/profile version changes.
+- Static import guard fails if ingestion, detection, incident, RCA, evidence, playbook, or explanation packages reference `expected` or `ground_truth`.
+- Leakage guard fails if dataset label columns influence runtime severity, alerts, hypothesis type/rank, incident membership, or signal values.
+- Semantic guard rejects time-bucket-derived trace IDs, implicit “closest entity” mappings, and proxy signals presented under measured-signal names.
 
 ### 25.3 Integration tests
 
@@ -1848,6 +2017,7 @@ At every exit gate, merge the smallest working vertical increments and run the g
 - Repeated `client_action_id` does not duplicate review or audit rows; stale analysis review returns `409`.
 - Conflicting terminal reviews and reviews on closed incidents return the frozen `409` codes.
 - Explanation failure produces template fallback.
+- Reset/replay reads each raw bundle file through its corresponding adapter; direct database/canonical-event fixture loading is rejected for the live demo path.
 
 ### 25.4 End-to-end golden test
 
@@ -1886,6 +2056,8 @@ The prototype is complete only when all are true:
 - It starts from a documented command on a fresh machine.
 - It works offline except for optional LLM mode.
 - The golden scenario is deterministic.
+- Original reference files are unchanged; the derived bundle has complete provenance and byte-reproducible generation.
+- Runtime analysis has no access to dataset class labels or `expected/ground_truth.json`.
 - All required modalities visibly enter through distinct source adapters, and the topology fixture load is visible.
 - The incident uses typed topology, symptom compatibility, and trace/session evidence—not only timestamp proximity.
 - At least three root-cause candidates are ranked.
@@ -1908,16 +2080,17 @@ The prototype is complete only when all are true:
 Target duration: 4–6 minutes.
 
 1. Show the normal typed topology, five source-adapter statuses, and baseline dashboard.
-2. Trigger the gateway configuration scenario.
-3. Show the config change, forwarded-RPS/connection/TCP anomaly, alert, and downstream errors arrive while raw-ingress distribution remains stable.
-4. Open the generated incident timeline.
-5. Show why each event was attached.
-6. Show the `sends_traffic_to` propagation path and contrast it with `depends_on` traversal.
-7. Compare the three hypotheses and factor breakdowns.
-8. Open observed, correlated, conflicting, and missing evidence.
-9. Show a safe diagnostic/remediation playbook.
-10. Confirm or reject a hypothesis and show the audit record.
-11. Briefly state that public datasets informed anomaly/log design but the live incident is a coherent simulator scenario.
+2. Show the data-source badge/manifest briefly: reference-informed, deterministically simulated, and not production telemetry.
+3. Trigger the gateway configuration scenario.
+4. Show the config change, forwarded-RPS/connection/TCP anomaly, alert, and downstream errors arrive while raw-ingress distribution remains stable.
+5. Open the generated incident timeline.
+6. Show why each event was attached.
+7. Show the `sends_traffic_to` propagation path and contrast it with `depends_on` traversal.
+8. Compare the three hypotheses and factor breakdowns.
+9. Open observed, correlated, conflicting, and missing evidence.
+10. Show a safe diagnostic/remediation playbook.
+11. Confirm or reject a hypothesis and show the audit record.
+12. State that public datasets informed anomaly/log design while the coherent cross-modal incident is deterministic and synthetic.
 
 ### Demo fallback
 
@@ -1938,6 +2111,7 @@ Target duration: 4–6 minutes.
 | Topology arrows imply contradictory directions | Use typed relations and catalogue-declared traversal policies |
 | Simulator feels artificial | Coherent scenario, realistic values, explicit prototype framing |
 | Reference datasets dominate scope | Keep them outside runtime and optional for future detector evaluation |
+| Synthetic enrichment is presented as real evidence | Preserve provenance, label it in the UI, forbid unrelated row-joins, and keep simulator ground truth separate from RCA inputs |
 | LLM hallucinates evidence | Structured IDs, backend validation, deterministic fallback |
 | SQLite write contention | Single backend process, short transactions, bounded event rate |
 | Too many UI panels | Prioritize incident investigation and topology/timeline views |
@@ -1952,6 +2126,7 @@ Target duration: 4–6 minutes.
 ### Frozen for MVP
 
 - Dataset is reference-only.
+- Public alternatives and enriched samples may improve realism, but only the deterministic scenario defines cross-modal causal truth.
 - Simulator is the runtime source.
 - SQLite is the only physical store.
 - REST polling replaces streaming.

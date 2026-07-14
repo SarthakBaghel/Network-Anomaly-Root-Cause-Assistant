@@ -16,7 +16,7 @@ competing copies.
 
 | Artifact | SHA-256 |
 |---|---|
-| `backend/openapi.json` | `ea1d39d04df12332e100bae4d077e0351a859611b634a9e4e25d99d3592b756d` |
+| `backend/openapi.json` | `7d3b4623622c43d16fc2c04d770b64dceb7c5702e66f519e9c927fc49c2e50d8` |
 | `backend/tests/fixtures/golden_events.jsonl` | `06612568cea892f214b245d95f2ebff0c04d659d1c931c2b74e26df82f60659a` |
 | `backend/tests/fixtures/golden_anomalies.json` | `fa57ab8b3052648592ef1c48d281905cba3b38e8ff12a905168e966ff362eb8f` |
 | `backend/tests/fixtures/golden_incident_bundle.json` | `fbcb25d76bbfc52ae14c8686a36b853eca4d36a89fbd897eb0a392f635914cfe` |

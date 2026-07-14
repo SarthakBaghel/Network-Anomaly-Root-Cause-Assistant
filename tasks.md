@@ -1,5 +1,5 @@
 # Network Anomaly Root-Cause Assistant — Team Task Board
-> **Authority:** [NETWORK_ANOMALY_RCA_PROTOTYPE_BLUEPRINT.md](./NETWORK_ANOMALY_RCA_PROTOTYPE_BLUEPRINT.md) (v1.4) is the implementation source of truth.
+> **Authority:** [NETWORK_ANOMALY_RCA_PROTOTYPE_BLUEPRINT.md](./NETWORK_ANOMALY_RCA_PROTOTYPE_BLUEPRINT.md) (v1.5) is the implementation source of truth.
 > If `design.md`, `Ideation.md`, code, or this file conflicts with the blueprint, **the blueprint wins** until a reviewed change is recorded in `docs/api-decisions.md`.
 
 > **Purpose:** This is the executable work board for a five-person team. Each artifact has one accountable owner, named consumers, acceptance checks, and a handoff point. “Owner” means merge responsibility; another person may review, but must not independently create a competing version.
@@ -336,13 +336,14 @@
 
 ### Phase 0 — Handoff Fixtures First (Hours 0–2)
 
-- [ ] **P3-00**: Build blueprint v1.4's provenance-safe bundle under `backend/app/fixtures/`:
+- [ ] **P3-00**: Build blueprint v1.5's provenance-safe bundle under `backend/app/fixtures/`:
   - `reference_profiles/network_profile.json` and `reference_profiles/log_templates.yaml`
   - `scenarios/gateway_rate_limit/inputs/{metrics,logs,alerts,config_changes}.jsonl`; every referenced entity must exist in P4's topology
   - `scenarios/gateway_rate_limit/provenance.json` with source file/hash, derivation script version, seed, generated-at value, and output hashes
   - `scenarios/gateway_rate_limit/expected/ground_truth.json` for tests only; runtime replay accepts `inputs/` only
   - `scripts/build_network_profile.py` reproduces byte-identical outputs from the checked-in source profile and seed
   - Add a provenance/ID/hash manifest test; coordinate with P1's runtime-import guard
+  - Apply blueprint §3.3.4: no label-derived severity/hypotheses, time-bucket trace IDs, implicit entity mapping, or proxy signals presented as measured metrics
 
 - [ ] **P3-01**: Create `backend/tests/fixtures/source_adapters/` — freeze the four raw source-schema shapes from blueprint §9.1.1 exactly:
   - `valid_prometheus_sample.json` — Prometheus metric sample

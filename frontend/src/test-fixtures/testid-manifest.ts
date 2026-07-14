@@ -12,9 +12,10 @@ export const TEST_IDS = {
   hypothesisConfirm: 'hypothesis-confirm-btn',
   hypothesisReject: 'hypothesis-reject-btn',
   evidenceRequest: 'evidence-request-btn',
+  apiError: 'api-error',
+  apiLoading: 'api-loading',
 } as const
 
 export const incidentRowTestId = (incidentId: string) => `incident-row-${incidentId}`
 export const hypothesisRowTestId = (hypothesisId: string) => `hypothesis-row-${hypothesisId}`
 export const sourceHealthTestId = (source: string) => `source-health-${source}`
-

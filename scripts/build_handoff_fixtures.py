@@ -13,6 +13,7 @@ BACKEND_FIXTURES = ROOT / "backend" / "tests" / "fixtures"
 GOLDEN_EVENTS = BACKEND_FIXTURES / "golden_events.jsonl"
 TOPOLOGY = ROOT / "backend" / "app" / "fixtures" / "topology.json"
 FRONTEND_MOCK = ROOT / "frontend" / "src" / "test-fixtures" / "golden-investigation-response.json"
+FRONTEND_EVENTS = ROOT / "frontend" / "src" / "test-fixtures" / "golden-events.json"
 RUN_ID = "run_007"
 INCIDENT_ID = "inc_001"
 
@@ -434,6 +435,7 @@ def build_outputs() -> dict[Path, str]:
         BACKEND_FIXTURES / "golden_review_examples.json": pretty(review_examples),
         BACKEND_FIXTURES / "golden_audit_examples.json": pretty(audit_examples),
         FRONTEND_MOCK: pretty(investigation),
+        FRONTEND_EVENTS: pretty(events),
     }
 
 
@@ -457,4 +459,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

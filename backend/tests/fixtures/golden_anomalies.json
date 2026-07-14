@@ -1,0 +1,180 @@
+{
+  "actionable_anomaly_count": 9,
+  "anomalies": [
+    {
+      "anomaly_id": "ano_35484f91d06c7a966ca1d3ee",
+      "anomaly_type": "FORWARDED_TRAFFIC_SPIKE",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:30:30.200Z",
+      "detector_id": "rolling_zscore_v1",
+      "event_id": "evt_35484f91d06c7a966ca1d3ee",
+      "explanation": "FORWARDED_TRAFFIC_SPIKE matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "prom-forwarded_requests_per_second-0242"
+      },
+      "score": 0.91,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:30:30.000Z",
+      "window_start": "2026-07-14T09:25:30.000Z"
+    },
+    {
+      "anomaly_id": "ano_885259a4b6d0556ea7c5de63",
+      "anomaly_type": "ACTIVE_CONNECTION_SPIKE",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:30:30.200Z",
+      "detector_id": "rolling_zscore_v1",
+      "event_id": "evt_885259a4b6d0556ea7c5de63",
+      "explanation": "ACTIVE_CONNECTION_SPIKE matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "prom-active_connections_total-0243"
+      },
+      "score": 0.89,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:30:30.000Z",
+      "window_start": "2026-07-14T09:25:30.000Z"
+    },
+    {
+      "anomaly_id": "ano_d7512779ec9e6b1d7816cd44",
+      "anomaly_type": "CONNECTION_UTILIZATION_HIGH",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:30:30.200Z",
+      "detector_id": "rolling_zscore_v1",
+      "event_id": "evt_d7512779ec9e6b1d7816cd44",
+      "explanation": "CONNECTION_UTILIZATION_HIGH matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "prom-connection_utilization-0244"
+      },
+      "score": 0.94,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:30:30.000Z",
+      "window_start": "2026-07-14T09:25:30.000Z"
+    },
+    {
+      "anomaly_id": "ano_e0522cc68c5745b71921ae73",
+      "anomaly_type": "TCP_RESET_SPIKE",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:30:40.200Z",
+      "detector_id": "rolling_zscore_v1",
+      "event_id": "evt_e0522cc68c5745b71921ae73",
+      "explanation": "TCP_RESET_SPIKE matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "prom-tcp_resets_total-0245"
+      },
+      "score": 0.85,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:30:40.000Z",
+      "window_start": "2026-07-14T09:25:40.000Z"
+    },
+    {
+      "anomaly_id": "ano_03c5050a56cee15ab5db71d6",
+      "anomaly_type": "TCP_RETRANSMISSION_SPIKE",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:30:40.200Z",
+      "detector_id": "rolling_zscore_v1",
+      "event_id": "evt_03c5050a56cee15ab5db71d6",
+      "explanation": "TCP_RETRANSMISSION_SPIKE matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "prom-tcp_retransmissions_total-0246"
+      },
+      "score": 0.87,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:30:40.000Z",
+      "window_start": "2026-07-14T09:25:40.000Z"
+    },
+    {
+      "anomaly_id": "ano_af9eac3889424a2665798d8e",
+      "anomaly_type": "GATEWAY_TRAFFIC_ALERT",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:30:45.200Z",
+      "detector_id": "alert_severity_v1",
+      "event_id": "evt_af9eac3889424a2665798d8e",
+      "explanation": "GATEWAY_TRAFFIC_ALERT matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "alert-gateway-forwarded-0001"
+      },
+      "score": 0.95,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:30:45.000Z",
+      "window_start": "2026-07-14T09:25:45.000Z"
+    },
+    {
+      "anomaly_id": "ano_9568af67025f7e38b7dcd123",
+      "anomaly_type": "CHECKOUT_LATENCY_HIGH",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:31:00.200Z",
+      "detector_id": "rolling_zscore_v1",
+      "event_id": "evt_9568af67025f7e38b7dcd123",
+      "explanation": "CHECKOUT_LATENCY_HIGH matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "prom-checkout_p95_latency_ms-0247"
+      },
+      "score": 0.88,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:31:00.000Z",
+      "window_start": "2026-07-14T09:26:00.000Z"
+    },
+    {
+      "anomaly_id": "ano_78365ca85ec827cf54fafd17",
+      "anomaly_type": "UPSTREAM_TIMEOUT",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:31:15.200Z",
+      "detector_id": "log_rule_v1",
+      "event_id": "evt_78365ca85ec827cf54fafd17",
+      "explanation": "UPSTREAM_TIMEOUT matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "log-payment-timeout-0001"
+      },
+      "score": 0.86,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:31:15.000Z",
+      "window_start": "2026-07-14T09:26:15.000Z"
+    },
+    {
+      "anomaly_id": "ano_51329709a4ae6b6bdd4c825b",
+      "anomaly_type": "CHECKOUT_ERROR_ALERT",
+      "can_open_incident": true,
+      "context_only": false,
+      "detected_at": "2026-07-14T09:31:30.200Z",
+      "detector_id": "alert_severity_v1",
+      "event_id": "evt_51329709a4ae6b6bdd4c825b",
+      "explanation": "CHECKOUT_ERROR_ALERT matched the frozen detector rule.",
+      "features": {
+        "source_record_id": "alert-checkout-error-0001"
+      },
+      "score": 0.95,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:31:30.000Z",
+      "window_start": "2026-07-14T09:26:30.000Z"
+    }
+  ],
+  "context_markers": [
+    {
+      "anomaly_id": "ctx_7f20aad8c07824c11b212d21",
+      "anomaly_type": "RECENT_CONFIGURATION_CHANGE",
+      "can_open_incident": false,
+      "context_only": true,
+      "detected_at": "2026-07-14T09:30:00.200Z",
+      "detector_id": "config_change_marker_v1",
+      "event_id": "evt_7f20aad8c07824c11b212d21",
+      "explanation": "Configuration changes are retained as context and cannot open an incident.",
+      "features": {
+        "change_ticket": "CHG-DEMO-001"
+      },
+      "score": 0.0,
+      "threshold": 0.75,
+      "window_end": "2026-07-14T09:30:00.000Z",
+      "window_start": "2026-07-14T09:25:00.000Z"
+    }
+  ],
+  "scenario_id": "gateway_rate_limit_disabled",
+  "schema_version": "1.0",
+  "version": "golden-anomalies-1.0"
+}

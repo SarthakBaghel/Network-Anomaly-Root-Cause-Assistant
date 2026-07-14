@@ -1,0 +1,10 @@
+{
+  "code": "UPSTREAM_CONNECTION_TIMEOUT",
+  "dependency_id": "payment-db-01",
+  "facility": "application",
+  "level": "error",
+  "message": "Upstream dependency payment-db-01 timed out after 2000 ms",
+  "observed_at": "2026-07-14T09:31:15.000Z",
+  "record_id": "log-payment-timeout-0001",
+  "trace_id": "scenario_gateway_rate_limit_001"
+}

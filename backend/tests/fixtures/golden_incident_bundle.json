@@ -1,0 +1,167 @@
+{
+  "attached_events": [
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "WITHIN_60_SECONDS"
+      ],
+      "attachment_score": 0.9,
+      "decision": "attached",
+      "event_id": "evt_7f20aad8c07824c11b212d21",
+      "source_record_id": "config-change-000001"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_d2ebd25def796477cdec8ba8",
+      "source_record_id": "prom-raw_ingress_requests_per_second-0241"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_35484f91d06c7a966ca1d3ee",
+      "source_record_id": "prom-forwarded_requests_per_second-0242"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_885259a4b6d0556ea7c5de63",
+      "source_record_id": "prom-active_connections_total-0243"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_d7512779ec9e6b1d7816cd44",
+      "source_record_id": "prom-connection_utilization-0244"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_e0522cc68c5745b71921ae73",
+      "source_record_id": "prom-tcp_resets_total-0245"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_03c5050a56cee15ab5db71d6",
+      "source_record_id": "prom-tcp_retransmissions_total-0246"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_af9eac3889424a2665798d8e",
+      "source_record_id": "alert-gateway-forwarded-0001"
+    },
+    {
+      "attachment_reasons": [
+        "ONE_TRAFFIC_HOP",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
+      "event_id": "evt_9568af67025f7e38b7dcd123",
+      "source_record_id": "prom-checkout_p95_latency_ms-0247"
+    },
+    {
+      "attachment_reasons": [
+        "TWO_TRAFFIC_HOPS",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 0.75,
+      "decision": "attached",
+      "event_id": "evt_78365ca85ec827cf54fafd17",
+      "source_record_id": "log-payment-timeout-0001"
+    },
+    {
+      "attachment_reasons": [
+        "ONE_TRAFFIC_HOP",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 0.9,
+      "decision": "attached",
+      "event_id": "evt_51329709a4ae6b6bdd4c825b",
+      "source_record_id": "alert-checkout-error-0001"
+    },
+    {
+      "attachment_reasons": [
+        "SHARED_SCENARIO_TRACE",
+        "CONFLICTING_DB_EVIDENCE"
+      ],
+      "attachment_score": 0.4,
+      "decision": "attached",
+      "event_id": "evt_0017b55d40f1c8d1a3233408",
+      "source_record_id": "prom-db_connection_utilization-0248"
+    }
+  ],
+  "excluded_events": [
+    {
+      "attachment_reasons": [
+        "INCOMPATIBLE_MAINTENANCE_SYMPTOM",
+        "EXPLICIT_DIFFERENT_TRACE"
+      ],
+      "attachment_score": -0.15,
+      "decision": "excluded",
+      "event_id": "evt_1d99bedd627abe8ef1dca5d6",
+      "source_record_id": "log-auth-certificate-0001"
+    }
+  ],
+  "incident": {
+    "affected_entity_ids": [
+      "api-gateway-01",
+      "checkout-api-01",
+      "payment-api-01"
+    ],
+    "anomaly_count": 9,
+    "confirmed_hypothesis_id": null,
+    "current_analysis_run_id": "run_007",
+    "incident_id": "inc_001",
+    "last_event_at": "2026-07-14T09:31:40.000Z",
+    "primary_entity_id": "api-gateway-01",
+    "severity": 0.95,
+    "started_at": "2026-07-14T09:30:00.000Z",
+    "status": "investigating",
+    "title": "Checkout degradation through API gateway",
+    "top_hypothesis_id": "hyp_001"
+  },
+  "schema_version": "1.0",
+  "version": "golden-incident-bundle-1.0"
+}

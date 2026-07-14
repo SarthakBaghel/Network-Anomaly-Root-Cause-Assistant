@@ -1,0 +1,31 @@
+{
+  "attached_event_ids": [
+    "evt_7f20aad8c07824c11b212d21",
+    "evt_d2ebd25def796477cdec8ba8",
+    "evt_35484f91d06c7a966ca1d3ee",
+    "evt_885259a4b6d0556ea7c5de63",
+    "evt_d7512779ec9e6b1d7816cd44",
+    "evt_e0522cc68c5745b71921ae73",
+    "evt_03c5050a56cee15ab5db71d6",
+    "evt_af9eac3889424a2665798d8e",
+    "evt_9568af67025f7e38b7dcd123",
+    "evt_78365ca85ec827cf54fafd17",
+    "evt_51329709a4ae6b6bdd4c825b",
+    "evt_0017b55d40f1c8d1a3233408"
+  ],
+  "excluded_event_ids": [
+    "evt_1d99bedd627abe8ef1dca5d6"
+  ],
+  "expected_scores": [
+    92.1,
+    65.6,
+    41.5
+  ],
+  "probable_cause": {
+    "entity_id": "api-gateway-01",
+    "hypothesis_type": "configuration_regression"
+  },
+  "scenario_id": "gateway_rate_limit_disabled",
+  "schema_version": "1.0",
+  "version": "ground-truth-1.0"
+}

@@ -1,0 +1,10 @@
+{
+  "actor": "deploy-bot",
+  "change_id": "config-change-000001",
+  "change_ticket": "CHG-DEMO-001",
+  "changed_at": "2026-07-14T09:30:00.000Z",
+  "config_key": "rate_limit.enabled",
+  "new_value": false,
+  "old_value": true,
+  "target_entity_id": "api-gateway-01"
+}

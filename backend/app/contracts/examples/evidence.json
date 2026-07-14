@@ -1,0 +1,13 @@
+{
+  "evidence_id": "ev_001",
+  "analysis_run_id": "run_007",
+  "incident_id": "inc_001",
+  "hypothesis_id": "hyp_001",
+  "kind": "observed",
+  "source_event_id": "evt_forwarded_rps_001",
+  "statement": "Gateway forwarded request rate reached 7,800 requests/s.",
+  "relevance": 0.95,
+  "reason_code": "METRIC_THRESHOLD_EXCEEDED",
+  "created_at": "2026-07-14T09:31:41.000Z"
+}
+

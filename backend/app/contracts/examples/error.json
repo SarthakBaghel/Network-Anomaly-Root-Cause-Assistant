@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Event failed validation.",
+    "details": [{"field": "entity_id", "reason_code": "FIELD_REQUIRED"}]
+  }
+}
+

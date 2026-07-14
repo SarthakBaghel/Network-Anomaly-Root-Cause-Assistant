@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "version": "topology-1.1",
+  "generated_at": "2026-07-14T09:00:00.000Z",
+  "nodes": [
+    {"id": "api-gateway-01", "name": "API Gateway", "entity_type": "gateway", "service": "api-gateway", "criticality": "critical"},
+    {"id": "checkout-api-01", "name": "Checkout API", "entity_type": "service", "service": "checkout-api", "criticality": "critical"},
+    {"id": "payment-api-01", "name": "Payment API", "entity_type": "service", "service": "payment-api", "criticality": "critical"},
+    {"id": "payment-db-01", "name": "Payment Database", "entity_type": "database", "service": "payment-db", "criticality": "critical"},
+    {"id": "auth-api-01", "name": "Authentication API", "entity_type": "service", "service": "auth-api", "criticality": "high"}
+  ],
+  "edges": [
+    {"source": "api-gateway-01", "target": "checkout-api-01", "relation_type": "sends_traffic_to", "relationship": "forwards_requests"},
+    {"source": "checkout-api-01", "target": "payment-api-01", "relation_type": "sends_traffic_to", "relationship": "calls"},
+    {"source": "payment-api-01", "target": "payment-db-01", "relation_type": "sends_traffic_to", "relationship": "queries"},
+    {"source": "api-gateway-01", "target": "auth-api-01", "relation_type": "sends_traffic_to", "relationship": "validates_sessions"},
+    {"source": "api-gateway-01", "target": "checkout-api-01", "relation_type": "depends_on", "relationship": "requires_checkout_response"},
+    {"source": "checkout-api-01", "target": "payment-api-01", "relation_type": "depends_on", "relationship": "requires_payment_service"},
+    {"source": "payment-api-01", "target": "payment-db-01", "relation_type": "depends_on", "relationship": "requires_payment_store"},
+    {"source": "api-gateway-01", "target": "auth-api-01", "relation_type": "depends_on", "relationship": "requires_authentication"}
+  ]
+}
+

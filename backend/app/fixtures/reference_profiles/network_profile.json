@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "version": "network-profile-1.0",
+  "source_policy": "Hand-reviewed plausible defaults informed by reference datasets; no labels are copied into runtime inputs.",
+  "signals": {
+    "raw_ingress_requests_per_second": {"baseline": 7800.0, "min": 7600.0, "max": 8000.0, "unit": "requests/s"},
+    "forwarded_requests_per_second": {"baseline": 2400.0, "changed": 7800.0, "safety_threshold": 5000.0, "unit": "requests/s"},
+    "active_connections_total": {"baseline": 1200.0, "changed": 4100.0, "safety_threshold": 3000.0, "unit": "connections"},
+    "connection_utilization": {"baseline": 0.35, "changed": 0.92, "safety_threshold": 0.8, "unit": "ratio"},
+    "tcp_resets_total": {"baseline": 2.0, "changed": 48.0, "safety_threshold": 20.0, "unit": "count/10s"},
+    "tcp_retransmissions_total": {"baseline": 6.0, "changed": 72.0, "safety_threshold": 30.0, "unit": "count/10s"},
+    "checkout_p95_latency_ms": {"baseline": 180.0, "changed": 1250.0, "safety_threshold": 800.0, "unit": "ms"},
+    "db_connection_utilization": {"baseline": 0.42, "changed": 0.44, "safety_threshold": 0.85, "unit": "ratio"}
+  }
+}
+

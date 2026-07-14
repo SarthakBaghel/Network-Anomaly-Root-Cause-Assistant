@@ -1,0 +1,10 @@
+{
+  "labels": {
+    "service": "api-gateway"
+  },
+  "metric": "forwarded_requests_per_second",
+  "observed_at": "2026-07-14T09:30:30.000Z",
+  "sample_id": "prom-forwarded_requests_per_second-0242",
+  "unit": "requests/s",
+  "value": 7800.0
+}

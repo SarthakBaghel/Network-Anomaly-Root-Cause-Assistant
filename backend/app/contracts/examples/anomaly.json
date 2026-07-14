@@ -1,0 +1,16 @@
+{
+  "anomaly_id": "ano_forwarded_rps_001",
+  "event_id": "evt_forwarded_rps_001",
+  "detector_id": "rolling_zscore_v1",
+  "detected_at": "2026-07-14T09:30:30.200Z",
+  "anomaly_type": "FORWARDED_TRAFFIC_SPIKE",
+  "score": 0.91,
+  "threshold": 0.75,
+  "context_only": false,
+  "can_open_incident": true,
+  "window_start": "2026-07-14T09:25:30.000Z",
+  "window_end": "2026-07-14T09:30:30.000Z",
+  "features": {"z_score": 4.25, "baseline_mean": 2400.0, "observed": 7800.0},
+  "explanation": "Forwarded request rate exceeded the rolling baseline by 4.25 standard deviations."
+}
+

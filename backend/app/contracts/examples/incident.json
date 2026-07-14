@@ -1,0 +1,15 @@
+{
+  "incident_id": "inc_001",
+  "current_analysis_run_id": "run_007",
+  "title": "Checkout degradation through API gateway",
+  "status": "investigating",
+  "severity": 0.95,
+  "started_at": "2026-07-14T09:30:00.000Z",
+  "last_event_at": "2026-07-14T09:31:40.000Z",
+  "primary_entity_id": "api-gateway-01",
+  "affected_entity_ids": ["api-gateway-01", "checkout-api-01", "payment-api-01"],
+  "anomaly_count": 9,
+  "top_hypothesis_id": "hyp_001",
+  "confirmed_hypothesis_id": null
+}
+

@@ -1,0 +1,13 @@
+{
+  "annotations": {
+    "summary": "Forwarded requests and active connections exceed limits"
+  },
+  "fingerprint": "alert-gateway-forwarded-0001",
+  "labels": {
+    "alertname": "HighForwardedRequestAndConnectionRate",
+    "entity_id": "api-gateway-01",
+    "severity": "critical"
+  },
+  "startsAt": "2026-07-14T09:30:45.000Z",
+  "status": "firing"
+}

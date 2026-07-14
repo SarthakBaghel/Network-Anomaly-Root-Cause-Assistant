@@ -13,6 +13,9 @@ dependencies = [
   "alembic==1.16.5",
   "uvicorn==0.32.0",
   "PyYAML==6.0.2",
+  "numpy==2.5.1",
+  "pandas==3.0.3",
+  "ulid-py==1.1.0",
   "networkx==3.5",
 ]
 

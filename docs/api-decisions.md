@@ -83,19 +83,3 @@ contracts only when its affected owners have reviewed it.
   explanation modules may not import or open them.
 - **Affected owners:** all backend owners
 
-## M0-009 — Expanded reference dataset and leakage firewall
-
-- **Status:** accepted for dataset integration
-- **Decision:** NSL-KDD, UNSW-NB15, Loghub HDFS/BGL, GAIA MicroSS, and the
-  sample distributed-trace dataset remain reference-only. They may produce
-  attributed profiles, templates, mapping proposals, and offline evaluation
-  samples, but the live incident remains the deterministic simulator scenario.
-- **Forbidden transformations:** dataset class/anomaly labels may not derive
-  runtime severity, alerts, hypotheses, incident membership, RCA factors, or
-  signal values; time buckets may not manufacture trace IDs; approximate
-  network formulas may not be named as measured operational metrics; GAIA
-  identities may not replace the frozen topology without a full contract change.
-- **Reason:** these restrictions prevent target leakage, false time-based
-  correlation, misleading measurement semantics, and fixture incompatibility.
-- **Affected owners:** all; Persons 3 and 4 resolve dataset/source and
-  topology/RCA semantics respectively.

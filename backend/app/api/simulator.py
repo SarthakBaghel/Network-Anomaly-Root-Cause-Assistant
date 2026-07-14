@@ -20,7 +20,17 @@ def stop() -> dict[str, Any]:
 
 @router.post("/reset", response_model=dict[str, Any])
 def reset() -> dict[str, Any]:
-    feature_not_implemented("Persons 1 and 3")
+    """Execute the full demo reset sequence (blueprint §5.2, P1-22).
+
+    Stops the simulator, clears demo rows, reloads topology,
+    re-seeds history, resets the simulator clock, and writes DEMO_RESET audit.
+    """
+    from app.db.session import session_scope
+    from app.orchestration import reset_service
+
+    with session_scope() as session:
+        result = reset_service.execute(session)
+    return result
 
 
 @router.post("/scenarios/{scenario_id}/trigger", response_model=dict[str, Any])

@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import timedelta
 
 from app.config import settings
-from app.simulator.ingestion import AdapterValidationSink, IngestionSink
+from app.simulator.ingestion import IngestionSink, PersistentIngestionSink
 from app.simulator.timeline import SCENARIO_ID, TRACE_ID, TRIGGER_TIME, baseline_groups, scenario_groups
 
 SIMULATOR_REAL_TICK_SECONDS = 0.05
@@ -15,7 +15,7 @@ class SimulatorStateError(RuntimeError):
 
 class SimulatorEngine:
     def __init__(self, ingestion: IngestionSink | None = None, *, background: bool = True) -> None:
-        self.ingestion = ingestion or AdapterValidationSink()
+        self.ingestion = ingestion or PersistentIngestionSink()
         self.background = background
         self._baseline = baseline_groups()
         self._lock = threading.RLock()

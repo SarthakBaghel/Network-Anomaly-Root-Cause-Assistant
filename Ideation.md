@@ -1,180 +1,155 @@
-
-# AI-Powered Root Cause Analysis (RCA) System Architecture
-
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              DATA SOURCES                                   │
+│ DATA SOURCES  [MVP: simulator only]                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ • Metrics                                                                   │
-│   - Time-series KPIs (latency, error rate, throughput, resource utilization)│
-│                                                                             │
-│ • Logs                                                                      │
-│   - Syslog/text logs, JSON application logs, per-device log formats         │
-│   - (RAN/Core/OSS each differ)                                              │
-│                                                                             │
-│ • Alerts                                                                    │
-│   - Threshold-fired alarms, deduplicated events                             │
-│                                                                             │
-│ • Config Changes                                                            │
-│   - Configuration diffs/commits with timestamp and actor                    │
-│                                                                             │
-│ • Deployments                                                               │
-│   - Release events, rollout events, version changes                         │
-│                                                                             │
-│ • Service Topology                                                          │
-│   - Dependency graph (RAN → Transport → Core → OSS/BSS)                     │
-│                                                                             │
-│ • Historical Incidents                                                      │
-│   - Previous root-cause resolutions                                         │
-│   - Used later for historical co-occurrence scoring                         │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             INGESTION LAYER                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ • FastAPI REST APIs                                                         │
-│   - Source-specific adapters                                                │
-│   - Syslog, SNMP, JSON alarms, CSV KPIs, etc.                               │
-│                                                                             │
-│ • WebSocket                                                                 │
-│   - Streaming metrics and alerts                                            │
-│                                                                             │
 │ • Telemetry Simulator                                                       │
-│   - Generates synthetic fault-injected traffic                              │
+│   - metrics, logs, config changes                                           │
+│   - (fault-injected, gives you ground truth for free)                       │
 │                                                                             │
-│ • Schema Validation                                                         │
-│   - Converts every source into one canonical event schema                   │
-│   - Invalid records quarantined (not discarded)                             │
-│                                                                             │
-│ • Timestamp Normalization                                                   │
-│   - Converts all timestamps to UTC                                          │
-│                                                                             │
-│ • Duplicate Detection                                                       │
-│   - Collapses repeated alarm storms                                         │
+│ [FUTURE: real Prometheus/OTel, syslog/SNMP, real telco feeds]               │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      RAW & NORMALIZED STORAGE                               │
+│ INGESTION & NORMALIZATION  [MVP]                                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ • Raw Event Store                                                           │
-│   - Original payloads                                                       │
+│ • Simulator                                                                 │
+│   - one ingestion function (not full REST/adapter framework — just a        │
+│     Python function per event type, calling the same validator)             │
 │                                                                             │
-│ • Metrics Store                                                             │
-│   - Normalized time-series database                                         │
+│ • Schema validation → CanonicalEvent, exactly:                              │
+│   {event_id, timestamp, entity_id, modality,                                │
+│    event_type, severity, raw_payload}                                       │
 │                                                                             │
-│ • Logs / Alerts / Config DB                                                 │
-│   - Canonical event records                                                 │
+│ • Invalid/incomplete records                                                │
+│   - quarantined, not dropped                                                │
+│   - (this alone still gives you the "missing evidence" story)               │
 │                                                                             │
-│ • Topology Store                                                            │
-│   - Network/service dependency graph                                        │
+│ • UTC timestamp normalization                                               │
 │                                                                             │
-│ • Incident & Audit Database                                                 │
-│   - Hypotheses, evidence, human verdicts                                    │
+│ • Duplicate/alarm-storm collapsing                                          │
+│                                                                             │
+│ [FUTURE: WebSocket streaming, multi-format adapters — REST polling          │
+│  every 1-2s is enough for the demo; judges won't check the transport]       │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     ANALYSIS & INTELLIGENCE                                 │
+│ STORAGE  [MVP: one SQLite DB, not five stores]                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ • Anomaly Detector                                                          │
-│   - Statistical/ML detection                                                │
-│   - Outputs anomaly events with confidence                                  │
+│ • Tables:                                                                   │
+│   metric_points, events, anomalies, incidents,                              │
+│   incident_events, hypotheses, evidence, audit_logs                         │
+│                                                                             │
+│ • raw_payload stored as a JSON column on `events`                           │
+│                                                                             │
+│ (diagram can still SHOW separate logical stores for the pitch —             │
+│ implementation is one file, one connection, zero ops overhead)              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ANALYSIS ENGINE  [MVP: simple, deterministic detectors]                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ • Anomaly Detector:                                                         │
+│   metrics  → rolling Z-score + static threshold                             │
+│   logs     → error-code mapping (known bad codes → anomaly)                 │
+│   alerts   → severity rule                                                  │
+│   changes  → recent-change flag (config/deploy in window = signal)          │
+│   [FUTURE: Isolation Forest, log-template drift]                            │
 │                                                                             │
 │ • Incident Manager                                                          │
-│   - Groups anomalies into incident windows                                  │
+│   - groups anomalies into one incident window                               │
 │                                                                             │
 │ • Topology Engine                                                           │
-│   - Finds upstream causes and downstream blast radius                       │
+│   - static, hand-authored dependency graph                                  │
+│   - frozen convention: source → target means "source depends on target"     │
+│   - e.g. checkout-service → database                                        │
+│   - downstream blast radius = traverse graph in REVERSE from the failing    │
+│     node                                                                    │
+│   - [FUTURE: automated topology discovery]                                  │
 │                                                                             │
 │ • Correlation Engine                                                        │
-│   Candidate accepted only if:                                               │
-│     ✓ Dependency edge exists                                                │
-│     ✓ Cause precedes symptom                                                │
-│     ✓ Historical co-occurrence passes threshold                             │
+│   - candidate ELIGIBLE if:                                                  │
+│     ✓ topologically connected (graph edge exists)                           │
+│     ✓ temporally plausible (cause precedes symptom)                         │
+│     ✓ supported by ≥1 metric/log/change event                               │
+│   (historical co-occurrence is NOT a required filter anymore —              │
+│    a novel failure with no matching history must still be findable)         │
 │                                                                             │
-│ • Root Cause Candidate Generator                                            │
+│ • Root-Cause Ranker                                                         │
+│   - weighted score, not a strict filter:                                    │
 │                                                                             │
-│ • Evidence Collector                                                        │
-│   - Alert IDs                                                               │
-│   - Config diffs                                                            │
-│   - KPI drift                                                               │
-│   - Links back to Raw Event Store                                           │
+│     Temporal relevance           20%                                        │
+│     Topology relevance           20%                                        │
+│     Change/deployment evidence   20%                                        │
+│     Metric anomaly severity      15%                                        │
+│     Supporting logs              15%                                        │
+│     Propagation consistency      10%                                        │
+│     + optional historical-similarity bonus, up to +10%                      │
 │                                                                             │
-│ • Root Cause Ranker                                                         │
-│   Score = Graph Distance                                                    │
-│         + Temporal Precedence                                               │
-│         + Historical Co-occurrence                                          │
-│                                                                             │
-│   Produces:                                                                 │
-│     • Confirmed                                                             │
-│     • Correlated                                                            │
-│     • Missing                                                               │
+│   → tiers: Confirmed evidence / Correlated signal / Missing evidence        │
 │                                                                             │
 │ • Playbook Engine                                                           │
-│   - Suggests historical remediation                                         │
-│   - Never auto-executes                                                     │
+│   - suggests from a small predefined list of                                │
+│     safe remediation steps; never auto-executes                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         EXPLAINABLE AI LAYER                                │
+│ LLM EXPLANATION LAYER  [MVP, this is your differentiator]                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ LLM Responsibilities                                                        │
+│ • Narrates only — never computes the root cause                             │
 │                                                                             │
-│ • Incident Summary                                                          │
-│ • Root Cause Explanation                                                    │
-│ • Investigation Steps                                                       │
-│ • Remediation Guidance                                                      │
-│                                                                             │
-│ Rules                                                                       │
-│ -----                                                                       │
 │ • Every claim must cite an evidence_id                                      │
-│ • Unsupported claims are regenerated                                        │
-│ • LLM NEVER computes the root cause                                         │
-│ • LLM only narrates structured analysis results                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER INTERFACE                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ • Dashboard                                                                 │
-│ • Live Topology                                                             │
-│ • Timeline                                                                  │
-│ • Ranked Root Causes                                                        │
-│ • Evidence Explorer                                                         │
-│ • Blast Radius Visualization                                                │
-│ • Suggested Remediation                                                     │
-│ • Audit Trail                                                               │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        HUMAN-IN-THE-LOOP                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Operators can:                                                              │
 │                                                                             │
-│ • Confirm hypothesis                                                        │
-│ • Reject hypothesis                                                         │
-│ • Modify evidence weighting                                                 │
-│ • Request additional evidence                                               │
-│ • Approve simulated remediation only                                        │
+│ • Unsupported claim → regenerate, OR fall back to a                         │
+│   deterministic templated sentence if regeneration still                    │
+│   fails (this fallback is cheap insurance — never let the                   │
+│   demo show a blank or an unciteable claim on stage)                        │
 │                                                                             │
-│ Nothing executes automatically below confidence thresholds.                 │
+│ • Wording rule: before human confirmation, always say                       │
+│   "Probable root cause" / "High-confidence evidence" —                      │
+│   reserve "Confirmed root cause" for AFTER operator accepts it              │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     INCIDENT MEMORY & LEARNING                              │
+│ DASHBOARD  [MVP]                                                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ • Final Human-Confirmed Root Cause                                          │
-│ • Resolution Applied                                                        │
-│ • Reviewer Feedback                                                         │
-│ • Similar Incident Retrieval                                                │
-│ • Historical Co-occurrence Updates                                          │
-│ • Permanent Audit History                                                   │
+│ • Charts                                                                    │
+│ • live topology (highlight propagation path)                                │
+│ • timeline                                                                  │
+│ • ranked probable causes                                                    │
+│ • evidence tiers (clickable to raw record)                                  │
+│ • suggested remediation                                                     │
+│ • audit trail                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ HUMAN REVIEW  [MVP]                                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ • Confirm                                                                   │
+│ • Reject                                                                    │
+│ • Request Evidence                                                          │
+│                                                                             │
+│ (Modify-weighting and Approve-simulated-remediation are                     │
+│ nice-to-haves — implement only if time remains after the                    │
+│ core loop works end to end)                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ INCIDENT MEMORY  [MVP: minimal, not learning]                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ • Store: completed incident, human-confirmed cause,                         │
+│   reviewer decision                                                         │
+│                                                                             │
+│ • Retrieve: one manually seeded "similar past incident" to                  │
+│   demonstrate the concept                                                   │
+│                                                                             │
+│ [FUTURE: automatic co-occurrence weight updates,                            │
+│ full similar-incident retrieval, model retraining]                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
-

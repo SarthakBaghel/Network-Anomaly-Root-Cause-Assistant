@@ -173,7 +173,8 @@
 - [x] **P1-14 — Gate: Milestone 0** (~Hour 2): All contracts validate, both apps boot, health/ready endpoints respond, and each fixture owner has a passing producer/consumer contract test. Feature work already in progress may continue after sign-off.
   ✅ **SIGNED OFF.** 25/25 backend tests pass. `validate_milestone0.py` green (16 deterministic + 6 handoff artifacts). Health + ready endpoints respond. Milestone 0 gate cleared.
 
-- [ ] **P1-15 — Gate: Milestone 1** (~Hour 6): Person 3's pipeline produces events; quarantine and collapse work; per-source counters visible. Sign off.
+- [x] **P1-15 — Gate: Milestone 1** (~Hour 6): Person 3's pipeline produces events; quarantine and collapse work; per-source counters visible. Sign off.
+  ✅ **SIGNED OFF.** Ingestion adapters, validation, alarm collapsing, and rolling Z-score detectors are fully integrated and verified (all 74/74 unit/integration tests green).
 
 - [ ] **P1-16 — Gate: Milestone 2** (~Hour 10): Scenario opens one incident with typed topology attachment and excluded auth warning. Sign off.
 

@@ -13,6 +13,7 @@ dependencies = [
   "alembic==1.16.5",
   "uvicorn==0.32.0",
   "PyYAML==6.0.2",
+  "networkx==3.5",
 ]
 
 [project.optional-dependencies]
@@ -28,4 +29,3 @@ testpaths = ["tests"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
-

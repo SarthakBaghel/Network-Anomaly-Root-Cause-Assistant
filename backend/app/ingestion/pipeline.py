@@ -106,7 +106,11 @@ class IngestionPipeline:
         adapters: dict[str, SourceAdapter] | None = None,
     ) -> None:
         self.session = session
-        self.publisher = publisher or NullPublisher()
+        if publisher is None:
+            from app.detection.service import DetectionPublisher
+            self.publisher: AcceptedEventPublisher = DetectionPublisher(session)
+        else:
+            self.publisher = publisher
         self.adapters = adapters or ADAPTERS
 
     def ingest(self, source: str, raw: Any, *, publish: bool = True) -> IngestionResult:

@@ -1,17 +1,19 @@
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ DATA SOURCES  [MVP: simulator only]                                         │
+│ DATA SOURCES [MVP]                                                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ • Telemetry Simulator                                                       │
-│   - metrics, logs, config changes                                           │
-│   - (fault-injected, gives you ground truth for free)                       │
-│                                                                             │
-│ [FUTURE: real Prometheus/OTel, syslog/SNMP, real telco feeds]               │
+│   - metrics, logs, alerts, config changes                                   │
+│   - (alerts added per Correction 3 — simulator emits an alert               │
+│      event once a threshold is crossed, e.g.:                              │
+│      {event_type: "HIGH_CHECKOUT_ERROR_RATE", modality: "alert",            │
+│       severity: 0.95} — cheap to add, makes the multimodal story            │
+│      genuinely true rather than partially true)                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ INGESTION & NORMALIZATION  [MVP]                                            │
+│ INGESTION & NORMALIZATION [MVP]                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ • Simulator                                                                 │
 │   - one ingestion function (not full REST/adapter framework — just a        │
@@ -21,21 +23,20 @@
 │   {event_id, timestamp, entity_id, modality,                                │
 │    event_type, severity, raw_payload}                                       │
 │                                                                             │
-│ • Invalid/incomplete records                                                │
-│   - quarantined, not dropped                                                │
-│   - (this alone still gives you the "missing evidence" story)               │
+│ • Invalid/incomplete records → quarantined, not dropped                     │
+│   (this alone still gives you the "missing evidence" story)                 │
 │                                                                             │
 │ • UTC timestamp normalization                                               │
 │                                                                             │
 │ • Duplicate/alarm-storm collapsing                                          │
 │                                                                             │
 │ [FUTURE: WebSocket streaming, multi-format adapters — REST polling          │
-│  every 1-2s is enough for the demo; judges won't check the transport]       │
+│ every 1-2s is enough for the demo; judges won't check the transport]        │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ STORAGE  [MVP: one SQLite DB, not five stores]                              │
+│ STORAGE [MVP: one SQLite DB, not five stores]                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ • Tables:                                                                   │
 │   metric_points, events, anomalies, incidents,                              │
@@ -49,73 +50,109 @@
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ANALYSIS ENGINE  [MVP: simple, deterministic detectors]                     │
+│ ANALYSIS ENGINE [MVP]                                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ • Anomaly Detector:                                                         │
-│   metrics  → rolling Z-score + static threshold                             │
-│   logs     → error-code mapping (known bad codes → anomaly)                 │
-│   alerts   → severity rule                                                  │
-│   changes  → recent-change flag (config/deploy in window = signal)          │
-│   [FUTURE: Isolation Forest, log-template drift]                            │
+│   metrics  → rolling Z-score + threshold                                    │
+│   logs     → error-code mapping                                             │
+│   alerts   → severity rule (now consistent — alerts exist                   │
+│              in the simulator, per Correction 3)                            │
+│   changes  → recent-change flag                                             │
 │                                                                             │
-│ • Incident Manager                                                          │
-│   - groups anomalies into one incident window                               │
+│ • Incident Manager — grouping rule now explicit:                            │
+│   attach an event to an incident when ALL of:                               │
+│     1. it falls within the time window (e.g. 5 minutes)                     │
+│     2. its entity is within N topology hops of the affected                 │
+│        entity (e.g. max 2 hops)                                             │
+│     3. its modality/category is relevant to the incident type               │
+│   → this is what stops an unrelated notification-service warning            │
+│     from getting swept into a database incident just because                │
+│     it happened around the same time                                        │
 │                                                                             │
-│ • Topology Engine                                                           │
-│   - static, hand-authored dependency graph                                  │
-│   - frozen convention: source → target means "source depends on target"     │
-│   - e.g. checkout-service → database                                        │
-│   - downstream blast radius = traverse graph in REVERSE from the failing    │
-│     node                                                                    │
-│   - [FUTURE: automated topology discovery]                                  │
+│ • Topology Engine — frozen edge convention (unchanged):                     │
+│   source → target means "source depends on target"                          │
 │                                                                             │
-│ • Correlation Engine                                                        │
-│   - candidate ELIGIBLE if:                                                  │
-│     ✓ topologically connected (graph edge exists)                           │
-│     ✓ temporally plausible (cause precedes symptom)                         │
-│     ✓ supported by ≥1 metric/log/change event                               │
-│   (historical co-occurrence is NOT a required filter anymore —              │
-│    a novel failure with no matching history must still be findable)         │
+│ • Candidate Generator                                                       │
+│   ↓                                                                         │
 │                                                                             │
 │ • Root-Cause Ranker                                                         │
-│   - weighted score, not a strict filter:                                    │
+│   answers: "how likely is this candidate?"                                  │
 │                                                                             │
-│     Temporal relevance           20%                                        │
-│     Topology relevance           20%                                        │
-│     Change/deployment evidence   20%                                        │
-│     Metric anomaly severity      15%                                        │
-│     Supporting logs              15%                                        │
-│     Propagation consistency      10%                                        │
-│     + optional historical-similarity bonus, up to +10%                      │
+│   weighted score (Correction 4: weights now correctly sum to 100%,          │
+│   history folded IN rather than added on top):                              │
 │                                                                             │
-│   → tiers: Confirmed evidence / Correlated signal / Missing evidence        │
+│     Temporal relevance          18%                                         │
+│     Topology relevance          18%                                         │
+│     Change/deployment evidence  18%                                         │
+│     Metric anomaly severity     14%                                         │
+│     Supporting logs             14%                                         │
+│     Propagation consistency     10%                                         │
+│     Historical similarity        8% (optional; 0 if no match —              │
+│                                  never a hard filter)                       │
+│                                                                             │
+│   → output labeled "Confidence score" only — NOT "causal probability"       │
+│     (an 89% score is a ranking heuristic, not a statistical claim)          │
+│                                                                             │
+│   ↓                                                                         │
+│                                                                             │
+│ • Evidence Collector                                                        │
+│   answers: "what records support or weaken this candidate?"                 │
+│                                                                             │
+│   attaches exact events per candidate, divided into                         │
+│   (Correction 2 — relabeled, never "confirmed"):                            │
+│                                                                             │
+│     Observed evidence                                                       │
+│       (factual: "DB connections reached 100%")                              │
+│                                                                             │
+│     Correlated signals                                                      │
+│       (temporally/statistically associated, no                              │
+│        proven causal path)                                                  │
+│                                                                             │
+│     Missing evidence                                                        │
+│       (would raise confidence if collected)                                 │
+│                                                                             │
+│   ↓                                                                         │
 │                                                                             │
 │ • Playbook Engine                                                           │
-│   - suggests from a small predefined list of                                │
-│     safe remediation steps; never auto-executes                             │
+│   suggests from a small predefined safe-remediation list;                   │
+│   never auto-executes                                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ LLM EXPLANATION LAYER  [MVP, this is your differentiator]                   │
+│ LLM EXPLANATION LAYER [MVP]                                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ • Narrates only — never computes the root cause                             │
+│ • LLM output is now STRUCTURED JSON, not free text                          │
+│   (Correction 6 — validate programmatically, not by reading                 │
+│   natural language after the fact):                                         │
 │                                                                             │
-│ • Every claim must cite an evidence_id                                      │
+│   {                                                                         │
+│     "summary": "...",                                                       │
+│     "claims": [                                                             │
+│       {"text": "...", "evidence_ids": ["evidence-14"]}                      │
+│     ],                                                                      │
+│     "remediation": [                                                        │
+│       {"text": "...", "playbook_step_id": "db-exhaustion-immediate-01"}     │
+│     ]                                                                       │
+│   }                                                                         │
 │                                                                             │
-│ • Unsupported claim → regenerate, OR fall back to a                         │
-│   deterministic templated sentence if regeneration still                    │
-│   fails (this fallback is cheap insurance — never let the                   │
-│   demo show a blank or an unciteable claim on stage)                        │
+│ • Backend validation (deterministic code, not the LLM):                     │
+│   - does every evidence_id actually exist in the Evidence Collector's       │
+│     output?                                                                 │
+│   - does every playbook_step_id actually exist in the Playbook Engine?      │
+│   - any claim with no evidence_id → unsupported                             │
+│   → on failure: retry generation once, else fall back to a                  │
+│     deterministic templated sentence (never show a blank or                 │
+│     unvalidated claim live)                                                 │
 │                                                                             │
-│ • Wording rule: before human confirmation, always say                       │
-│   "Probable root cause" / "High-confidence evidence" —                      │
-│   reserve "Confirmed root cause" for AFTER operator accepts it              │
+│ • Wording rule:                                                             │
+│   always "probable root cause" / "high-confidence evidence"                 │
+│   before human confirmation                                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ DASHBOARD  [MVP]                                                            │
+│ DASHBOARD [MVP]                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ • Charts                                                                    │
 │ • live topology (highlight propagation path)                                │
@@ -128,7 +165,7 @@
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ HUMAN REVIEW  [MVP]                                                         │
+│ HUMAN REVIEW [MVP]                                                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ • Confirm                                                                   │
 │ • Reject                                                                    │
@@ -141,7 +178,7 @@
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ INCIDENT MEMORY  [MVP: minimal, not learning]                               │
+│ INCIDENT MEMORY [MVP: minimal, not learning]                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ • Store: completed incident, human-confirmed cause,                         │
 │   reviewer decision                                                         │

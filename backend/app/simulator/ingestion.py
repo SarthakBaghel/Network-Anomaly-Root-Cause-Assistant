@@ -4,6 +4,9 @@ from typing import Literal, Protocol
 from app.contracts import CanonicalEvent
 from app.ingestion.adapters import ADAPTERS
 from app.ingestion.adapters.base import AdapterError
+from app.db.models import Event
+from app.db.session import session_scope
+from app.ingestion.pipeline import IngestionPipeline, event_to_contract
 
 
 @dataclass(frozen=True)
@@ -33,3 +36,17 @@ class AdapterValidationSink:
             return IngestionOutcome("quarantined", reason_code=getattr(exc, "reason_code", "VALIDATION_ERROR"))
         self.accepted_events.append(event)
         return IngestionOutcome("accepted", event=event)
+
+
+class PersistentIngestionSink:
+    """Runtime sink: simulator records traverse the same pipeline as API records."""
+
+    def ingest(self, source: str, raw: dict) -> IngestionOutcome:
+        with session_scope() as session:
+            result = IngestionPipeline(session).ingest(source, raw)
+            if result.status == "quarantined":
+                return IngestionOutcome("quarantined", reason_code=result.reason_codes[0])
+            if result.status == "collapsed":
+                return IngestionOutcome("collapsed")
+            row = session.get(Event, result.event_id) if result.event_id else None
+            return IngestionOutcome("accepted", event=event_to_contract(row) if row else None)

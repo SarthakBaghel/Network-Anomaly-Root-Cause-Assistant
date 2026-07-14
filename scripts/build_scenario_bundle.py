@@ -249,7 +249,7 @@ def canonical_event(source_type: str, raw: dict[str, Any]) -> dict[str, Any]:
         timestamp = payload["observed_at"]
         entity = payload["host"]
         event_type = payload["code"]
-        severity = {"info": 0.2, "warning": 0.35, "error": 0.8}[payload["level"]]
+        severity = {"info": 0.2, "warning": 0.35, "error": 0.88}[payload["level"]]
         signal = (None, None, None)
         trace = payload.get("trace_id") or TRACE_ID
     elif source_type == "alerts":
@@ -273,6 +273,8 @@ def canonical_event(source_type: str, raw: dict[str, Any]) -> dict[str, Any]:
 
     timestamp_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
     raw_payload = dict(payload)
+    if source_type == "config_changes":
+        raw_payload["context_only"] = True
     raw_payload["scenario_id"] = raw["scenario_id"]
     raw_payload["provenance"] = provenance
     return {
@@ -438,7 +440,7 @@ def build_outputs() -> dict[Path, str]:
         content = outputs[path] if path in outputs else path.read_text(encoding="utf-8")
         provenance_entries.append(
             {
-                "path": str(path.relative_to(ROOT)),
+                "path": path.relative_to(ROOT).as_posix(),
                 "sha256": digest(content),
                 "record_count": content.count("\n") if path.suffix == ".jsonl" else None,
                 "origin": "checked-in-profile" if path.is_relative_to(FIXTURES / "reference_profiles") else "deterministic-simulator",

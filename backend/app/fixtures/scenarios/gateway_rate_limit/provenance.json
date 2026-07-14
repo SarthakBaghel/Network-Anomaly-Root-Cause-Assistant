@@ -55,7 +55,7 @@
       "origin": "deterministic-simulator",
       "path": "backend/tests/fixtures/golden_events.jsonl",
       "record_count": 254,
-      "sha256": "06612568cea892f214b245d95f2ebff0c04d659d1c931c2b74e26df82f60659a"
+      "sha256": "8cb5e335b8f063f506774bb310741e9d9172d9c62ebea0fa0003a253d08c575a"
     },
     {
       "license": "project-authored synthetic fixture",

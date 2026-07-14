@@ -1,6 +1,4 @@
-]
 
-````md
 # AI-Powered Root Cause Analysis (RCA) System Architecture
 
 ```text
@@ -179,4 +177,4 @@
 │ • Permanent Audit History                                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
-````
+

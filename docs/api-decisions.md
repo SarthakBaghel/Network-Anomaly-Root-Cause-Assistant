@@ -83,3 +83,20 @@ contracts only when its affected owners have reviewed it.
   explanation modules may not import or open them.
 - **Affected owners:** all backend owners
 
+## M0-009 — Run-scoped explanation publication
+
+- **Status:** accepted for Milestone 0
+- **Decision:** Person 1 creates an immutable `AnalysisBuildContext` containing
+  the pending analysis-run and incident IDs before invoking the analysis
+  engine. Person 5 returns one or more validated `ExplanationDraft` values in
+  `AnalysisResult.explanation_rows`; the atomic publisher validates every
+  draft against that context, preserves its `template|llm` generator, and
+  appends all rows before switching `incident.current_analysis_run_id`.
+- **Fallback rule:** normal template generation is not a fallback. An
+  `EXPLANATION_FALLBACK_USED` audit record is appended only when the result
+  includes an uppercase catalogue-style fallback reason code and positive
+  attempt count. Invalid or run-mismatched drafts fail the building run and
+  leave the prior run current.
+- **Compatibility:** `explanation_payload` remains a deprecated constructor
+  input for one transition window and is converted to a validated draft.
+- **Affected owners:** Persons 1, 4, and 5

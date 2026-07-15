@@ -28,13 +28,16 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import threading
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Protocol, runtime_checkable
 
 from sqlalchemy.orm import Session
 
+from app.contracts import ExplanationOutput
 from app.db import models
 from app.db.repositories import (
     AnalysisRunRepository,
@@ -48,6 +51,29 @@ from app.db.repositories import (
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERSION = "rca-rules-1.1"
+FALLBACK_REASON_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+
+
+@dataclass(frozen=True)
+class AnalysisBuildContext:
+    """Immutable identity of the analysis revision currently being built."""
+
+    analysis_run_id: str
+    incident_id: str
+
+
+@dataclass(frozen=True)
+class ExplanationDraft:
+    """A validated, run-scoped explanation awaiting atomic persistence."""
+
+    output: ExplanationOutput
+    validated: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.output, ExplanationOutput):
+            raise TypeError("ExplanationDraft.output must be an ExplanationOutput")
+        if not isinstance(self.validated, bool):
+            raise TypeError("ExplanationDraft.validated must be a boolean")
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +116,7 @@ class AnalysisEngineProtocol(Protocol):
         self,
         incident: models.Incident,
         session: Session,
+        context: AnalysisBuildContext,
     ) -> "AnalysisResult":
         """Return a complete analysis result without opening a DB transaction."""
         ...
@@ -112,12 +139,53 @@ class AnalysisResult:
         hypotheses: list[models.Hypothesis],
         evidence_rows: list[models.Evidence],
         recommendation_rows: list[models.PlaybookRecommendation],
-        explanation_payload: dict[str, Any],
+        explanation_payload: dict[str, Any] | None = None,
+        *,
+        explanation_rows: list[ExplanationDraft] | None = None,
+        explanation_fallback_reason: str | None = None,
+        explanation_fallback_attempt_count: int = 0,
     ) -> None:
+        if explanation_payload is not None and explanation_rows is not None:
+            raise ValueError(
+                "provide explanation_rows or deprecated explanation_payload, not both"
+            )
         self.hypotheses = hypotheses
         self.evidence_rows = evidence_rows
         self.recommendation_rows = recommendation_rows
+        if explanation_rows is not None:
+            self.explanation_rows = list(explanation_rows)
+        elif explanation_payload is not None:
+            self.explanation_rows = [
+                ExplanationDraft(
+                    output=ExplanationOutput.model_validate(explanation_payload)
+                )
+            ]
+        else:
+            self.explanation_rows = []
         self.explanation_payload = explanation_payload
+        self.explanation_fallback_reason = explanation_fallback_reason
+        self.explanation_fallback_attempt_count = explanation_fallback_attempt_count
+        self._validate_fallback_metadata()
+
+    def _validate_fallback_metadata(self) -> None:
+        reason = self.explanation_fallback_reason
+        attempts = self.explanation_fallback_attempt_count
+        if isinstance(attempts, bool) or not isinstance(attempts, int):
+            raise TypeError("explanation fallback attempt count must be an integer")
+        if reason is None:
+            if attempts != 0:
+                raise ValueError(
+                    "fallback attempt count must be zero when no fallback occurred"
+                )
+            return
+        if not FALLBACK_REASON_PATTERN.fullmatch(reason):
+            raise ValueError(
+                "explanation fallback reason must be an uppercase reason code"
+            )
+        if attempts < 1:
+            raise ValueError(
+                "fallback attempt count must be positive when fallback occurred"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -314,21 +382,39 @@ class AnalysisOrchestrator:
         )
         run_repo.create(new_run)
 
-        # Run the pure analysis engine (no DB commits inside)
-        analysis_result: AnalysisResult | None = None
-        if self._analysis_engine is not None:
-            analysis_result = self._analysis_engine.analyse(incident, session)
-
-        # Atomically publish: insert children → supersede prior → swap pointer
-        self._atomic_publish(
-            new_run=new_run,
-            analysis_result=analysis_result,
-            incident=incident,
-            session=session,
-            run_repo=run_repo,
-            incident_repo=incident_repo,
-            audit_repo=audit_repo,
+        context = AnalysisBuildContext(
+            analysis_run_id=new_run.id,
+            incident_id=incident.id,
         )
+        try:
+            # A savepoint keeps the building run outside the publication unit.
+            # Any invalid child output rolls back without disturbing the prior
+            # current run; the building row can then be marked failed.
+            with session.begin_nested():
+                analysis_result: AnalysisResult | None = None
+                if self._analysis_engine is not None:
+                    analysis_result = self._analysis_engine.analyse(
+                        incident, session, context
+                    )
+
+                # Atomically publish: insert children → supersede prior → swap pointer
+                self._atomic_publish(
+                    new_run=new_run,
+                    analysis_result=analysis_result,
+                    incident=incident,
+                    session=session,
+                    run_repo=run_repo,
+                    incident_repo=incident_repo,
+                    audit_repo=audit_repo,
+                )
+        except Exception as exc:
+            self._persist_failed_run(
+                run_id=new_run.id,
+                incident_id=incident.id,
+                reason=f"rca_publication: {type(exc).__name__}: {exc}",
+                session=session,
+            )
+            raise
 
         return new_run_id
 
@@ -354,6 +440,8 @@ class AnalysisOrchestrator:
         top_hypothesis_id: str | None = None
 
         if analysis_result is not None:
+            self._validate_explanation_rows(new_run, incident, analysis_result)
+
             # Insert hypotheses
             for hyp in analysis_result.hypotheses:
                 hyp.analysis_run_id = new_run.id
@@ -372,18 +460,38 @@ class AnalysisOrchestrator:
                 rec.incident_id = incident.id
                 session.add(rec)
 
-            # Insert explanation
-            if analysis_result.explanation_payload:
+            # Append every validated explanation; never replace earlier rows.
+            for draft in analysis_result.explanation_rows:
+                output = draft.output
                 explanation = models.Explanation(
                     id=f"exp_{uuid.uuid4().hex[:12]}",
                     analysis_run_id=new_run.id,
                     incident_id=incident.id,
-                    generator="template",
-                    validated=True,
-                    payload=analysis_result.explanation_payload,
+                    generator=output.generator,
+                    validated=draft.validated,
+                    payload=output.model_dump(mode="json"),
                     created_at=datetime.now(tz=timezone.utc),
                 )
                 session.add(explanation)
+
+            if analysis_result.explanation_fallback_reason is not None:
+                audit_repo.append(
+                    audit_id=f"aud_{uuid.uuid4().hex}",
+                    actor_type="system",
+                    actor_id="explanation_service",
+                    action="EXPLANATION_FALLBACK_USED",
+                    object_type="incident",
+                    object_id=incident.id,
+                    payload={
+                        "request_id": f"analysis:{new_run.id}",
+                        "analysis_run_id": new_run.id,
+                        "incident_id": incident.id,
+                        "reason_code": analysis_result.explanation_fallback_reason,
+                        "attempt_count": (
+                            analysis_result.explanation_fallback_attempt_count
+                        ),
+                    },
+                )
 
             session.flush()
 
@@ -423,6 +531,40 @@ class AnalysisOrchestrator:
                 "algorithm_version": ALGORITHM_VERSION,
             },
         )
+
+    @staticmethod
+    def _validate_explanation_rows(
+        new_run: models.AnalysisRun,
+        incident: models.Incident,
+        analysis_result: AnalysisResult,
+    ) -> None:
+        rows = analysis_result.explanation_rows
+        if not rows:
+            raise ValueError("analysis result must include a template explanation")
+        hypothesis_ids = {item.id for item in analysis_result.hypotheses}
+        identities: set[tuple[str, str]] = set()
+        has_template = False
+        for draft in rows:
+            if not draft.validated:
+                raise ValueError("unvalidated explanation drafts cannot be published")
+            output = draft.output
+            if output.analysis_run_id != new_run.id:
+                raise ValueError("explanation analysis_run_id does not match pending run")
+            if output.incident_id != incident.id:
+                raise ValueError("explanation incident_id does not match pending incident")
+            if output.hypothesis_id not in hypothesis_ids:
+                raise ValueError(
+                    "explanation hypothesis_id is not part of the pending run"
+                )
+            identity = (output.generator, output.hypothesis_id)
+            if identity in identities:
+                raise ValueError(
+                    "duplicate explanation generator for the same hypothesis"
+                )
+            identities.add(identity)
+            has_template = has_template or output.generator == "template"
+        if not has_template:
+            raise ValueError("analysis result must retain a template explanation")
 
     def _persist_failed_run(
         self,

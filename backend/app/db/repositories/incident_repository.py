@@ -280,6 +280,7 @@ class AnalysisRunRepository:
         row = self._get_or_raise(run_id)
         row.status = "failed"
         row.failure_reason = reason[:2000]  # never store unbounded strings
+        row.completed_at = datetime.now(tz=__import__("datetime").timezone.utc)
         self.session.flush()
 
     # ------------------------------------------------------------------

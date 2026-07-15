@@ -7,7 +7,7 @@ expectations. It does not commit; the orchestrator owns the transaction.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -186,14 +186,28 @@ class IncidentManager:
 
         attachable = [item for item in candidates if item[1].decision == "attached"]
         if attachable:
-            incident, evaluation = max(
+            selected_incident = max(
                 attachable,
                 key=lambda item: (item[1].score, _utc(item[0].last_event_at)),
-            )
-            self._persist_evaluation(
-                incident, trigger_event, event_anomalies, evaluation, session
-            )
-            return incident
+            )[0]
+            for incident, evaluation in candidates:
+                if (
+                    incident.id != selected_incident.id
+                    and evaluation.decision == "attached"
+                ):
+                    evaluation = replace(
+                        evaluation,
+                        decision="excluded",
+                        reasons=tuple(
+                            dict.fromkeys(
+                                (*evaluation.reasons, "BETTER_INCIDENT_MATCH")
+                            )
+                        ),
+                    )
+                self._persist_evaluation(
+                    incident, trigger_event, event_anomalies, evaluation, session
+                )
+            return selected_incident
 
         opening = self._opening_anomalies(event_anomalies)
         entity = session.get(models.Entity, trigger_event.entity_id)
@@ -207,12 +221,9 @@ class IncidentManager:
             return self._open_incident(trigger_event, opening, entity, session)
 
         # Non-opening records such as the maintenance warning are retained as
-        # explicit exclusions against the best active incident.
-        if candidates:
-            incident, evaluation = max(
-                candidates,
-                key=lambda item: (item[1].score, _utc(item[0].last_event_at)),
-            )
+        # explicit exclusions against every active incident that considered
+        # them. This keeps incident_event_evaluations a complete decision log.
+        for incident, evaluation in candidates:
             self._persist_evaluation(
                 incident, trigger_event, event_anomalies, evaluation, session
             )

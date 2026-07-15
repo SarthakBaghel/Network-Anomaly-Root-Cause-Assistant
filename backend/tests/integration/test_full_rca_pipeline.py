@@ -52,6 +52,9 @@ def test_real_engine_adapter_publication_is_atomic_and_idempotent() -> None:
         orchestrator.recompute("inc_001", session)
         current = AnalysisRunRepository(session).get_current_for_incident("inc_001")
         assert current is not None
+        incident = IncidentRepository(session).get_by_id("inc_001")
+        assert incident is not None
+        assert incident.status == "investigating"
         hypotheses = list(
             session.execute(
                 select(models.Hypothesis)

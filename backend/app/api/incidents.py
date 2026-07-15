@@ -3,13 +3,13 @@ from __future__ import annotations
 import base64
 import binascii
 import json
-import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Annotated, Any, Never
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, select
+from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.contracts import (
@@ -28,14 +28,11 @@ from app.contracts import (
     ReviewRequest,
     TimelineItem,
     TopologySnapshot,
-    ExplanationClaim,
     EvidenceCoverage,
 )
 from app.db import models
 from app.db.repositories import (
     AnalysisRunRepository,
-    EvidenceRepository,
-    HypothesisRepository,
     IncidentRepository,
 )
 from app.ingestion.pipeline import event_to_contract
@@ -149,7 +146,7 @@ def _current_context(
     incident = IncidentRepository(session).get_by_id(incident_id)
     if incident is None:
         _api_error(
-            http_status.HTTP_404_NOT_FOUND,
+            status.HTTP_404_NOT_FOUND,
             "NOT_FOUND",
             f"Incident not found: {incident_id}",
         )
@@ -159,19 +156,113 @@ def _current_context(
     run_id = incident.current_analysis_run_id
     if run_id is None:
         _api_error(
-            http_status.HTTP_409_CONFLICT,
+            status.HTTP_409_CONFLICT,
             "ANALYSIS_NOT_AVAILABLE",
             f"Incident {incident_id} has no published analysis run",
         )
     run = AnalysisRunRepository(session).get_by_id(run_id)
     if run is None or run.incident_id != incident_id or run.status != "current":
         _api_error(
-            http_status.HTTP_409_CONFLICT,
+            status.HTTP_409_CONFLICT,
             "STALE_ANALYSIS",
             f"Incident {incident_id} does not point to a valid current analysis run",
             current_analysis_run_id=run_id,
         )
     return incident, run, run_id
+
+
+def _timeline_items_for_run(
+    session: Session,
+    incident_id: str,
+    analysis_run_id: str,
+) -> list[TimelineItem]:
+    """Build an evaluated timeline against one immutable analysis snapshot."""
+
+    relevance: dict[str, dict[str, list[str]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    evidence_rows = session.execute(
+        select(models.Evidence).where(
+            models.Evidence.analysis_run_id == analysis_run_id,
+            models.Evidence.source_event_id.is_not(None),
+        )
+    ).scalars()
+    for row in evidence_rows:
+        relevance[row.source_event_id][row.hypothesis_id].append(row.reason_code)
+
+    items: list[TimelineItem] = []
+    for evaluation in IncidentRepository(session).get_all_evaluations(incident_id):
+        event_row = session.get(models.Event, evaluation.event_id)
+        if event_row is None:
+            continue
+        hypothesis_relevance = {}
+        if evaluation.decision == "attached":
+            hypothesis_relevance = {
+                hypothesis_id: sorted(set(reason_codes))
+                for hypothesis_id, reason_codes in relevance[evaluation.event_id].items()
+            }
+        items.append(
+            TimelineItem(
+                event=event_to_contract(event_row),
+                attachment_decision=evaluation.decision,
+                attachment_score=evaluation.attachment_score,
+                attachment_reasons=evaluation.attachment_reasons,
+                hypothesis_relevance=hypothesis_relevance,
+            )
+        )
+    return sorted(
+        items,
+        key=lambda item: (item.event.timestamp, item.event.event_id),
+    )
+
+
+def _explanation_for_run(
+    session: Session,
+    incident_id: str,
+    analysis_run_id: str,
+    hypothesis_id: str,
+) -> ExplanationOutput:
+    """Read the preferred validated explanation without rereading the run pointer."""
+
+    rows = list(
+        session.execute(
+            select(models.Explanation).where(
+                models.Explanation.analysis_run_id == analysis_run_id,
+                models.Explanation.incident_id == incident_id,
+                models.Explanation.validated.is_(True),
+            )
+        ).scalars()
+    )
+    candidates: list[tuple[models.Explanation, ExplanationOutput]] = []
+    for row in rows:
+        try:
+            output = ExplanationOutput.model_validate(row.payload)
+        except ValidationError:
+            continue
+        if (
+            output.analysis_run_id == analysis_run_id
+            and output.incident_id == incident_id
+            and output.hypothesis_id == hypothesis_id
+            and output.generator == row.generator
+        ):
+            candidates.append((row, output))
+    if not candidates:
+        _api_error(
+            status.HTTP_404_NOT_FOUND,
+            "NOT_FOUND",
+            "Explanation not found for current analysis run",
+        )
+    # The publisher always retains the template row and appends a validated LLM
+    # row when available. Prefer that optional narration deterministically.
+    candidates.sort(
+        key=lambda item: (
+            item[1].generator == "llm",
+            _utc(item[0].created_at),
+            item[0].id,
+        ),
+        reverse=True,
+    )
+    return candidates[0][1]
 
 
 def _encode_cursor(row: models.Incident, filters: dict[str, Any]) -> str:
@@ -262,29 +353,8 @@ def incident_summary(incident_id: str, session: Session = Depends(get_session)) 
 
 @router.get("/{incident_id}/timeline", response_model=dict[str, Any])
 def timeline(incident_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
-    repo = IncidentRepository(session)
-    row = repo.get_by_id(incident_id)
-    if row is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
-        )
-    evals = repo.get_all_evaluations(incident_id)
-    
-    items = []
-    for ev_eval in evals:
-        evt_row = session.get(models.Event, ev_eval.event_id)
-        if evt_row is not None:
-            items.append(TimelineItem(
-                event=event_to_contract(evt_row),
-                attachment_decision=ev_eval.decision,
-                attachment_score=ev_eval.attachment_score,
-                attachment_reasons=ev_eval.attachment_reasons,
-                hypothesis_relevance={}
-            ))
-    # Sort timeline items chronologically
-    items = sorted(items, key=lambda it: (it.event.timestamp, it.event.event_id))
-    return {"items": items}
+    _, _, run_id = _current_context(session, incident_id)
+    return {"items": _timeline_items_for_run(session, incident_id, run_id)}
 
 @router.get("/{incident_id}/hypotheses", response_model=list[Hypothesis])
 def hypotheses(incident_id: str, session: Session = Depends(get_session)) -> list[Hypothesis]:
@@ -356,54 +426,20 @@ def recommendations(incident_id: str, session: Session = Depends(get_session)) -
 
 @router.get("/{incident_id}/explanation", response_model=ExplanationOutput)
 def explanation(incident_id: str, session: Session = Depends(get_session)) -> ExplanationOutput:
-    repo = IncidentRepository(session)
-    row = repo.get_by_id(incident_id)
-    if row is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
-        )
-    if not row.current_analysis_run_id:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": "No current analysis run found for incident", "details": []}
-        )
-        
-    explanation_row = session.scalar(
-        select(models.Explanation).where(models.Explanation.analysis_run_id == row.current_analysis_run_id)
-    )
-    if explanation_row is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": "Explanation not found", "details": []}
-        )
-        
+    incident_row, _, run_id = _current_context(session, incident_id)
     top_hyp = session.scalar(
-        select(models.Hypothesis).where(models.Hypothesis.analysis_run_id == row.current_analysis_run_id).order_by(models.Hypothesis.rank.asc())
+        select(models.Hypothesis)
+        .where(models.Hypothesis.analysis_run_id == run_id)
+        .order_by(models.Hypothesis.rank.asc())
     )
     if top_hyp is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": "No hypotheses found", "details": []}
+        _api_error(
+            status.HTTP_404_NOT_FOUND,
+            "NOT_FOUND",
+            "No hypotheses found for current analysis run",
         )
-        
-    payload = explanation_row.payload
-    hyp_payload = next((h for h in payload.get("hypotheses", []) if h["hypothesis_id"] == top_hyp.id), None)
-    if hyp_payload is None:
-        # Fallback to the first payload entry
-        hyp_payload = payload.get("hypotheses", [{}])[0]
-        
-    claims = [ExplanationClaim(claim=c.get("text", c.get("claim", "")), evidence_ids=c.get("evidence_ids", [])) for c in hyp_payload.get("claims", [])]
-    return ExplanationOutput(
-        analysis_run_id=row.current_analysis_run_id,
-        incident_id=incident_id,
-        hypothesis_id=top_hyp.id,
-        generator=explanation_row.generator,
-        summary=hyp_payload.get("summary", explanation_row.payload.get("incident_summary", "Summary not available")),
-        claims=claims,
-        diagnostic_step_ids=hyp_payload.get("diagnostic_step_ids", []),
-        remediation_step_ids=hyp_payload.get("remediation_step_ids", [])
-    )
+    hypothesis_id = incident_row.top_hypothesis_id or top_hyp.id
+    return _explanation_for_run(session, incident_id, run_id, hypothesis_id)
 
 @router.get("/{incident_id}/audit", response_model=list[AuditRecord])
 def audit(incident_id: str, session: DatabaseSession) -> list[AuditRecord]:
@@ -446,29 +482,12 @@ def review(
 
 @router.get("/{incident_id}/investigation", response_model=InvestigationResponse)
 def investigation(incident_id: str, session: Session = Depends(get_session)) -> InvestigationResponse:
-    repo = IncidentRepository(session)
-    incident_row = repo.get_by_id(incident_id)
-    if incident_row is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
-        )
-        
-    run_id = incident_row.current_analysis_run_id
-    if not run_id:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": "No current analysis run found", "details": []}
-        )
-        
-    run_repo = AnalysisRunRepository(session)
-    run_row = run_repo.get_by_id(run_id)
-    if run_row is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": f"Analysis run not found: {run_id}", "details": []}
-        )
-        
+    incident_row, run_row, run_id = _current_context(session, incident_id)
+    # Freeze the incident envelope before any child query. A concurrent
+    # publication may change the database pointer, but this response remains a
+    # complete snapshot of the run captured above.
+    incident_contract = _incident_contract(incident_row)
+
     # Evidence grouped
     stmt_ev = select(models.Evidence).where(models.Evidence.analysis_run_id == run_id)
     ev_rows = session.execute(stmt_ev).scalars().all()
@@ -476,34 +495,16 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
     for r in ev_rows:
         evidence_by_hyp.setdefault(r.hypothesis_id, []).append(ev_to_contract(r))
 
-    from collections import defaultdict
-    relevance = defaultdict(lambda: defaultdict(list))
-    for r in ev_rows:
-        if r.source_event_id:
-            relevance[r.source_event_id][r.hypothesis_id].append(r.reason_code)
-
-    # Build timeline
-    evals = repo.get_all_evaluations(incident_id)
-    timeline_items = []
-    for ev_eval in evals:
-        evt_row = session.get(models.Event, ev_eval.event_id)
-        if evt_row is not None:
-            timeline_items.append(TimelineItem(
-                event=event_to_contract(evt_row),
-                attachment_decision=ev_eval.decision,
-                attachment_score=ev_eval.attachment_score,
-                attachment_reasons=ev_eval.attachment_reasons,
-                hypothesis_relevance={
-                    hyp_id: sorted(list(set(reason_codes)))
-                    for hyp_id, reason_codes in relevance[ev_eval.event_id].items()
-                } if ev_eval.decision == "attached" else {}
-            ))
-    # Sort chronologically
-    timeline_items = sorted(timeline_items, key=lambda it: (it.event.timestamp, it.event.event_id))
+    timeline_items = _timeline_items_for_run(session, incident_id, run_id)
     
     # Topology annotated snapshot
     graph = get_topology_graph()
-    node_states, edge_states = _incident_annotation(graph, incident_id, session=session)
+    node_states, edge_states = _incident_annotation(
+        graph,
+        incident_id,
+        session=session,
+        analysis_run_id=run_id,
+    )
     topology_snap = TopologySnapshot.model_validate(
         graph.snapshot(node_states=node_states, edge_states=edge_states)
     )
@@ -534,8 +535,21 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
             rationale=r.rationale
         ))
         
-    # Explanation
-    explanation_contract = explanation(incident_id, session)
+    top_hypothesis_id = incident_contract.top_hypothesis_id
+    if top_hypothesis_id is None and hyp_rows:
+        top_hypothesis_id = hyp_rows[0].id
+    if top_hypothesis_id is None:
+        _api_error(
+            status.HTTP_404_NOT_FOUND,
+            "NOT_FOUND",
+            "No hypotheses found for current analysis run",
+        )
+    explanation_contract = _explanation_for_run(
+        session,
+        incident_id,
+        run_id,
+        top_hypothesis_id,
+    )
     
     # Reviews
     stmt_rev = select(models.Review).where(models.Review.analysis_run_id == run_id).order_by(models.Review.created_at.asc())
@@ -572,7 +586,7 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
         generated_at=datetime.now(tz=timezone.utc),
         analysis_run_id=run_id,
         analysis_run=ar_contract,
-        incident=_incident_contract(incident_row),
+        incident=incident_contract,
         timeline=timeline_items,
         topology=topology_snap,
         hypotheses=hyps_contract,

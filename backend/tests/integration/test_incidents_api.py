@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api import incidents as incidents_api
 from app.api.incidents import get_session
 from app.contracts import InvestigationResponse
 from app.db import models
@@ -348,6 +349,66 @@ def test_investigation_is_one_current_run_snapshot(client: TestClient) -> None:
     assert any(item["hypothesis_relevance"] for item in payload["timeline"] if item is not auth)
 
 
+def test_investigation_keeps_captured_run_when_pointer_changes_mid_assembly(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_timeline = incidents_api._timeline_items_for_run
+    original_explanation = incidents_api._explanation_for_run
+    captured_run_ids: list[str] = []
+
+    def change_pointer_then_read_captured_timeline(
+        session,
+        incident_id: str,
+        analysis_run_id: str,
+    ):
+        captured_run_ids.append(analysis_run_id)
+        incident = session.get(models.Incident, incident_id)
+        incident.current_analysis_run_id = "run_006"
+        incident.top_hypothesis_id = "hyp_old"
+        session.flush()
+        return original_timeline(session, incident_id, analysis_run_id)
+
+    def read_captured_explanation(
+        session,
+        incident_id: str,
+        analysis_run_id: str,
+        hypothesis_id: str,
+    ):
+        captured_run_ids.append(analysis_run_id)
+        return original_explanation(
+            session,
+            incident_id,
+            analysis_run_id,
+            hypothesis_id,
+        )
+
+    monkeypatch.setattr(
+        incidents_api,
+        "_timeline_items_for_run",
+        change_pointer_then_read_captured_timeline,
+    )
+    monkeypatch.setattr(
+        incidents_api,
+        "_explanation_for_run",
+        read_captured_explanation,
+    )
+
+    response = client.get("/api/v1/incidents/inc_001/investigation")
+
+    assert response.status_code == 200
+    snapshot = InvestigationResponse.model_validate(response.json())
+    snapshot.assert_consistent_run()
+    assert captured_run_ids == ["run_007", "run_007"]
+    assert snapshot.analysis_run_id == "run_007"
+    assert snapshot.incident.current_analysis_run_id == "run_007"
+    assert {item.analysis_run_id for item in snapshot.hypotheses} == {"run_007"}
+    node_states = {node.id: node.state for node in snapshot.topology.nodes}
+    assert node_states["api-gateway-01"] == "suspected_root"
+    assert node_states["auth-api-01"] != "suspected_root"
+    assert "hyp_old" not in response.text
+
+
 def test_incident_reads_and_cursor_pagination(client: TestClient) -> None:
     summary = client.get("/api/v1/incidents/inc_001")
     assert summary.status_code == 200
@@ -393,6 +454,20 @@ def test_current_run_read_endpoints_never_return_superseded_rows(client: TestCli
         for item in items
     } == {"run_007"}
     assert explanation.json()["analysis_run_id"] == "run_007"
+    assert explanation.json()["summary"] == _load(
+        FIXTURES / "golden_investigation_response.json"
+    )["explanation"]["summary"]
+
+    timeline_items = timeline.json()["items"]
+    excluded = next(
+        item for item in timeline_items if item["attachment_decision"] == "excluded"
+    )
+    assert excluded["hypothesis_relevance"] == {}
+    assert any(
+        item["hypothesis_relevance"]
+        for item in timeline_items
+        if item["attachment_decision"] == "attached"
+    )
 
 
 def test_review_is_idempotent_audited_and_closes_on_confirmation(

@@ -4,6 +4,7 @@ from itertools import pairwise
 from typing import Annotated, Any, Literal, Never
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -42,17 +43,34 @@ def _raise_api_error(exc: TopologyError) -> Never:
 
 
 def _incident_annotation(
-    graph: TopologyGraph, incident_id: str, session: Session | None = None
+    graph: TopologyGraph,
+    incident_id: str,
+    session: Session | None = None,
+    analysis_run_id: str | None = None,
 ) -> tuple[dict[str, NodeState], dict[EdgeIdentity, EdgeState]]:
     if session is None:
         with SessionLocal() as s:
-            return _incident_annotation_impl(graph, incident_id, s)
+            return _incident_annotation_impl(
+                graph,
+                incident_id,
+                s,
+                analysis_run_id=analysis_run_id,
+            )
     else:
-        return _incident_annotation_impl(graph, incident_id, session)
+        return _incident_annotation_impl(
+            graph,
+            incident_id,
+            session,
+            analysis_run_id=analysis_run_id,
+        )
 
 
 def _incident_annotation_impl(
-    graph: TopologyGraph, incident_id: str, session: Session
+    graph: TopologyGraph,
+    incident_id: str,
+    session: Session,
+    *,
+    analysis_run_id: str | None = None,
 ) -> tuple[dict[str, NodeState], dict[EdgeIdentity, EdgeState]]:
     incident = session.get(Incident, incident_id)
     if incident is None:
@@ -64,11 +82,18 @@ def _incident_annotation_impl(
                 "details": [],
             },
         )
-    top_hypothesis = (
-        session.get(Hypothesis, incident.top_hypothesis_id)
-        if incident.top_hypothesis_id
-        else None
-    )
+    if analysis_run_id is not None:
+        top_hypothesis = session.scalar(
+            select(Hypothesis)
+            .where(Hypothesis.analysis_run_id == analysis_run_id)
+            .order_by(Hypothesis.rank.asc())
+        )
+    else:
+        top_hypothesis = (
+            session.get(Hypothesis, incident.top_hypothesis_id)
+            if incident.top_hypothesis_id
+            else None
+        )
     affected_entity_ids = list(incident.affected_entity_ids)
     primary_entity_id = incident.primary_entity_id
 

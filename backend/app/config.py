@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -30,10 +31,38 @@ def _ratio(name: str, default: float) -> float:
     return value
 
 
+def _positive_float(name: str, default: float) -> float:
+    raw = os.getenv(name, str(default))
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be numeric, got {raw!r}") from exc
+    if value <= 0:
+        raise RuntimeError(f"{name} must be positive, got {value}")
+    return value
+
+
+def _local_ollama_host() -> str:
+    value = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+    if "://" not in value:
+        value = f"http://{value}"
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+    }:
+        raise RuntimeError("OLLAMA_HOST must point to a local Ollama server")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     database_url: str
     explanation_mode: str
+    ollama_host: str
+    ollama_model: str
+    ollama_timeout_seconds: float
     simulator_seed: int
     simulator_metric_interval_seconds: int
     detector_window_seconds: int
@@ -61,12 +90,28 @@ def load_settings() -> Settings:
     explanation_mode = os.getenv("EXPLANATION_MODE", "template")
     if explanation_mode not in {"template", "llm"}:
         raise RuntimeError("EXPLANATION_MODE must be 'template' or 'llm'")
+    ollama_model = os.getenv("OLLAMA_MODEL", "qwen2.5:3b").strip()
+    if explanation_mode == "llm" and not ollama_model:
+        raise RuntimeError("OLLAMA_MODEL must not be empty")
+    ollama_host = (
+        _local_ollama_host()
+        if explanation_mode == "llm"
+        else "http://localhost:11434"
+    )
+    ollama_timeout_seconds = (
+        _positive_float("OLLAMA_TIMEOUT_SECONDS", 30.0)
+        if explanation_mode == "llm"
+        else 30.0
+    )
     zscore = float(os.getenv("METRIC_ZSCORE_THRESHOLD", "3.0"))
     if zscore <= 0:
         raise RuntimeError("METRIC_ZSCORE_THRESHOLD must be positive")
     return Settings(
         database_url=database_url,
         explanation_mode=explanation_mode,
+        ollama_host=ollama_host,
+        ollama_model=ollama_model or "qwen2.5:3b",
+        ollama_timeout_seconds=ollama_timeout_seconds,
         simulator_seed=_integer("SIMULATOR_SEED", 20260714, minimum=0),
         simulator_metric_interval_seconds=_integer("SIMULATOR_METRIC_INTERVAL_SECONDS", 10),
         detector_window_seconds=_integer("DETECTOR_WINDOW_SECONDS", 300),

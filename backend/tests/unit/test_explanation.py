@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
@@ -14,6 +15,8 @@ from app.contracts import (
 )
 from app.explanation import (
     ExplanationService,
+    OllamaExplanationProvider,
+    OllamaProviderError,
     build_structured_bundle,
     generate_template_explanation,
     validate_explanation_detailed,
@@ -157,6 +160,16 @@ class FakeProvider:
         if isinstance(response, Exception):
             raise response
         return response
+
+
+class FakeOllamaClient:
+    def __init__(self, payload: Mapping[str, Any]) -> None:
+        self.payload = payload
+        self.calls: list[dict[str, Any]] = []
+
+    def chat(self, **kwargs: Any) -> dict[str, Any]:
+        self.calls.append(kwargs)
+        return {"message": {"content": json.dumps(self.payload)}}
 
 
 def test_template_is_valid_when_optional_inputs_are_absent() -> None:
@@ -322,3 +335,65 @@ def test_structured_bundle_has_no_event_or_raw_log_field() -> None:
     serialized = str(bundle).lower()
     assert "raw_payload" not in serialized
     assert "canonicalevent" not in serialized
+
+
+def test_ollama_provider_sends_only_structured_schema_constrained_input() -> None:
+    bundle = build_structured_bundle(
+        _hypothesis(), _evidence(), _recommendations()
+    )
+    client = FakeOllamaClient(_llm_payload())
+    provider = OllamaExplanationProvider(
+        model="test-model",
+        client=client,
+    )
+
+    result = provider.generate(bundle)
+
+    assert result == _llm_payload()
+    assert len(client.calls) == 1
+    call = client.calls[0]
+    assert call["model"] == "test-model"
+    assert call["stream"] is False
+    assert call["options"] == {"temperature": 0, "seed": 0}
+    assert call["format"] == ExplanationOutput.model_json_schema()
+    assert json.loads(call["messages"][1]["content"]) == bundle
+    assert "raw_payload" not in call["messages"][1]["content"].lower()
+    assert "do not create evidence" in call["messages"][0]["content"].lower()
+
+
+def test_ollama_provider_rejects_raw_fields_before_calling_client() -> None:
+    client = FakeOllamaClient(_llm_payload())
+    provider = OllamaExplanationProvider(client=client)
+    unsafe = build_structured_bundle(
+        _hypothesis(), _evidence(), _recommendations()
+    )
+    unsafe["hypothesis"]["raw_payload"] = {
+        "message": "must not cross provider boundary"
+    }
+
+    try:
+        provider.generate(unsafe)
+    except OllamaProviderError as exc:
+        assert "raw event or log fields" in str(exc)
+    else:
+        raise AssertionError("unsafe Ollama input was accepted")
+    assert client.calls == []
+
+
+def test_real_ollama_provider_output_still_passes_service_validator() -> None:
+    client = FakeOllamaClient(_llm_payload())
+    provider = OllamaExplanationProvider(client=client)
+
+    result = ExplanationService(mode="llm", optional_provider=provider).generate(
+        _run(),
+        _hypothesis(),
+        _evidence(),
+        _recommendations(),
+        candidate_entity_type="gateway",
+    )
+
+    assert [row.output.generator for row in result.explanation_rows] == [
+        "template",
+        "llm",
+    ]
+    assert result.explanation_fallback_reason is None

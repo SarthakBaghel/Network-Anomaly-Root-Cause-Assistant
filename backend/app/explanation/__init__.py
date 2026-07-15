@@ -8,6 +8,7 @@ from .service import (
     build_structured_bundle,
     explanation_service,
 )
+from .llm_engine import OllamaExplanationProvider, OllamaProviderError
 from .template_engine import (
     RecommendationLike,
     TemplateExplanationEngine,
@@ -26,6 +27,8 @@ __all__ = [
     "ExplanationServiceError",
     "ExplanationServiceResult",
     "ExplanationValidationResult",
+    "OllamaExplanationProvider",
+    "OllamaProviderError",
     "RecommendationLike",
     "StructuredExplanationProvider",
     "TemplateExplanationEngine",

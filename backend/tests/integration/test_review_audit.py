@@ -304,6 +304,9 @@ def test_rejecting_every_current_hypothesis_rejects_incident(
             client_action_id=f"phase3-reject-{index}",
         )
         assert response.status_code == 200
+        if index < len(HYPOTHESIS_IDS):
+            interim = client.get(f"/api/v1/incidents/{INCIDENT_ID}").json()
+            assert interim["status"] == "investigating"
     summary = client.get(f"/api/v1/incidents/{INCIDENT_ID}").json()
     assert summary["status"] == "rejected"
     audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()

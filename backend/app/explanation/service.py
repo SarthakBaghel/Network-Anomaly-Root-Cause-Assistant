@@ -211,4 +211,18 @@ class ExplanationService:
         return None
 
 
-explanation_service = ExplanationService()
+def _configured_optional_provider() -> StructuredExplanationProvider | None:
+    if settings.explanation_mode != "llm":
+        return None
+    from .llm_engine import OllamaExplanationProvider
+
+    return OllamaExplanationProvider(
+        host=settings.ollama_host,
+        model=settings.ollama_model,
+        timeout_seconds=settings.ollama_timeout_seconds,
+    )
+
+
+explanation_service = ExplanationService(
+    optional_provider=_configured_optional_provider()
+)

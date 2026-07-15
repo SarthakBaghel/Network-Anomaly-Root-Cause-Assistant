@@ -291,7 +291,7 @@
     "incident_id": "inc_001",
     "last_event_at": "2026-07-14T09:31:40.000Z",
     "primary_entity_id": "api-gateway-01",
-    "severity": 0.95,
+    "severity": 1.0,
     "started_at": "2026-07-14T09:30:00.000Z",
     "status": "investigating",
     "title": "Checkout degradation through API gateway",

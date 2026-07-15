@@ -22,9 +22,9 @@ competing copies.
 | `backend/app/fixtures/symptom_families.yaml` | `dd2562735dd0537356893eb7f11f1879774ec11773c203f2749b15433c8eed53` |
 | `backend/tests/fixtures/golden_events.jsonl` | `f3bdc90833b7ccf81b0f807d4c866ba3e78adddaa3ef219052e90d1f1dfe1a47` |
 | `backend/tests/fixtures/golden_anomalies.json` | `b7d317e95d4e68a3a306b63d4714c9075e5a1bb02f4e29dbc3db440152551bc8` |
-| `backend/tests/fixtures/golden_incident_bundle.json` | `6344a5f248c9d23e1bbb10e2fef5500ea29f01fe9aadb300f5dec9b900be83fd` |
+| `backend/tests/fixtures/golden_incident_bundle.json` | `5e13bf369ab2c1134bee61fc6c4cfc87d90198ae419fe41fd99349f1e13ff6ba` |
 | `backend/tests/fixtures/golden_expected_analysis.json` | `4a84ab7a52b764743da9aea20a05c8ed444e63116af9c11feff0fd9a0a839cb7` |
-| `backend/tests/fixtures/golden_investigation_response.json` | `71aa91951026daa4236af7cd00d8e1b77898addd99f2fd55530bd613f9da2358` |
+| `backend/tests/fixtures/golden_investigation_response.json` | `6b274a60eebb84951475271d8592d14fab366b8020a7988e2c7f0a37c405632e` |
 | `backend/tests/fixtures/golden_review_examples.json` | `e43586e25df9f8d63db59294f066c5a29ebbf420adfb71a9f35e76b2a778f963` |
 | `backend/tests/fixtures/golden_audit_examples.json` | `dc8ecca349591e8dc270d04b28b724265319b31ad5223678bca53b6b965dc80d` |
 | `frontend/src/routes.ts` | `03063934eaca8276bb85d47785d23ec2f5698f12bcb4ca824c76d674aaa15560` |

@@ -23,6 +23,22 @@ python3 scripts/validate_milestone0.py
 dependencies, applies the Alembic migration, rebuilds deterministic fixtures,
 and validates all Milestone-0 handoffs.
 
+## Optional local LLM explanation
+
+Template explanations are the default and require no model. To enable the
+optional validated Ollama narration after installing Ollama locally:
+
+```bash
+.venv/bin/python -m pip install -e "backend[llm]"
+ollama pull qwen2.5:3b
+EXPLANATION_MODE=llm OLLAMA_MODEL=qwen2.5:3b ./scripts/dev.sh
+```
+
+The application sends only the structured hypothesis, evidence, and playbook
+bundle to `localhost:11434`. Ollama cannot alter ranks, evidence scores, or
+evidence records. Invalid, stale, or unavailable LLM output automatically
+retains the deterministic template explanation.
+
 ## Ownership
 
 Implementation assignments and merge gates live in [`tasks.md`](./tasks.md).

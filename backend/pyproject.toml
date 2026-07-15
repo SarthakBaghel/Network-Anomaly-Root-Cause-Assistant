@@ -21,6 +21,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+llm = [
+  "ollama==0.6.2",
+]
 test = [
   "httpx==0.28.1",
   "pytest==8.4.1",

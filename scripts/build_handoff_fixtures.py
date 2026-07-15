@@ -164,7 +164,8 @@ def build_incident_bundle(by_source: dict[str, dict[str, Any]]) -> dict[str, Any
             "current_analysis_run_id": RUN_ID,
             "title": "Checkout degradation through API gateway",
             "status": "investigating",
-            "severity": 0.95,
+            # Blueprint §12.2: maximum opening-capable attached anomaly score.
+            "severity": 1.0,
             "started_at": "2026-07-14T09:30:00.000Z",
             "last_event_at": "2026-07-14T09:31:40.000Z",
             "primary_entity_id": "api-gateway-01",

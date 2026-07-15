@@ -742,7 +742,7 @@
   - Wording rule: always "probable root cause" in summary — never "confirmed" (reserved for human review only)
   - No internet required
 
-- [ ] **P5-09**: If and only if Milestone 4 is already green, create `backend/app/explanation/llm_engine.py` — optional LLM path behind `EXPLANATION_MODE=llm`; it is not required for P0:
+- [x] **P5-09**: If and only if Milestone 4 is already green, create `backend/app/explanation/llm_engine.py` — optional LLM path behind `EXPLANATION_MODE=llm`; it is not required for P0: ✅ **DONE** — local Ollama provider is schema-constrained, structured-input-only, validator-gated, and safely falls back to the deterministic template
   - Uses `ollama` client against `localhost:11434` — offline
   - Prompt includes ONLY structured Hypothesis + Evidence + Playbook bundle — never raw logs
   - Instructs LLM to return JSON matching §17.3 contract exactly

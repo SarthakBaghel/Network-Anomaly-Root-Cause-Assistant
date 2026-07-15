@@ -7,7 +7,7 @@ a fully populated DetectionContext that includes:
   1. history         — metric/log events in the rolling window (existing)
   2. safety_thresholds — loaded from network_profile.json (existing)
   3. signal_aliases  — proxy mappings from network_profile.json (existing)
-  4. ewma_state      — per-(entity, signal) EWMA baseline from EwmaStateStore (NEW)
+  4. ewma_state      — current canonical signal baseline from EwmaStateStore (NEW)
   5. topology        — TopologyView built from topology_edges table (NEW)
   6. recent_anomalies — last N actionable anomalies for cascade detection (NEW)
 
@@ -30,9 +30,11 @@ from app.db.models import Anomaly, Event
 from app.detection.alert_severity import AlertSeverityDetector
 from app.detection.config_change import ConfigChangeMarker
 from app.detection.detector import DetectionContext, Detector
+from app.detection.ewma_detector import EwmaDetector
 from app.detection.ewma_store import ewma_store
 from app.detection.log_rule import LogRuleDetector
 from app.detection.rolling_zscore import RollingZscoreDetector
+from app.detection.topology_cascade import TopologyCascadeDetector
 from app.detection.topology_view import TopologyView
 
 # Number of recent actionable anomalies to load for cascade correlation
@@ -41,9 +43,11 @@ RECENT_ANOMALY_WINDOW_SECONDS = settings.detector_window_seconds * 2
 
 DETECTORS: tuple[Detector, ...] = (
     RollingZscoreDetector(),
+    EwmaDetector(),
     LogRuleDetector(),
     AlertSeverityDetector(),
     ConfigChangeMarker(),
+    TopologyCascadeDetector(),
 )
 
 
@@ -72,13 +76,16 @@ def _build_context(
     )
     history = [event_to_contract(row) for row in history_rows]
 
-    # 2. EWMA state — load all per-(entity, signal) states for this entity
-    #    EwmaDetector reads from context.ewma_state dict keyed by "entity_id:signal_name"
+    ctx = DetectionContext(history=history)
+
+    # 2. EWMA state — load the canonical state for the signal being evaluated.
+    #    Alias resolution must happen here as well as in EwmaDetector; otherwise
+    #    proxy events repeatedly cold-start instead of resuming persisted state.
     ewma_state: dict[str, dict] = {}
-    # Pre-populate: load any known state for this entity's signal from the store
     if event.signal_name is not None:
-        key = f"{event.entity_id}:{event.signal_name}"
-        stored = ewma_store.get(event.entity_id, event.signal_name, session)
+        effective_signal = ctx.signal_aliases.get(event.signal_name, event.signal_name)
+        key = f"{event.entity_id}:{effective_signal}"
+        stored = ewma_store.get(event.entity_id, effective_signal, session)
         if stored is not None:
             ewma_state[key] = dict(stored)
 
@@ -104,7 +111,6 @@ def _build_context(
     ]
 
     # 4. Assemble DetectionContext (frozen dataclass — inject extras via __setattr__)
-    ctx = DetectionContext(history=history)
     object.__setattr__(ctx, "ewma_state", ewma_state)
     object.__setattr__(ctx, "_ewma_updates", {})
     object.__setattr__(ctx, "topology", topology)
@@ -201,7 +207,7 @@ class DetectionPublisher:
     def publish(self, event: CanonicalEvent) -> None:
         topo = self._get_topology()
         ctx = _build_context(event, self.session, topology=topo)
-        records = self._evaluate_and_persist(event, ctx)
+        self._evaluate_and_persist(event, ctx)
         _flush_ewma_updates(ctx, self.session)
         ewma_store.flush(self.session)
 

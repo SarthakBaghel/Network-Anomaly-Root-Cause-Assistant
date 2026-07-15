@@ -28,6 +28,10 @@ test("golden path exploration and review flow", async ({ page }) => {
   await expect(page.getByTestId(sourceHealthTestId("fixture.cmdb_topology"))).toBeVisible();
   await expect(page.getByTestId(TEST_IDS.simulatorState)).toContainText("stopped");
 
+  await page.getByTestId(TEST_IDS.simulatorReset).click();
+  await page.getByTestId(TEST_IDS.simulatorResetConfirm).click();
+  await page.getByTestId(TEST_IDS.simulatorStart).click();
+  await expect(page.getByTestId(TEST_IDS.scenarioTrigger)).toBeEnabled();
   await page.getByTestId(TEST_IDS.scenarioTrigger).click();
   await expect(page.getByTestId(TEST_IDS.simulatorState)).toContainText("completed");
   await expect(page.getByTestId(anomalyRowTestId("ano_forwarded_rps_001"))).toBeVisible();

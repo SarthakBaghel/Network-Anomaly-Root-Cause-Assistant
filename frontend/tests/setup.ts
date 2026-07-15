@@ -4,11 +4,13 @@ import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import React from "react";
 
 import { server } from "../src/mocks/server";
+import { resetFixtureState } from "../src/test-fixtures/handlers";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  resetFixtureState();
 });
 afterAll(() => server.close());
 

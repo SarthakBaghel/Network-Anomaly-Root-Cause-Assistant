@@ -9,5 +9,11 @@ export const simulatorApi = {
       method: 'POST',
       url: `/simulator/scenarios/${encodeURIComponent(scenarioId)}/trigger`,
     }),
+  listScenarios: (signal?: AbortSignal) =>
+    request<JsonResponse<'scenarios_api_v1_simulator_scenarios_get'>>({
+      method: 'GET',
+      url: '/simulator/scenarios',
+      signal,
+    }),
   status: (signal?: AbortSignal) => request<JsonResponse<'status_api_v1_simulator_status_get'>>({ method: 'GET', url: '/simulator/status', signal }),
 }

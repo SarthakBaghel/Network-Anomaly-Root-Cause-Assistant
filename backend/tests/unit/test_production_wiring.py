@@ -9,18 +9,15 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from unittest.mock import MagicMock
 
-import pytest
 from sqlalchemy import create_engine, event as sa_event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.db.models import Base, Entity, TopologyEdge, Anomaly, Event, EwmaBaseline
+from app.db.models import Base, Entity, EwmaBaseline, TopologyEdge
 from app.detection.ewma_store import EwmaStateStore
 from app.detection.topology_view import TopologyView
 from app.detection.detector import DetectionContext
-from app.detection.ewma_detector import EWMA_ALPHA, EWMA_MIN_SAMPLES
 from app.detection.topology_cascade import TopologyCascadeDetector
 from app.contracts import CanonicalEvent, Modality
 
@@ -167,6 +164,19 @@ class TestEwmaStateStore:
         assert loaded["ewma_mean"] == 55.0
         assert loaded["n_samples"] == 100
 
+    def test_cache_does_not_leak_between_database_binds(self):
+        first_session = _fresh_session()
+        second_session = _fresh_session()
+        store = EwmaStateStore()
+        state = {"ewma_mean": 7.5, "ewma_variance": 0.1, "n_samples": 3}
+
+        store.put("gw", "tcp_resets_total", state, first_session)
+        store.flush(first_session)
+        first_session.flush()
+
+        assert store.get("gw", "tcp_resets_total", first_session) == state
+        assert store.get("gw", "tcp_resets_total", second_session) is None
+
 
 # ─── TopologyView tests ────────────────────────────────────────────────────────
 
@@ -219,6 +229,18 @@ class TestTopologyView:
 # ─── Context injection tests ──────────────────────────────────────────────────
 
 class TestContextInjection:
+    def test_production_detector_registry_includes_adaptive_and_cascade_detectors(self):
+        from app.detection.service import DETECTORS
+
+        assert [detector.detector_id for detector in DETECTORS] == [
+            "rolling_zscore_v1",
+            "ewma_v1",
+            "log_rule_v1",
+            "alert_severity_v1",
+            "config_change_marker_v1",
+            "topology_cascade_v1",
+        ]
+
     def test_build_context_injects_ewma_state(self):
         """Injected ewma_state is a dict (possibly empty for unknown signals)."""
         session = _fresh_session()
@@ -228,6 +250,35 @@ class TestContextInjection:
         ctx = _build_context(event, session)
         assert hasattr(ctx, "ewma_state")
         assert isinstance(ctx.ewma_state, dict)
+
+    def test_build_context_loads_proxy_state_under_canonical_signal(self):
+        from app.detection.ewma_store import ewma_store
+        from app.detection.service import _build_context
+
+        session = _fresh_session()
+        _entity(session, "gw")
+        session.add(EwmaBaseline(
+            entity_id="gw",
+            signal_name="forwarded_requests_per_second",
+            ewma_mean=55.0,
+            ewma_variance=2.0,
+            n_samples=100,
+            updated_at=_now(),
+        ))
+        session.flush()
+        ewma_store.reset()
+        try:
+            event = _canonical_event("gw", "src_bytes_proxy", 60.0)
+            ctx = _build_context(event, session)
+            assert ctx.ewma_state == {
+                "gw:forwarded_requests_per_second": {
+                    "ewma_mean": 55.0,
+                    "ewma_variance": 2.0,
+                    "n_samples": 100,
+                }
+            }
+        finally:
+            ewma_store.reset()
 
     def test_build_context_injects_ewma_updates_dict(self):
         session = _fresh_session()

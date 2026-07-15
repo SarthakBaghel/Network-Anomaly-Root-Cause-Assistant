@@ -1173,6 +1173,14 @@
             "title": "Anomaly Type",
             "type": "string"
           },
+          "can_open_incident": {
+            "title": "Can Open Incident",
+            "type": "boolean"
+          },
+          "context_only": {
+            "title": "Context Only",
+            "type": "boolean"
+          },
           "detected_at": {
             "format": "date-time",
             "title": "Detected At",
@@ -1188,20 +1196,47 @@
             "title": "Entity Id",
             "type": "string"
           },
+          "event_id": {
+            "minLength": 1,
+            "title": "Event Id",
+            "type": "string"
+          },
+          "explanation": {
+            "minLength": 1,
+            "title": "Explanation",
+            "type": "string"
+          },
           "score": {
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Score",
             "type": "number"
+          },
+          "severity": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Severity",
+            "type": "number"
+          },
+          "source": {
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
           }
         },
         "required": [
           "anomaly_id",
+          "event_id",
           "entity_id",
+          "source",
           "anomaly_type",
+          "severity",
           "score",
           "detector_id",
-          "detected_at"
+          "detected_at",
+          "context_only",
+          "can_open_incident",
+          "explanation"
         ],
         "title": "OverviewAnomaly",
         "type": "object"
@@ -1652,6 +1687,18 @@
             "title": "Generated At",
             "type": "string"
           },
+          "last_reset_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Reset At"
+          },
           "metric_interval_seconds": {
             "exclusiveMinimum": 0.0,
             "title": "Metric Interval Seconds",
@@ -1726,6 +1773,7 @@
           "baseline_ticks_required",
           "sources",
           "source_health",
+          "last_reset_at",
           "request_id"
         ],
         "title": "SimulatorMutationResponse",
@@ -1748,6 +1796,18 @@
             "format": "date-time",
             "title": "Generated At",
             "type": "string"
+          },
+          "last_reset_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Reset At"
           },
           "metric_interval_seconds": {
             "exclusiveMinimum": 0.0,
@@ -1828,10 +1888,95 @@
           "baseline_ticks_required",
           "sources",
           "source_health",
+          "last_reset_at",
           "request_id",
           "reset_audit_id"
         ],
         "title": "SimulatorResetResponse",
+        "type": "object"
+      },
+      "SimulatorScenario": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_entity_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Affected Entity Ids",
+            "type": "array"
+          },
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "difficulty": {
+            "enum": [
+              "introductory",
+              "intermediate",
+              "advanced"
+            ],
+            "title": "Difficulty",
+            "type": "string"
+          },
+          "duration_seconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Duration Seconds",
+            "type": "integer"
+          },
+          "expected_signals": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Expected Signals",
+            "type": "array"
+          },
+          "scenario_id": {
+            "minLength": 1,
+            "title": "Scenario Id",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario_id",
+          "title",
+          "description",
+          "affected_entity_ids",
+          "duration_seconds",
+          "expected_signals",
+          "difficulty"
+        ],
+        "title": "SimulatorScenario",
+        "type": "object"
+      },
+      "SimulatorScenarioListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SimulatorScenario"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "items"
+        ],
+        "title": "SimulatorScenarioListResponse",
         "type": "object"
       },
       "SimulatorStatusResponse": {
@@ -1851,6 +1996,18 @@
             "format": "date-time",
             "title": "Generated At",
             "type": "string"
+          },
+          "last_reset_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Reset At"
           },
           "metric_interval_seconds": {
             "exclusiveMinimum": 0.0,
@@ -1920,7 +2077,8 @@
           "baseline_ticks_emitted",
           "baseline_ticks_required",
           "sources",
-          "source_health"
+          "source_health",
+          "last_reset_at"
         ],
         "title": "SimulatorStatusResponse",
         "type": "object"
@@ -2017,7 +2175,10 @@
           },
           "status": {
             "enum": [
-              "ready",
+              "healthy",
+              "delayed",
+              "offline",
+              "quarantined",
               "error"
             ],
             "title": "Status",
@@ -4353,6 +4514,97 @@
           }
         },
         "summary": "Reset",
+        "tags": [
+          "simulator"
+        ]
+      }
+    },
+    "/api/v1/simulator/scenarios": {
+      "get": {
+        "operationId": "scenarios_api_v1_simulator_scenarios_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulatorScenarioListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Scenarios",
         "tags": [
           "simulator"
         ]

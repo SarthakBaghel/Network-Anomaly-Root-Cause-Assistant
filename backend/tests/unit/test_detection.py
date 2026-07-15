@@ -107,8 +107,8 @@ def _seed_topology(session: Session) -> None:
     session.flush()
 
 
-def test_production_golden_replay_persists_nine_actionable_and_one_context_anomaly() -> None:
-    """The production registry is the frozen 9 + 1 P3→P4 handoff."""
+def test_production_replay_persists_primary_ewma_and_cascade_findings() -> None:
+    """The production registry extends the frozen handoff with corroboration."""
     from app.detection.service import DetectionPublisher
     from app.db.models import Event as EventModel
     from app.ingestion.pipeline import event_to_contract
@@ -123,7 +123,13 @@ def test_production_golden_replay_persists_nine_actionable_and_one_context_anoma
         publisher = DetectionPublisher(session)
         records = [record for group in [*baseline_groups(), *scenario_groups()] for record in group.records]
         for source, raw in records:
-            result = pipeline.ingest(source=source, raw=raw, request_id=str(_uuid.uuid4()), session=session)
+            result = pipeline.ingest(
+                source=source,
+                raw=raw,
+                request_id=str(_uuid.uuid4()),
+                session=session,
+                publish=False,
+            )
             # Run detection on each accepted event (P4/P5 separation of ingestion and detection)
             if result.status == "accepted" and result.event_id:
                 event_row = session.get(EventModel, result.event_id)
@@ -131,8 +137,18 @@ def test_production_golden_replay_persists_nine_actionable_and_one_context_anoma
                     publisher.publish(event_to_contract(event_row))
         session.flush()
         anomalies = list(session.scalars(select(Anomaly).order_by(Anomaly.window_end, Anomaly.id)))
-        assert len([item for item in anomalies if item.can_open_incident]) == 9
-        assert len([item for item in anomalies if item.context_only]) == 1
+        actionable = [item for item in anomalies if item.can_open_incident]
+        context = [item for item in anomalies if item.context_only]
+        diagnostic_rows = [
+            (
+                item.detector_id,
+                item.type,
+                item.features.get("source_record_id"),
+            )
+            for item in anomalies
+        ]
+        assert len(actionable) == 15, diagnostic_rows
+        assert len(context) == 3, diagnostic_rows
         assert not any(item.event_id.endswith("1d99bedd627abe8ef1dca5d6") for item in anomalies)
 
 
@@ -169,7 +185,9 @@ def test_person3_detector_replay_matches_golden_anomaly_manifest_exactly() -> No
         AnomalyRecord.model_validate(item)
         for item in [*manifest["anomalies"], *manifest["context_markers"]]
     ]
-    key = lambda item: (item.window_end, item.event_id, item.detector_id)
+    def key(item: AnomalyRecord) -> tuple[datetime, str, str]:
+        return item.window_end, item.event_id, item.detector_id
+
     assert [item.model_dump() for item in sorted(actual, key=key)] == [
         item.model_dump() for item in sorted(expected, key=key)
     ]

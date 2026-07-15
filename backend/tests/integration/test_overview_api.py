@@ -90,11 +90,17 @@ def test_recent_anomalies_include_entity_and_detector_identity():
         assert payload["items"] == [
             {
                 "anomaly_id": "ano_overview_001",
+                "event_id": "evt_overview_001",
                 "entity_id": "api-gateway-01",
+                "source": "simulator.prometheus",
                 "anomaly_type": "FORWARDED_TRAFFIC_SPIKE",
+                "severity": 0.0,
                 "score": 0.94,
                 "detector_id": "rolling_zscore_v1",
                 "detected_at": "2026-07-14T09:30:30Z",
+                "context_only": False,
+                "can_open_incident": True,
+                "explanation": "Forwarded traffic exceeded its rolling baseline.",
             }
         ]
     finally:
@@ -113,5 +119,5 @@ def test_simulator_status_exposes_five_typed_source_health_rows():
         "fixture.cmdb_topology",
     ]
     topology = payload["source_health"][-1]
-    assert topology["status"] == "ready"
+    assert topology["status"] == "healthy"
     assert topology["fixture_version"] == "topology-1.1"

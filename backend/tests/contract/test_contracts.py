@@ -139,6 +139,7 @@ def test_openapi_contains_every_frozen_endpoint() -> None:
         "/api/v1/simulator/start",
         "/api/v1/simulator/stop",
         "/api/v1/simulator/reset",
+        "/api/v1/simulator/scenarios",
         "/api/v1/simulator/scenarios/{scenario_id}/trigger",
         "/api/v1/simulator/status",
         "/api/v1/incidents",

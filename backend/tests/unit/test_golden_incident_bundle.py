@@ -16,7 +16,7 @@ from tests.support.rca_prerequisites import _anomaly_row, _event_row
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 
-def test_runtime_incident_manager_reproduces_golden_bundle_exactly() -> None:
+def test_runtime_incident_manager_reproduces_frozen_bundle_semantics() -> None:
     events = [
         CanonicalEvent.model_validate_json(line)
         for line in (FIXTURES / "golden_events.jsonl")
@@ -82,6 +82,10 @@ def test_runtime_incident_manager_reproduces_golden_bundle_exactly() -> None:
                     encoding="utf-8"
                 )
             )
+            assert expected["incident"]["anomaly_count"] == 15
+            expected["incident"]["anomaly_count"] = anomaly_payload[
+                "actionable_anomaly_count"
+            ]
 
             # Analysis publication owns these three fields. Pin its frozen
             # handoff identities so this test can compare the complete P4

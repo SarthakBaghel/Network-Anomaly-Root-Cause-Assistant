@@ -161,6 +161,7 @@ def ingest_batch(
         results=results,
     )
 
+
 @router.get("/events", response_model=EventListResponse)
 def list_events(
     session: DatabaseSession,
@@ -207,13 +208,17 @@ def list_anomalies(
         items.append(
             OverviewAnomaly(
                 anomaly_id=row.id,
+                event_id=row.event_id,
                 entity_id=event.entity_id,
+                source=event.source,
                 anomaly_type=row.type,
+                severity=event.severity,
                 score=row.score,
                 detector_id=row.detector_id,
-                detected_at=row.detected_at.replace(
-                    tzinfo=row.detected_at.tzinfo or timezone.utc
-                ),
+                detected_at=row.detected_at.replace(tzinfo=row.detected_at.tzinfo or timezone.utc),
+                context_only=row.context_only,
+                can_open_incident=row.can_open_incident,
+                explanation=row.explanation,
             )
         )
     return AnomalyListResponse(

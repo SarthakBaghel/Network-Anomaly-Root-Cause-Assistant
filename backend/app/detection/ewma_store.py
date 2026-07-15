@@ -46,6 +46,7 @@ class EwmaStateStore:
         self._cache: dict[tuple[str, str], EwmaState] = {}
         self._dirty: set[tuple[str, str]] = set()
         self._loaded_from_db = False
+        self._database_bind: object | None = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -55,6 +56,7 @@ class EwmaStateStore:
         """Return EWMA state for the given (entity_id, signal_name), or None on cold start."""
         key = (entity_id, signal_name)
         with self._lock:
+            self._prepare_database_bind(session)
             if not self._loaded_from_db:
                 self._load(session)
             return dict(self._cache[key]) if key in self._cache else None  # type: ignore[return-value]
@@ -63,6 +65,7 @@ class EwmaStateStore:
         """Store updated EWMA state and mark as dirty for flush."""
         key = (entity_id, signal_name)
         with self._lock:
+            self._prepare_database_bind(session)
             self._cache[key] = state
             self._dirty.add(key)
 
@@ -75,6 +78,7 @@ class EwmaStateStore:
         from app.db.models import EwmaBaseline
 
         with self._lock:
+            self._prepare_database_bind(session)
             dirty_snapshot = set(self._dirty)  # snapshot the set of (entity_id, signal_name) tuples
             self._dirty.clear()
 
@@ -119,10 +123,24 @@ class EwmaStateStore:
             self._cache.clear()
             self._dirty.clear()
             self._loaded_from_db = False
+            self._database_bind = None
 
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _prepare_database_bind(self, session: Session) -> None:
+        """Scope cached baselines to the database backing the current session."""
+        database_bind = session.get_bind()
+        if self._database_bind is database_bind:
+            return
+        if self._dirty:
+            raise RuntimeError(
+                "cannot switch EWMA database bind with unflushed baseline state"
+            )
+        self._cache.clear()
+        self._loaded_from_db = False
+        self._database_bind = database_bind
 
     def _load(self, session: Session) -> None:
         """Load all rows from ewma_baselines into the in-memory cache.

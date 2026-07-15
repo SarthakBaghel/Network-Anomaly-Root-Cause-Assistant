@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Iterator
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -21,7 +22,11 @@ SCENARIO_ID = "scenario_gateway_rate_limit_001"
 
 
 @contextmanager
-def _production_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker]]:
+def _production_client(
+    monkeypatch,
+    *,
+    raise_server_exceptions: bool = False,
+) -> Iterator[tuple[TestClient, sessionmaker]]:
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -43,7 +48,7 @@ def _production_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker]]
     monkeypatch.setattr(db_session, "SessionLocal", session_factory)
     monkeypatch.setattr(simulator_api, "simulator_engine", simulator)
     try:
-        with TestClient(app, raise_server_exceptions=False) as client:
+        with TestClient(app, raise_server_exceptions=raise_server_exceptions) as client:
             yield client, session_factory
     finally:
         (
@@ -60,6 +65,7 @@ def _replay(client: TestClient) -> tuple[str, dict]:
     assert reset.status_code == 200, reset.text
     start = client.post("/api/v1/simulator/start")
     assert start.status_code == 200, start.text
+    simulator_api.simulator_engine.complete_baseline()
     trigger = client.post(f"/api/v1/simulator/scenarios/{SCENARIO_ID}/trigger")
     assert trigger.status_code == 200, trigger.text
     incidents = client.get("/api/v1/incidents")
@@ -179,7 +185,10 @@ def test_production_reset_replay_is_deterministic_and_run_consistent(
         assert _semantic_projection(first) == _semantic_projection(second)
         assert first_incident_id != second_incident_id
 
-        assert first["incident"]["anomaly_count"] == 9
+
+        # Nine primary detector findings plus six independent EWMA
+        # corroborations over the same metric events.
+        assert first["incident"]["anomaly_count"] == 15
         assert len(first["timeline"]) == 13
         decisions = {
             item["event"]["source_record_id"]: item["attachment_decision"]
@@ -225,6 +234,41 @@ def test_production_reset_replay_is_deterministic_and_run_consistent(
                 "dos_or_traffic_surge",
                 "database_connection_exhaustion",
             }
+
+
+@pytest.mark.parametrize(
+    ("scenario_id", "expected_hypothesis_type"),
+    [
+        ("database_connection_pool_exhaustion", "database_connection_exhaustion"),
+        ("network_path_congestion", "network_path_congestion"),
+        ("dns_resolution_failure", "dns_resolution_failure"),
+        ("tls_certificate_failure", "certificate_or_tls_failure"),
+    ],
+)
+def test_additional_catalogue_scenarios_publish_matching_rca(
+    monkeypatch,
+    scenario_id: str,
+    expected_hypothesis_type: str,
+) -> None:
+    with _production_client(
+        monkeypatch, raise_server_exceptions=True
+    ) as (client, _session_factory):
+        assert client.post("/api/v1/simulator/reset").status_code == 200
+        assert client.post("/api/v1/simulator/start").status_code == 200
+        simulator_api.simulator_engine.complete_baseline()
+        trigger = client.post(f"/api/v1/simulator/scenarios/{scenario_id}/trigger")
+        assert trigger.status_code == 200, trigger.text
+
+        incidents = client.get("/api/v1/incidents").json()["items"]
+        assert incidents
+        investigation = client.get(
+            f"/api/v1/incidents/{incidents[0]['incident_id']}/investigation"
+        )
+        assert investigation.status_code == 200, investigation.text
+        hypothesis_types = {
+            item["hypothesis_type"] for item in investigation.json()["hypotheses"]
+        }
+        assert expected_hypothesis_type in hypothesis_types
 
 
 class _FailingAnalysisEngine:

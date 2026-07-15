@@ -77,7 +77,9 @@ REQUIREMENT_MATCHERS: dict[str, EventMatcher] = {
     and _payload_contains(event, "dependency_id"),
     "path_telemetry": lambda event: _contains(
         event.signal_name, "packet_loss", "retransmission", "hop_latency"
-    ),
+    )
+    or _contains(event.event_type, "packet_loss", "retransmission", "hop_latency")
+    or _payload_contains(event, "packet_loss", "retransmission", "hop_latency"),
     "upstream_health": lambda event: _contains(
         event.event_type, "health", "upstream_failure", "upstream_error"
     ),

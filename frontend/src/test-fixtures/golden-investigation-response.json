@@ -380,7 +380,7 @@
       "checkout-api-01",
       "payment-api-01"
     ],
-    "anomaly_count": 9,
+    "anomaly_count": 15,
     "confirmed_hypothesis_id": null,
     "current_analysis_run_id": "run_007",
     "incident_id": "inc_001",

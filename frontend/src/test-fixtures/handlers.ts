@@ -15,8 +15,18 @@ const SOURCE_HEALTH = [
 let simulatorState = 'stopped'
 let scenarioState = 'idle'
 let scenarioId: string | null = null
+let lastResetAt: string | null = null
 let mockReviews: Array<Record<string, unknown>> = []
 let mockAudit: Array<Record<string, unknown>> = []
+
+export function resetFixtureState() {
+  simulatorState = 'stopped'
+  scenarioState = 'idle'
+  scenarioId = null
+  lastResetAt = null
+  mockReviews = []
+  mockAudit = []
+}
 
 function simulatorStatus() {
   return {
@@ -27,19 +37,20 @@ function simulatorStatus() {
     virtual_clock: scenarioState === 'completed' ? '2026-07-14T09:32:00Z' : '2026-07-14T09:25:00Z',
     seed: 20260714,
     metric_interval_seconds: 10,
-    baseline_ticks_emitted: scenarioState === 'completed' ? 30 : 0,
+    baseline_ticks_emitted: ['baseline_complete', 'completed'].includes(scenarioState) ? 30 : scenarioState === 'baseline' ? 18 : 0,
     baseline_ticks_required: 30,
     sources: {},
     source_health: SOURCE_HEALTH.map(([source_id, source_type]) => ({
       source_id,
       source_type,
-      status: 'ready',
+      status: source_id === 'fixture.cmdb_topology' ? 'healthy' : scenarioState === 'idle' ? 'offline' : 'healthy',
       last_ingest_at: source_id === 'fixture.cmdb_topology' ? '2026-07-14T09:00:00Z' : null,
       accepted: source_id === 'fixture.cmdb_topology' ? 1 : 0,
       collapsed: 0,
       quarantined: 0,
       fixture_version: source_id === 'fixture.cmdb_topology' ? 'topology-1.1' : null,
     })),
+    last_reset_at: lastResetAt,
   }
 }
 
@@ -60,12 +71,28 @@ export const handlers = [
     generated_at: new Date().toISOString(),
     items: scenarioState === 'completed' ? [{
       anomaly_id: 'ano_forwarded_rps_001',
+      event_id: goldenEvents[0].event_id,
       entity_id: 'api-gateway-01',
+      source: goldenEvents[0].source,
       anomaly_type: 'FORWARDED_TRAFFIC_SPIKE',
+      severity: 0.95,
       score: 0.94,
       detector_id: 'rolling_zscore_v1',
       detected_at: '2026-07-14T09:30:30Z',
+      context_only: false,
+      can_open_incident: true,
+      explanation: 'Forwarded traffic exceeded the rolling baseline.',
     }] : [],
+  })),
+  http.get('*/api/v1/simulator/scenarios', () => HttpResponse.json({
+    generated_at: new Date().toISOString(),
+    items: [
+      { scenario_id: 'gateway_rate_limit_disabled', title: 'Gateway rate-limit disabled', description: 'Gateway configuration regression.', affected_entity_ids: ['api-gateway-01', 'checkout-api-01'], duration_seconds: 120, expected_signals: ['forwarded request spike'], difficulty: 'introductory' },
+      { scenario_id: 'database_connection_pool_exhaustion', title: 'Database connection-pool exhaustion', description: 'The payment database pool saturates.', affected_entity_ids: ['payment-db-01', 'payment-api-01'], duration_seconds: 90, expected_signals: ['database utilization', 'pool waits'], difficulty: 'intermediate' },
+      { scenario_id: 'network_path_congestion', title: 'Network path congestion', description: 'Packet loss affects the checkout path.', affected_entity_ids: ['api-gateway-01', 'checkout-api-01'], duration_seconds: 75, expected_signals: ['packet loss', 'TCP retransmissions'], difficulty: 'advanced' },
+      { scenario_id: 'dns_resolution_failure', title: 'DNS resolution failure', description: 'Checkout DNS lookups fail.', affected_entity_ids: ['checkout-api-01', 'payment-api-01'], duration_seconds: 60, expected_signals: ['DNS resolver errors'], difficulty: 'intermediate' },
+      { scenario_id: 'tls_certificate_failure', title: 'TLS certificate failure', description: 'Payment TLS handshakes fail.', affected_entity_ids: ['payment-api-01', 'checkout-api-01'], duration_seconds: 60, expected_signals: ['TLS handshake failure'], difficulty: 'intermediate' },
+    ],
   })),
   http.get('*/api/v1/incidents', () => HttpResponse.json({ generated_at: new Date().toISOString(), items: [incident], next_cursor: null })),
   http.get('*/api/v1/incidents/:incidentId/investigation', ({ params }) =>
@@ -118,9 +145,9 @@ export const handlers = [
       review,
     })
   }),
-  http.post('*/api/v1/simulator/start', () => { simulatorState = 'running'; scenarioState = 'baseline'; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_start' }) }),
+  http.post('*/api/v1/simulator/start', () => { simulatorState = 'ready'; scenarioState = 'baseline_complete'; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_start' }) }),
   http.post('*/api/v1/simulator/stop', () => { simulatorState = 'stopped'; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_stop' }) }),
-  http.post('*/api/v1/simulator/reset', () => { simulatorState = 'stopped'; scenarioState = 'idle'; scenarioId = null; mockReviews = []; mockAudit = []; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_reset', reset_audit_id: 'aud_mock_reset' }) }),
+  http.post('*/api/v1/simulator/reset', () => { simulatorState = 'stopped'; scenarioState = 'idle'; scenarioId = null; lastResetAt = new Date().toISOString(); mockReviews = []; mockAudit = []; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_reset', reset_audit_id: 'aud_mock_reset' }) }),
   http.post('*/api/v1/simulator/scenarios/:scenarioId/trigger', ({ params }) => { simulatorState = 'completed'; scenarioState = 'completed'; scenarioId = String(params.scenarioId); return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_trigger' }) }),
   http.get('*/api/v1/simulator/status', () => HttpResponse.json(simulatorStatus())),
   http.get('*/api/v1/topology', () => HttpResponse.json(goldenInvestigationResponse.topology)),

@@ -334,6 +334,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/simulator/scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scenarios */
+        get: operations["scenarios_api_v1_simulator_scenarios_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/simulator/scenarios/{scenario_id}/trigger": {
         parameters: {
             query?: never;
@@ -867,6 +884,10 @@ export interface components {
             anomaly_id: string;
             /** Anomaly Type */
             anomaly_type: string;
+            /** Can Open Incident */
+            can_open_incident: boolean;
+            /** Context Only */
+            context_only: boolean;
             /**
              * Detected At
              * Format: date-time
@@ -876,8 +897,16 @@ export interface components {
             detector_id: string;
             /** Entity Id */
             entity_id: string;
+            /** Event Id */
+            event_id: string;
+            /** Explanation */
+            explanation: string;
             /** Score */
             score: number;
+            /** Severity */
+            severity: number;
+            /** Source */
+            source: string;
         };
         /** PlaybookRecommendation */
         PlaybookRecommendation: {
@@ -1067,6 +1096,8 @@ export interface components {
              * Format: date-time
              */
             generated_at: string;
+            /** Last Reset At */
+            last_reset_at: string | null;
             /** Metric Interval Seconds */
             metric_interval_seconds: number;
             /** Request Id */
@@ -1105,6 +1136,8 @@ export interface components {
              * Format: date-time
              */
             generated_at: string;
+            /** Last Reset At */
+            last_reset_at: string | null;
             /** Metric Interval Seconds */
             metric_interval_seconds: number;
             /** Request Id */
@@ -1134,6 +1167,36 @@ export interface components {
              */
             virtual_clock: string;
         };
+        /** SimulatorScenario */
+        SimulatorScenario: {
+            /** Affected Entity Ids */
+            affected_entity_ids: string[];
+            /** Description */
+            description: string;
+            /**
+             * Difficulty
+             * @enum {string}
+             */
+            difficulty: "introductory" | "intermediate" | "advanced";
+            /** Duration Seconds */
+            duration_seconds: number;
+            /** Expected Signals */
+            expected_signals: string[];
+            /** Scenario Id */
+            scenario_id: string;
+            /** Title */
+            title: string;
+        };
+        /** SimulatorScenarioListResponse */
+        SimulatorScenarioListResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Items */
+            items: components["schemas"]["SimulatorScenario"][];
+        };
         /** SimulatorStatusResponse */
         SimulatorStatusResponse: {
             /** Baseline Ticks Emitted */
@@ -1145,6 +1208,8 @@ export interface components {
              * Format: date-time
              */
             generated_at: string;
+            /** Last Reset At */
+            last_reset_at: string | null;
             /** Metric Interval Seconds */
             metric_interval_seconds: number;
             /** Scenario Id */
@@ -1204,7 +1269,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "ready" | "error";
+            status: "healthy" | "delayed" | "offline" | "quarantined" | "error";
         };
         /** TimelineItem */
         TimelineItem: {
@@ -2848,6 +2913,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SimulatorResetResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    scenarios_api_v1_simulator_scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulatorScenarioListResponse"];
                 };
             };
             /** @description Bad Request */

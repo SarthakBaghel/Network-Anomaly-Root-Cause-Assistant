@@ -26,14 +26,14 @@ log_rules:
 
   - template_id: packet_loss_anomaly
     event_code: PACKET_LOSS_WARNING
-    anomaly_type: NETWORK_PACKET_LOSS
+    anomaly_type: PACKET_LOSS_SPIKE
     normalized_severity: 0.65
     anomaly_score: 0.76
     repeatable: true
 
   - template_id: dns_resolution_failure
     event_code: DNS_RESOLUTION_FAILED
-    anomaly_type: DNS_ANOMALY
+    anomaly_type: DNS_RESOLUTION_FAILURE
     normalized_severity: 0.85
     anomaly_score: 0.87
     repeatable: true
@@ -55,10 +55,17 @@ log_rules:
 
   - template_id: db_pool_exhausted
     event_code: DB_CONNECTION_POOL_EXHAUSTED
-    anomaly_type: DATABASE_CONNECTION_EXHAUSTED
+    anomaly_type: DB_POOL_EXHAUSTED
     normalized_severity: 0.90
     anomaly_score: 0.88
     repeatable: false
+
+  - template_id: tls_handshake_failure
+    event_code: TLS_HANDSHAKE_ERROR
+    anomaly_type: TLS_HANDSHAKE_FAILURE
+    normalized_severity: 0.92
+    anomaly_score: 0.91
+    repeatable: true
 
   - template_id: connection_pool_pressure
     event_code: CONNECTION_POOL_PRESSURE

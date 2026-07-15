@@ -101,6 +101,7 @@ def _production_snapshot() -> dict[str, Any]:
     with _production_client() as (client, session_factory):
         _expect(client.post("/api/v1/simulator/reset"))
         _expect(client.post("/api/v1/simulator/start"))
+        simulator_api.simulator_engine.complete_baseline()
         _expect(client.post(f"/api/v1/simulator/scenarios/{SCENARIO_ID}/trigger"))
 
         incident_list = _expect(client.get("/api/v1/incidents"))
@@ -306,8 +307,11 @@ def build_outputs() -> dict[Path, str]:
             item["payload"]["request_id"] = "req_golden_review_001"
     if [item["evidence_score"] for item in investigation["hypotheses"]] != [92.1, 65.6, 41.5]:
         raise RuntimeError("production replay no longer reproduces the approved RCA scores")
-    if investigation["incident"]["anomaly_count"] != 9:
-        raise RuntimeError("production replay no longer reproduces nine actionable anomalies")
+    if investigation["incident"]["anomaly_count"] != 15:
+        raise RuntimeError(
+            "production replay no longer reproduces nine primary findings "
+            "plus six EWMA corroborations"
+        )
 
     review_examples = {
         "schema_version": "1.0",

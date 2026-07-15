@@ -16,9 +16,25 @@ families:
       - UPSTREAM_CONNECTION_TIMEOUT
       - HIGH_CHECKOUT_ERROR_RATE
   database_pressure:
+    incident_title: Payment database connection pool exhausted
     event_types:
       - DB_CONNECTION_UTILIZATION
       - DB_POOL_EXHAUSTED
+      - DB_CONNECTION_POOL_EXHAUSTED
+      - UPSTREAM_CONNECTION_TIMEOUT
+  network_path:
+    incident_title: Network congestion on the checkout path
+    event_types:
+      - TCP_RETRANSMISSIONS
+      - PACKET_LOSS_WARNING
+  dns_failure:
+    incident_title: DNS resolution failure affecting checkout
+    event_types:
+      - DNS_RESOLUTION_FAILED
+  tls_failure:
+    incident_title: TLS certificate failure affecting payments
+    event_types:
+      - TLS_HANDSHAKE_ERROR
   maintenance_warning:
     event_types:
       - CERTIFICATE_EXPIRY_WARNING

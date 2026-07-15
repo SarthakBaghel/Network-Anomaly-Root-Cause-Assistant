@@ -9,39 +9,36 @@ import {
 } from "@testing-library/react";
 
 let pollCallback: (() => void) | null = null;
-const usePollingMock = vi.fn((callback: () => void) => {
-  pollCallback = callback;
+vi.mock("../src/hooks/usePolling", async () => {
+  const React = await import("react");
+  return {
+    usePolling: (callback: () => void) => {
+      React.useEffect(() => {
+        pollCallback = callback;
+        void callback();
+      }, [callback]);
+    },
+  };
 });
-vi.mock("../src/hooks/usePolling", () => ({
-  usePolling: (...args: any[]) => {
-    pollCallback = args[0];
-  },
-}));
 
 import { InvestigationPage } from "../src/pages/InvestigationPage";
-import { apiClient } from "../src/api/client";
+import { incidentsApi } from "../src/api/incidents";
+import { ApiClientError } from "../src/api/client";
 import investigationFixture from "../src/test-fixtures/golden-investigation-response.json";
 import {
   TEST_IDS,
+  evidenceItemTestId,
   hypothesisConfirmTestId,
 } from "../src/test-fixtures/testid-manifest";
 
 describe("InvestigationPage", () => {
   afterEach(() => {
     pollCallback = null;
-    usePollingMock.mockReset();
     vi.restoreAllMocks();
   });
   it("renders all evidence categories in the explorer", async () => {
-    vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-      if (url.includes("/investigation")) {
-        return Promise.resolve({ data: investigationFixture });
-      }
-      if (url.includes("/audit")) {
-        return Promise.resolve({ data: [] });
-      }
-      return Promise.resolve({ data: {} });
-    });
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -62,16 +59,9 @@ describe("InvestigationPage", () => {
   });
 
   it("disables confirm button and posts with client_action_id", async () => {
-    const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({ data: {} });
-    vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-      if (url.includes("/investigation")) {
-        return Promise.resolve({ data: investigationFixture });
-      }
-      if (url.includes("/audit")) {
-        return Promise.resolve({ data: [] });
-      }
-      return Promise.resolve({ data: {} });
-    });
+    const postSpy = vi.spyOn(incidentsApi, "submitReview").mockResolvedValue({} as any);
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -87,8 +77,7 @@ describe("InvestigationPage", () => {
     await waitFor(() => expect(confirmButton).toBeDisabled());
     await waitFor(() => expect(postSpy).toHaveBeenCalled());
 
-    const [url, body] = postSpy.mock.calls[0];
-    expect(url).toMatch(/\/incidents\/inc_001\/review$/);
+    const [, body] = postSpy.mock.calls[0];
     expect(body).toHaveProperty("client_action_id");
     expect(body).toMatchObject({
       decision: "confirmed",
@@ -99,35 +88,21 @@ describe("InvestigationPage", () => {
   it("discards stale analysis responses from the poll", async () => {
     let callCount = 0;
 
-    vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-      if (url.includes("/investigation")) {
-        callCount += 1;
-        if (callCount === 1) {
-          return Promise.resolve({ data: investigationFixture });
-        }
-
-        return Promise.resolve({
-          data: {
-            ...investigationFixture,
-            analysis_run: {
-              ...investigationFixture.analysis_run,
-              revision: 6,
-            },
-            analysis_run_id: "run_006",
-          },
-        });
-      }
-
-      if (url.includes("/audit")) {
-        return Promise.resolve({ data: [] });
-      }
-
-      return Promise.resolve({ data: {} });
+    vi.spyOn(incidentsApi, "getInvestigation").mockImplementation(async () => {
+      callCount += 1;
+      if (callCount === 1) return investigationFixture as any;
+      return {
+        ...investigationFixture,
+        generated_at: "2026-07-14T09:31:42.000Z",
+        analysis_run: { ...investigationFixture.analysis_run, revision: 6 },
+        analysis_run_id: "run_006",
+      } as any;
     });
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
 
     render(<InvestigationPage incidentId="inc_001" />);
 
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(incidentsApi.getInvestigation).toHaveBeenCalledTimes(1));
     await act(async () => {
       if (pollCallback) {
         await pollCallback();
@@ -142,35 +117,22 @@ describe("InvestigationPage", () => {
   it("shows stale-analysis banner when poll returns a newer analysis snapshot", async () => {
     let callCount = 0;
 
-    vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-      if (url.includes("/investigation")) {
-        callCount += 1;
-        if (callCount === 1) {
-          return Promise.resolve({ data: investigationFixture });
-        }
-
-        return Promise.resolve({
-          data: {
-            ...investigationFixture,
-            analysis_run: {
-              ...investigationFixture.analysis_run,
-              revision: 8,
-            },
-            analysis_run_id: "run_008",
-          },
-        });
-      }
-
-      if (url.includes("/audit")) {
-        return Promise.resolve({ data: [] });
-      }
-
-      return Promise.resolve({ data: {} });
+    vi.spyOn(incidentsApi, "getInvestigation").mockImplementation(async () => {
+      callCount += 1;
+      if (callCount === 1) return investigationFixture as any;
+      return {
+        ...investigationFixture,
+        generated_at: "2026-07-14T09:31:42.000Z",
+        analysis_run: { ...investigationFixture.analysis_run, revision: 8 },
+        analysis_run_id: "run_008",
+        incident: { ...investigationFixture.incident, title: "Replacement snapshot title" },
+      } as any;
     });
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
 
     render(<InvestigationPage incidentId="inc_001" />);
 
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(incidentsApi.getInvestigation).toHaveBeenCalledTimes(1));
     await act(async () => {
       if (pollCallback) {
         await pollCallback();
@@ -181,18 +143,12 @@ describe("InvestigationPage", () => {
     expect(banner).toHaveTextContent(
       "Analysis updated; now displaying the latest snapshot.",
     );
+    expect(screen.getByText("Replacement snapshot title")).toBeInTheDocument();
   });
 
   it("renders timeline attached and excluded events separately", async () => {
-    vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-      if (url.includes("/investigation")) {
-        return Promise.resolve({ data: investigationFixture });
-      }
-      if (url.includes("/audit")) {
-        return Promise.resolve({ data: [] });
-      }
-      return Promise.resolve({ data: {} });
-    });
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -208,5 +164,84 @@ describe("InvestigationPage", () => {
 
     expect(attached).toBeGreaterThan(0);
     expect(excluded).toBeGreaterThan(0);
+  });
+
+  it("rejects an older generated_at response for the same analysis revision", async () => {
+    let callCount = 0;
+    vi.spyOn(incidentsApi, "getInvestigation").mockImplementation(async () => {
+      callCount += 1;
+      if (callCount === 1) return investigationFixture as any;
+      return {
+        ...investigationFixture,
+        generated_at: "2026-07-14T09:30:00Z",
+        incident: { ...investigationFixture.incident, title: "Stale title must not render" },
+      } as any;
+    });
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    render(<InvestigationPage incidentId="inc_001" />);
+    await screen.findByText(investigationFixture.incident.title);
+    await act(async () => { await pollCallback?.(); });
+    expect(screen.queryByText("Stale title must not render")).not.toBeInTheDocument();
+  });
+
+  it("opens missing evidence as a concrete collection request", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    render(<InvestigationPage incidentId="inc_001" />);
+    const missing = Object.values(investigationFixture.evidence_by_hypothesis).flat().find((item) => item.kind === "missing")!;
+    fireEvent.click(await screen.findByTestId(evidenceItemTestId(missing.evidence_id)));
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Evidence collection request");
+    expect(screen.getByTestId(TEST_IDS.eventModalBody)).toHaveTextContent(missing.statement);
+  });
+
+  it("shows attachment details for accepted evidence without fabricating a record", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    render(<InvestigationPage incidentId="inc_001" />);
+    const accepted = Object.values(investigationFixture.evidence_by_hypothesis)
+      .flat()
+      .find((item) => item.kind === "observed" && item.source_event_id)!;
+
+    fireEvent.click(await screen.findByTestId(evidenceItemTestId(accepted.evidence_id)));
+
+    const modal = await screen.findByRole("dialog");
+    expect(modal).toHaveTextContent("Raw CanonicalEvent");
+    expect(modal).toHaveTextContent("Attachment score");
+    expect(modal).toHaveTextContent(String(accepted.source_event_id));
+  });
+
+  it("renders the explanation-fallback state from the append-only audit", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([{
+      audit_id: "aud_fallback_001",
+      timestamp: "2026-07-14T09:31:42Z",
+      actor_type: "system",
+      actor_id: null,
+      action: "EXPLANATION_FALLBACK_USED",
+      object_type: "analysis_run",
+      object_id: "run_007",
+      request_id: "req_fallback_001",
+      analysis_run_id: "run_007",
+      payload: {},
+    }] as any);
+
+    render(<InvestigationPage incidentId="inc_001" />);
+
+    expect(await screen.findByTestId(TEST_IDS.explanationFallbackBanner)).toHaveTextContent("template")
+  });
+
+  it("surfaces a frozen review-conflict message", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "submitReview").mockRejectedValue(new ApiClientError(409, {
+      code: "REVIEW_CONFLICT",
+      message: "A terminal decision already exists.",
+      details: [],
+    }));
+
+    render(<InvestigationPage incidentId="inc_001" />);
+    fireEvent.click(await screen.findByTestId(hypothesisConfirmTestId("hyp_001")));
+
+    expect(await screen.findByTestId(TEST_IDS.genericBanner)).toHaveTextContent("Decision already recorded")
   });
 });

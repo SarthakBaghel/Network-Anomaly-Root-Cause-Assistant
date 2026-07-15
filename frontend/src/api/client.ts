@@ -52,7 +52,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function toErrorPayload(value: unknown): ApiErrorPayload | null {
-  const envelope = isRecord(value) && isRecord(value.error) ? value.error : value
+  const envelope = isRecord(value) && isRecord(value.error)
+    ? value.error
+    : isRecord(value) && isRecord(value.detail)
+      ? value.detail
+      : value
   if (!isRecord(envelope) || typeof envelope.code !== 'string' || typeof envelope.message !== 'string') {
     return null
   }

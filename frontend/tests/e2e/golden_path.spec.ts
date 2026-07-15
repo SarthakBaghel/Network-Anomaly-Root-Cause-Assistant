@@ -1,37 +1,57 @@
 import { test, expect } from "@playwright/test";
 
+import fixture from "../../src/test-fixtures/golden-investigation-response.json" with { type: "json" };
+import {
+  TEST_IDS,
+  anomalyRowTestId,
+  auditRowTestId,
+  evidenceItemTestId,
+  evidenceRequestTestId,
+  evidenceSectionTestId,
+  evidenceSectionToggleTestId,
+  hypothesisConfirmTestId,
+  incidentRowTestId,
+  sourceHealthTestId,
+} from "../../src/test-fixtures/testid-manifest";
+
 test("golden path exploration and review flow", async ({ page }) => {
+  const firstHypothesis = fixture.hypotheses[0];
+  const missingEvidence = Object.values(fixture.evidence_by_hypothesis)
+    .flat()
+    .find((item) => item.kind === "missing");
+  if (!missingEvidence) throw new Error("Golden fixture must contain missing evidence");
+
   await page.goto("/");
 
-  await expect(page.locator('[data-testid="incident-list"]')).toBeVisible();
-  await expect(
-    page.locator('[data-testid="source-health-simulator.prometheus"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-testid="source-health-simulator.syslog"]'),
-  ).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.incidentList)).toBeVisible();
+  await expect(page.getByTestId(sourceHealthTestId("simulator.prometheus"))).toBeVisible();
+  await expect(page.getByTestId(sourceHealthTestId("fixture.cmdb_topology"))).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.simulatorState)).toContainText("stopped");
 
-  await expect(page.locator("text=Scenario not triggered")).toBeVisible();
-  await page.click('[data-testid="scenario-trigger-btn"]');
-  await expect(page.locator("text=Scenario triggered")).toBeVisible();
+  await page.getByTestId(TEST_IDS.scenarioTrigger).click();
+  await expect(page.getByTestId(TEST_IDS.simulatorState)).toContainText("completed");
+  await expect(page.getByTestId(anomalyRowTestId("ano_forwarded_rps_001"))).toBeVisible();
 
-  await page.click('[data-testid="incident-row-inc_001"]');
-  await expect(
-    page.locator('[data-testid="investigation-panel"]'),
-  ).toBeVisible();
-  await expect(page.locator('[data-testid="timeline-panel"]')).toBeVisible();
-  await expect(page.locator('[data-testid="topology-graph"]')).toBeVisible();
-  await expect(page.locator('[data-testid="evidence-panel"]')).toBeVisible();
+  await page.getByTestId(incidentRowTestId(fixture.incident.incident_id)).click();
+  await expect(page.getByTestId(TEST_IDS.investigationPanel)).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.timelinePanel)).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.topologyGraph)).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.evidencePanel)).toBeVisible();
+  for (const kind of ["observed", "correlated", "conflicting", "missing"]) {
+    await expect(page.getByTestId(evidenceSectionTestId(kind))).toBeVisible();
+  }
 
-  await expect(page.locator("text=Verified observed facts")).toBeVisible();
-  await expect(page.locator("text=Correlated signals")).toBeVisible();
-  await expect(page.locator("text=Conflicting evidence")).toBeVisible();
-  await expect(page.locator("text=Missing evidence")).toBeVisible();
+  await page.getByTestId(evidenceSectionToggleTestId("missing")).click();
+  await page.getByTestId(evidenceItemTestId(missingEvidence.evidence_id)).click();
+  await expect(page.getByTestId(TEST_IDS.eventModal)).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.eventModalBody)).toContainText(missingEvidence.statement);
+  await page.getByTestId(TEST_IDS.evidenceCloseModal).click();
 
-  const confirmButton = page.getByRole("button", { name: /Confirm/i });
-  await expect(confirmButton).toBeVisible();
-  await confirmButton.click();
-  await expect(confirmButton).toBeDisabled();
+  await page.getByTestId(evidenceRequestTestId(firstHypothesis.hypothesis_id)).click();
+  await expect(page.getByTestId(auditRowTestId("aud_mock_1"))).toBeVisible();
 
-  await expect(page.locator('[data-testid="audit-trail-panel"]')).toBeVisible();
+  await page.getByTestId(hypothesisConfirmTestId(firstHypothesis.hypothesis_id)).click();
+  await expect(page.getByTestId(TEST_IDS.incidentStatus)).toContainText("resolved");
+  await expect(page.getByTestId(auditRowTestId("aud_mock_2"))).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.auditTrailPanel)).toBeVisible();
 });

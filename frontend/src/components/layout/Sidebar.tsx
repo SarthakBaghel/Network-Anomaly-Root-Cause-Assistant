@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import investigationFixture from "../../test-fixtures/golden-investigation-response.json";
+import { TEST_IDS } from "../../test-fixtures/testid-manifest";
 import { ChevronLeftIcon, ChevronRightIcon, HomeIcon, ShieldIcon } from "../icons";
 
 type SidebarProps = {
@@ -26,9 +26,7 @@ export function Sidebar({ activePath }: SidebarProps) {
     });
   }
 
-  const incidentId = investigationFixture.incident.incident_id;
-  const incidentTitle = investigationFixture.incident.title;
-  const incidentPath = `/incidents/${incidentId}`;
+  const incidentPath = activePath.startsWith("/incidents/") ? activePath : null;
 
   return (
     <aside
@@ -51,6 +49,8 @@ export function Sidebar({ activePath }: SidebarProps) {
       <nav className="flex-1 space-y-1 px-3 py-4">
         <a
           href="/"
+          data-testid={TEST_IDS.sidebarOverviewLink}
+          aria-label="Open operations overview"
           className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
             activePath === "/"
               ? "bg-accent-cyan/10 text-accent-cyan"
@@ -66,8 +66,10 @@ export function Sidebar({ activePath }: SidebarProps) {
             Active Incidents
           </p>
         ) : null}
-        <a
+        {incidentPath ? <a
           href={incidentPath}
+          data-testid={TEST_IDS.sidebarIncidentLink}
+          aria-label="Open current incident investigation"
           className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
             activePath === incidentPath
               ? "bg-accent-purple/10 text-accent-purple"
@@ -75,12 +77,13 @@ export function Sidebar({ activePath }: SidebarProps) {
           }`}
         >
           <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-red" />
-          {!collapsed ? <span className="truncate">{incidentTitle}</span> : null}
-        </a>
+          {!collapsed ? <span className="truncate">Current incident</span> : null}
+        </a> : null}
       </nav>
 
       <button
         type="button"
+        data-testid={TEST_IDS.sidebarToggle}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         onClick={toggleCollapsed}
         className="m-3 flex items-center justify-center gap-2 rounded-2xl border border-border-subtle py-2 text-text-secondary transition-colors hover:border-accent-cyan/40 hover:text-accent-cyan"

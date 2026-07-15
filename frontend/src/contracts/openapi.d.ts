@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/anomalies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Anomalies */
+        get: operations["list_anomalies_api_v1_anomalies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -468,6 +485,16 @@ export interface components {
          * @enum {string}
          */
         AnalysisRunStatus: "building" | "current" | "superseded" | "failed";
+        /** AnomalyListResponse */
+        AnomalyListResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Items */
+            items: components["schemas"]["OverviewAnomaly"][];
+        };
         /**
          * AuditActorType
          * @enum {string}
@@ -750,6 +777,24 @@ export interface components {
          * @enum {string}
          */
         Modality: "metric" | "log" | "alert" | "config_change";
+        /** OverviewAnomaly */
+        OverviewAnomaly: {
+            /** Anomaly Id */
+            anomaly_id: string;
+            /** Anomaly Type */
+            anomaly_type: string;
+            /**
+             * Detected At
+             * Format: date-time
+             */
+            detected_at: string;
+            /** Detector Id */
+            detector_id: string;
+            /** Entity Id */
+            entity_id: string;
+            /** Score */
+            score: number;
+        };
         /** PlaybookRecommendation */
         PlaybookRecommendation: {
             /** Analysis Run Id */
@@ -856,6 +901,116 @@ export interface components {
             /** Reviewer */
             reviewer: string;
         };
+        /** SimulatorResetResponse */
+        SimulatorResetResponse: {
+            /** Baseline Ticks Emitted */
+            baseline_ticks_emitted: number;
+            /** Baseline Ticks Required */
+            baseline_ticks_required: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Metric Interval Seconds */
+            metric_interval_seconds: number;
+            /** Reset Audit Id */
+            reset_audit_id: string;
+            /** Scenario Id */
+            scenario_id: string | null;
+            /** Scenario State */
+            scenario_state: string;
+            /** Seed */
+            seed: number;
+            /** Source Health */
+            source_health: components["schemas"]["SourceHealth"][];
+            /** Sources */
+            sources: {
+                [key: string]: components["schemas"]["SourceCounters"];
+            };
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "stopped" | "running" | "paused" | "ready" | "triggering" | "completed";
+            /**
+             * Virtual Clock
+             * Format: date-time
+             */
+            virtual_clock: string;
+        };
+        /** SimulatorStatusResponse */
+        SimulatorStatusResponse: {
+            /** Baseline Ticks Emitted */
+            baseline_ticks_emitted: number;
+            /** Baseline Ticks Required */
+            baseline_ticks_required: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Metric Interval Seconds */
+            metric_interval_seconds: number;
+            /** Scenario Id */
+            scenario_id: string | null;
+            /** Scenario State */
+            scenario_state: string;
+            /** Seed */
+            seed: number;
+            /** Source Health */
+            source_health: components["schemas"]["SourceHealth"][];
+            /** Sources */
+            sources: {
+                [key: string]: components["schemas"]["SourceCounters"];
+            };
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "stopped" | "running" | "paused" | "ready" | "triggering" | "completed";
+            /**
+             * Virtual Clock
+             * Format: date-time
+             */
+            virtual_clock: string;
+        };
+        /** SourceCounters */
+        SourceCounters: {
+            /** Accepted */
+            accepted: number;
+            /** Collapsed */
+            collapsed: number;
+            /** Emitted */
+            emitted: number;
+            /** Quarantined */
+            quarantined: number;
+        };
+        /** SourceHealth */
+        SourceHealth: {
+            /** Accepted */
+            accepted: number;
+            /** Collapsed */
+            collapsed: number;
+            /** Fixture Version */
+            fixture_version?: string | null;
+            /** Last Ingest At */
+            last_ingest_at: string | null;
+            /** Quarantined */
+            quarantined: number;
+            /** Source Id */
+            source_id: string;
+            /**
+             * Source Type
+             * @enum {string}
+             */
+            source_type: "metrics" | "logs" | "alerts" | "config_changes" | "topology";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "error";
+        };
         /** TimelineItem */
         TimelineItem: {
             /**
@@ -932,6 +1087,37 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_anomalies_api_v1_anomalies_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnomalyListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_events_api_v1_events_get: {
         parameters: {
             query?: {
@@ -1492,7 +1678,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["SimulatorResetResponse"];
                 };
             };
         };
@@ -1514,7 +1700,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["SimulatorStatusResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1543,7 +1729,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["SimulatorStatusResponse"];
                 };
             };
         };
@@ -1563,7 +1749,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["SimulatorStatusResponse"];
                 };
             };
         };
@@ -1583,7 +1769,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["SimulatorStatusResponse"];
                 };
             };
         };

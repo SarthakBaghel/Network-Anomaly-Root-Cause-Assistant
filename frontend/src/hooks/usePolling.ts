@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+export const FRONTEND_POLL_INTERVAL_MS = 1_500;
+
 export type PollingSnapshot = {
   generated_at?: string;
   analysis_run_id?: string;
@@ -17,8 +19,8 @@ export function shouldAcceptSnapshot(
 }
 
 export function usePolling(
-  callback: () => void | Promise<void>,
-  intervalMs: number,
+  callback: (signal?: AbortSignal) => void | Promise<void>,
+  intervalMs = FRONTEND_POLL_INTERVAL_MS,
   enabled = true,
 ) {
   const callbackRef = useRef(callback);
@@ -32,10 +34,14 @@ export function usePolling(
       return;
     }
 
-    const id = window.setInterval(() => {
-      void callbackRef.current();
-    }, intervalMs);
+    const controller = new AbortController();
+    const run = () => void callbackRef.current(controller.signal);
+    run();
+    const id = window.setInterval(run, intervalMs);
 
-    return () => window.clearInterval(id);
+    return () => {
+      controller.abort();
+      window.clearInterval(id);
+    };
   }, [intervalMs, enabled]);
 }

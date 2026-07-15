@@ -38,7 +38,8 @@ describe('Person 2 Phase 0', () => {
     expect(events).toHaveLength(goldenEvents.length)
     expect(investigation.analysis_run_id).toBe(goldenInvestigationResponse.analysis_run_id)
     expect(topology.fixture_version).toBe(goldenInvestigationResponse.topology.fixture_version)
-    expect(simulator).toEqual({ status: 'ready' })
+    expect(simulator.source_health).toHaveLength(5)
+    expect(simulator.state).toBe('stopped')
   })
 
   it('renders the mocked investigation with all Phase 0 panels and controls', async () => {
@@ -55,13 +56,13 @@ describe('Person 2 Phase 0', () => {
     expect(screen.getByTestId(evidenceRequestTestId('hyp_001'))).toBeInTheDocument()
   })
 
-  it('provides stable test IDs for every Phase 0 control', () => {
+  it('provides stable test IDs for every Phase 0 control', async () => {
     render(<OverviewPage />)
 
-    expect(screen.getByTestId(TEST_IDS.simulatorStart)).toBeInTheDocument()
+    expect(await screen.findByTestId(TEST_IDS.simulatorStart)).toBeInTheDocument()
     expect(screen.getByTestId(TEST_IDS.simulatorReset)).toBeInTheDocument()
     expect(screen.getByTestId(TEST_IDS.scenarioTrigger)).toBeInTheDocument()
-    expect(screen.getByTestId(incidentRowTestId('inc_001'))).toBeInTheDocument()
+    expect(await screen.findByTestId(incidentRowTestId('inc_001'))).toBeInTheDocument()
     expect(sourceHealthTestId('simulator.prometheus')).toBe('source-health-simulator.prometheus')
     expect(new Set(Object.values(TEST_IDS)).size).toBe(Object.values(TEST_IDS).length)
   })

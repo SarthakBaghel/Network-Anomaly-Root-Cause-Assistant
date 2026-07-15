@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
-  Controls,
   ReactFlow,
   type Edge,
   type Node,
@@ -18,14 +17,23 @@ import {
 } from "recharts";
 
 import type { components } from "../contracts/openapi";
-import { apiClient } from "../api/client";
-import investigationFixture from "../test-fixtures/golden-investigation-response.json";
+import { ApiClientError } from "../api/client";
+import { eventsApi } from "../api/events";
+import { incidentsApi } from "../api/incidents";
 import {
   TEST_IDS,
+  auditRowTestId,
+  evidenceItemTestId,
+  evidenceSectionTestId,
+  evidenceSectionToggleTestId,
+  factorBreakdownTestId,
+  factorTooltipTestId,
+  observedEvidenceTooltipTestId,
   evidenceRequestTestId,
   hypothesisConfirmTestId,
   hypothesisRejectTestId,
   hypothesisRowTestId,
+  timelineEventTestId,
 } from "../test-fixtures/testid-manifest";
 import { Card } from "../components/ui/Card";
 import { Badge, type BadgeVariant } from "../components/ui/Badge";
@@ -63,6 +71,21 @@ type TimelinePoint = {
   modality: components["schemas"]["Modality"];
   attached: boolean;
 };
+
+type SelectedDetail =
+  | {
+      kind: "event";
+      event: components["schemas"]["CanonicalEvent"];
+      attachment_score?: number;
+      attachment_reasons?: string[];
+      attachment_decision?: "attached" | "excluded";
+    }
+  | {
+      kind: "collection_request";
+      evidence_id: string;
+      statement: string;
+      reason_code: string;
+    };
 
 const laneOrder: components["schemas"]["Modality"][] = [
   "metric",
@@ -107,11 +130,27 @@ const NODE_STATE_CLASS: Record<string, string> = {
 const NODE_STATE_FALLBACK_CLASS = "bg-white/10 border-white/20";
 
 function createUuid() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+}
+
+function severityBadgeVariant(severity: number): BadgeVariant {
+  if (severity >= 0.9) return "danger";
+  if (severity >= 0.5) return "warning";
+  return "success";
+}
+
+function severityLabel(severity: number) {
+  if (severity >= 0.9) return "critical";
+  if (severity >= 0.75) return "high";
+  if (severity >= 0.5) return "medium";
+  return "low";
 }
 
 function formatTimestamp(value: number) {
@@ -154,23 +193,6 @@ function eventColor(point: TimelinePoint) {
   return laneColor[point.modality];
 }
 
-function kindToModality(
-  kind: components["schemas"]["EvidenceKind"],
-): components["schemas"]["Modality"] {
-  switch (kind) {
-    case "observed":
-      return "log";
-    case "correlated":
-      return "alert";
-    case "conflicting":
-      return "metric";
-    case "missing":
-      return "config_change";
-    default:
-      return "log";
-  }
-}
-
 const EVIDENCE_KIND_LABEL: Record<
   components["schemas"]["EvidenceKind"],
   string
@@ -191,18 +213,13 @@ const EVIDENCE_KIND_ICON: Record<
   missing: HelpCircleIcon,
 };
 
-const defaultInvestigation =
-  investigationFixture as unknown as InvestigationResponse;
-
 export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   const [investigation, setInvestigation] =
-    useState<InvestigationResponse | null>(defaultInvestigation);
+    useState<InvestigationResponse | null>(null);
   const [auditTrail, setAuditTrail] = useState<
     components["schemas"]["AuditRecord"][]
   >([]);
-  const [selectedEvent, setSelectedEvent] = useState<
-    components["schemas"]["CanonicalEvent"] | null
-  >(null);
+  const [selectedDetail, setSelectedDetail] = useState<SelectedDetail | null>(null);
   const [reviewStatus, setReviewStatus] = useState<Record<string, string>>({});
   const [busyHypothesis, setBusyHypothesis] = useState<Record<string, boolean>>(
     {},
@@ -211,62 +228,61 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   const [apiError, setApiError] = useState<string | null>(null);
   const [auditFilter, setAuditFilter] = useState("");
   const latestRevisionRef = useRef<number | null>(null);
+  const latestGeneratedAtRef = useRef(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
-  async function loadInvestigation() {
+  const loadInvestigation = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsRefreshing(true);
-      const response = await apiClient.get<InvestigationResponse>(
-        `/incidents/${incidentId}/investigation`,
-      );
-      const revision = response.data.analysis_run.revision;
+      const response = await incidentsApi.getInvestigation(incidentId);
+      if (signal?.aborted) return;
+      const revision = response.analysis_run.revision;
+      const generatedAt = Date.parse(response.generated_at);
       if (
         latestRevisionRef.current !== null &&
-        revision <= latestRevisionRef.current
+        (revision < latestRevisionRef.current ||
+          (revision === latestRevisionRef.current &&
+            !Number.isNaN(generatedAt) &&
+            generatedAt < latestGeneratedAtRef.current))
       ) {
         return;
       }
-      if (latestRevisionRef.current !== null) {
+      if (latestRevisionRef.current !== null && revision > latestRevisionRef.current) {
         setBanner("Analysis updated; now displaying the latest snapshot.");
       }
       latestRevisionRef.current = revision;
-      setInvestigation(response.data);
+      if (!Number.isNaN(generatedAt)) latestGeneratedAtRef.current = generatedAt;
+      setInvestigation(response);
       setApiError(null);
-    } catch (error: any) {
-      const code = error?.response?.data?.code as string | undefined;
-      setApiError(
-        code
-          ? `${code}: Unable to load investigation snapshot`
-          : "Unable to load investigation snapshot",
-      );
+    } catch (error) {
+      if (!signal?.aborted) {
+        setApiError(
+          error instanceof ApiClientError
+            ? `${error.payload.code}: ${error.payload.message}`
+            : "UNEXPECTED_ERROR: Unable to load investigation snapshot",
+        );
+      }
     } finally {
-      setIsRefreshing(false);
+      if (!signal?.aborted) setIsRefreshing(false);
     }
-  }
-
-  useEffect(() => {
-    void loadInvestigation();
   }, [incidentId]);
 
-  usePolling(loadInvestigation, 1500);
+  usePolling(loadInvestigation);
+
+  const loadAudit = useCallback(async () => {
+    try {
+      setAuditTrail(await incidentsApi.getAudit(incidentId));
+    } catch {
+      // Keep the last append-only view if an audit refresh fails.
+    }
+  }, [incidentId]);
 
   useEffect(() => {
-    async function loadAudit() {
-      if (!investigation) {
-        return;
-      }
-      try {
-        const response = await apiClient.get<
-          components["schemas"]["AuditRecord"][]
-        >(`/incidents/${incidentId}/audit`);
-        setAuditTrail(response.data);
-      } catch {
-        // keep existing audit trail if unavailable
-      }
-    }
-
-    void loadAudit();
-  }, [incidentId, investigation]);
+    if (investigation) void loadAudit();
+  }, [investigation?.analysis_run_id, loadAudit]);
 
   const evidenceByHypothesis = useMemo(
     () => investigation?.evidence_by_hypothesis ?? {},
@@ -309,13 +325,93 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
     return grouped;
   }, [evidenceByHypothesis]);
 
-  function openEventModal(event: components["schemas"]["CanonicalEvent"]) {
-    setSelectedEvent(event);
+  function openTimelineModal(point: TimelinePoint, trigger?: HTMLElement) {
+    returnFocusRef.current = trigger ?? (document.activeElement as HTMLElement);
+    setSelectedDetail({
+      kind: "event",
+      event: point.event,
+      attachment_score: point.attachment_score,
+      attachment_reasons: point.attachment_reasons,
+      attachment_decision: point.attached ? "attached" : "excluded",
+    });
   }
 
-  function closeEventModal() {
-    setSelectedEvent(null);
+  function closeDetailModal() {
+    setSelectedDetail(null);
+    window.setTimeout(() => returnFocusRef.current?.focus(), 0);
   }
+
+  async function openEvidenceItem(
+    item: components["schemas"]["EvidenceItem"],
+    trigger: HTMLElement,
+  ) {
+    returnFocusRef.current = trigger;
+    if (item.kind === "missing" || !item.source_event_id) {
+      setSelectedDetail({
+        kind: "collection_request",
+        evidence_id: item.evidence_id,
+        statement: item.statement,
+        reason_code: item.reason_code,
+      });
+      return;
+    }
+
+    const timelineItem = investigation?.timeline.find(
+      (entry) => entry.event.event_id === item.source_event_id,
+    );
+    if (timelineItem) {
+      openTimelineModal(
+        {
+          x: Date.parse(timelineItem.event.timestamp),
+          y: laneOrder.indexOf(timelineItem.event.modality),
+          event: timelineItem.event,
+          attachment_score: timelineItem.attachment_score,
+          attachment_reasons: timelineItem.attachment_reasons,
+          modality: timelineItem.event.modality,
+          attached: timelineItem.attachment_decision === "attached",
+        },
+        trigger,
+      );
+      return;
+    }
+
+    try {
+      setSelectedDetail({ kind: "event", event: await eventsApi.get(item.source_event_id) });
+    } catch (error) {
+      setApiError(
+        error instanceof ApiClientError
+          ? `${error.payload.code}: ${error.payload.message}`
+          : "UNEXPECTED_ERROR: Unable to load evidence event",
+      );
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedDetail) return;
+    closeButtonRef.current?.focus();
+    const modal = modalRef.current;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeDetailModal();
+      if (event.key !== "Tab" || !modal) return;
+      const focusable = Array.from(
+        modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedDetail]);
 
   async function postReview(
     hypothesisId: string,
@@ -344,18 +440,24 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
     }
 
     try {
-      await apiClient.post(`/incidents/${incidentId}/review`, body);
+      await incidentsApi.submitReview(
+        incidentId,
+        body as Parameters<typeof incidentsApi.submitReview>[1],
+      );
       setReviewStatus((current) => ({ ...current, [hypothesisId]: decision }));
       if (decision === "confirmed") {
         setBanner("Confirmed root cause");
       }
-    } catch (error: any) {
-      if (error?.response?.status === 409) {
-        const code = error.response.data?.code;
+      await Promise.all([loadInvestigation(), loadAudit()]);
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 409) {
+        const code = error.payload.code;
         if (code === "STALE_ANALYSIS") {
           setBanner("Analysis updated, refresh the page");
         } else if (code === "REVIEW_CONFLICT") {
           setBanner("Decision already recorded");
+        } else if (code === "INCIDENT_CLOSED") {
+          setBanner("Incident is closed; review controls are read-only");
         } else {
           setBanner("Review action failed");
         }
@@ -376,6 +478,9 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
       .toLowerCase()
       .includes(auditFilter.toLowerCase()),
   );
+  const explanationFallbackUsed = auditTrail.some(
+    (record) => record.action === "EXPLANATION_FALLBACK_USED",
+  );
 
   return (
     <main
@@ -393,8 +498,11 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
               {investigation.incident.title}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Badge variant={statusBadgeVariant(investigation.incident.status)}>
-                {investigation.incident.status}
+              <Badge variant={severityBadgeVariant(investigation.incident.severity)}>
+                ⚠ {severityLabel(investigation.incident.severity)} severity
+              </Badge>
+              <Badge data-testid={TEST_IDS.incidentStatus} variant={statusBadgeVariant(investigation.incident.status)}>
+                ● {investigation.incident.status}
               </Badge>
               <span className="text-sm text-text-secondary">
                 Current incident status
@@ -405,9 +513,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
             Affected entities:{" "}
             <span className="font-semibold text-text-primary">
               {Array.from(
-                new Set(
-                  investigation.hypotheses.map((h) => h.candidate_entity_id),
-                ),
+                new Set(investigation.incident.affected_entity_ids),
               ).join(", ")}
             </span>
           </div>
@@ -415,6 +521,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
         {banner ? (
           <div
             role="status"
+            aria-live="polite"
             className="glass-panel flex items-center gap-2 border-accent-amber/30 bg-accent-amber/10 px-4 py-3 text-sm font-semibold text-accent-amber"
             data-testid={
               banner.includes("Analysis updated")
@@ -428,6 +535,8 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
         {apiError ? (
           <div
             role="alert"
+            aria-live="assertive"
+            data-testid={TEST_IDS.genericBanner}
             className="glass-panel flex items-center gap-2 border-accent-red/30 bg-accent-red/10 px-4 py-3 text-sm font-semibold text-accent-red"
           >
             <AlertTriangleIcon className="h-4 w-4 shrink-0" aria-hidden="true" />{" "}
@@ -473,9 +582,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     dataKey="y"
                     type="number"
                     domain={[0, laneOrder.length - 1]}
-                    tickFormatter={(value) =>
-                      laneLabels[value as components["schemas"]["Modality"]]
-                    }
+                    tickFormatter={(value) => laneLabels[laneOrder[Number(value)]] ?? ""}
                     ticks={laneOrder.map((_, index) => index)}
                     tick={{ fill: CHART_COLORS.axisTick, fontSize: 12 }}
                     stroke={CHART_COLORS.gridStroke}
@@ -523,12 +630,21 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                           cy={cy}
                           r={point.attached ? 8 : 6}
                           data-attached={String(point.attached)}
-                          data-testid="timeline-event"
+                          data-testid={timelineEventTestId(point.event.event_id)}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${point.attached ? "Attached" : "Excluded"} ${laneLabels[point.modality]} event ${point.event.event_type}`}
                           fill={eventColor(point)}
                           stroke={point.attached ? "#e2e8f0" : "#64748b"}
                           strokeWidth={point.attached ? 2 : 1}
                           className="cursor-pointer"
-                          onClick={() => openEventModal(point.event)}
+                          onClick={(event) => openTimelineModal(point, event.currentTarget as unknown as HTMLElement)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openTimelineModal(point, event.currentTarget as unknown as HTMLElement);
+                            }
+                          }}
                         />
                       );
                     }}
@@ -581,7 +697,6 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 fitView
               >
                 <Background gap={16} />
-                <Controls />
               </ReactFlow>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -611,13 +726,15 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 <ul className="mt-3 space-y-2">
                   <li>
                     <strong className="text-text-primary">depends_on</strong> —
-                    static relationship between nodes
+                    forward from an affected service finds a dependency that
+                    could fail; reverse from a failed dependency finds impacted services
                   </li>
                   <li>
                     <strong className="text-text-primary">
                       sends_traffic_to
                     </strong>{" "}
-                    — traffic direction used by active hypothesis
+                    — forward from a change point follows traffic impact;
+                    reverse finds sources feeding an overloaded entity
                   </li>
                 </ul>
               </div>
@@ -638,8 +755,16 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                   (item) => item.kind === "missing",
                 );
                 const confirmed =
-                  reviewStatus[hypothesis.hypothesis_id] === "confirmed";
+                  reviewStatus[hypothesis.hypothesis_id] === "confirmed" ||
+                  investigation.incident.confirmed_hypothesis_id === hypothesis.hypothesis_id ||
+                  investigation.reviews.some(
+                    (review) => review.hypothesis_id === hypothesis.hypothesis_id && review.decision === "confirmed",
+                  );
                 const busy = Boolean(busyHypothesis[hypothesis.hypothesis_id]);
+                const closed = ["resolved", "rejected"].includes(investigation.incident.status);
+                const terminal = investigation.reviews.some(
+                  (review) => review.hypothesis_id === hypothesis.hypothesis_id && ["confirmed", "rejected"].includes(review.decision),
+                );
                 return (
                   <article
                     key={hypothesis.hypothesis_id}
@@ -670,7 +795,11 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       requirements available
                     </div>
                     <details className="mt-4 rounded-2xl border border-border-subtle bg-white/[0.02] p-4">
-                      <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+                      <summary
+                        data-testid={factorBreakdownTestId(hypothesis.hypothesis_id)}
+                        aria-label={`Toggle factor breakdown for ${hypothesis.hypothesis_type}`}
+                        className="cursor-pointer text-sm font-semibold text-text-primary"
+                      >
                         Factor breakdown
                       </summary>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -680,7 +809,10 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                               key={factor}
                               className="rounded-xl border border-border-subtle bg-surface-soft p-3 text-sm"
                             >
-                              <UiTooltip label={`Contribution of ${factor.replace(/_/g, " ")} to the overall evidence score`}>
+                              <UiTooltip
+                                label={`Contribution of ${factor.replace(/_/g, " ")} to the overall evidence score`}
+                                testId={factorTooltipTestId(hypothesis.hypothesis_id, factor)}
+                              >
                                 <p className="cursor-help font-semibold text-text-primary underline decoration-dotted decoration-text-muted underline-offset-4">
                                   {factor}
                                 </p>
@@ -697,10 +829,10 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       <Button
                         variant="success"
                         data-testid={hypothesisConfirmTestId(hypothesis.hypothesis_id)}
-                        aria-label="Confirm hypothesis"
+                        aria-label={`Confirm ${hypothesis.hypothesis_type} hypothesis`}
                         icon={<CheckIcon className="h-4 w-4" />}
                         loading={busy}
-                        disabled={busy}
+                        disabled={busy || closed || terminal}
                         onClick={() =>
                           postReview(hypothesis.hypothesis_id, "confirmed")
                         }
@@ -710,10 +842,10 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       <Button
                         variant="danger"
                         data-testid={hypothesisRejectTestId(hypothesis.hypothesis_id)}
-                        aria-label="Reject hypothesis"
+                        aria-label={`Reject ${hypothesis.hypothesis_type} hypothesis`}
                         icon={<XIcon className="h-4 w-4" />}
                         loading={busy}
-                        disabled={busy}
+                        disabled={busy || closed || terminal}
                         onClick={() =>
                           postReview(hypothesis.hypothesis_id, "rejected")
                         }
@@ -723,10 +855,10 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       <Button
                         variant="warning"
                         data-testid={evidenceRequestTestId(hypothesis.hypothesis_id)}
-                        aria-label="Request evidence"
+                        aria-label={`Request missing evidence for ${hypothesis.hypothesis_type}`}
                         icon={<HelpCircleIcon className="h-4 w-4" />}
                         loading={busy}
-                        disabled={busy || missingEvidence.length === 0}
+                        disabled={busy || closed || missingEvidence.length === 0}
                         onClick={() =>
                           postReview(
                             hypothesis.hypothesis_id,
@@ -769,9 +901,14 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 return (
                   <details
                     key={kind}
+                    data-testid={evidenceSectionTestId(kind)}
                     className="glass-inset p-4"
                   >
-                    <summary className="flex cursor-pointer items-center gap-2 font-semibold text-text-primary">
+                    <summary
+                      data-testid={evidenceSectionToggleTestId(kind)}
+                      aria-label={`Toggle ${EVIDENCE_KIND_LABEL[kind]}`}
+                      className="flex cursor-pointer items-center gap-2 font-semibold text-text-primary"
+                    >
                       <KindIcon className="h-4 w-4 shrink-0" />
                       {EVIDENCE_KIND_LABEL[kind]}
                     </summary>
@@ -782,7 +919,8 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                         groupedEvidence[kind].map((item) => (
                           <button
                             key={item.evidence_id}
-                            data-testid={TEST_IDS.evidenceItem}
+                            data-testid={evidenceItemTestId(item.evidence_id)}
+                            aria-label={kind === "missing" ? `Open collection request: ${item.statement}` : `Open source record: ${item.statement}`}
                             className={`w-full rounded-2xl border p-4 text-left text-sm transition-colors ${
                               kind === "conflicting"
                                 ? "border-accent-amber/30 bg-accent-amber/10 text-accent-amber"
@@ -790,34 +928,22 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                                   ? "border-border-subtle bg-white/[0.02] text-text-primary hover:bg-white/[0.05]"
                                   : "border-border-subtle bg-white/[0.02] text-text-primary hover:bg-white/[0.05]"
                             }`}
-                            onClick={() => {
-                              const canonicalEvent = {
-                                entity_id:
-                                  item.source_event_id ?? item.evidence_id,
-                                event_id:
-                                  item.source_event_id ?? item.evidence_id,
-                                event_type: item.reason_code,
-                                ingested_at: item.created_at,
-                                modality: kindToModality(kind),
-                                schema_version: "1.0",
-                                severity: 0,
-                                source: "evidence",
-                                timestamp: item.created_at,
-                                quality_flags: [],
-                                raw_payload: {},
-                              } as components["schemas"]["CanonicalEvent"];
-
-                              openEventModal(canonicalEvent);
-                            }}
+                            onClick={(event) => void openEvidenceItem(item, event.currentTarget)}
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="font-semibold">{item.statement}</p>
+                                <p className="font-semibold">
+                                  {kind === "missing" ? `Collection request: ${item.statement}` : item.statement}
+                                </p>
                                 {kind === "observed" ? (
-                                  <p className="mt-1 text-xs text-text-muted">
-                                    Confirms the record and value were
-                                    observed; does not confirm causation
-                                  </p>
+                                  <UiTooltip
+                                    label="Confirms the record and value were observed; does not confirm causation"
+                                    testId={observedEvidenceTooltipTestId(item.evidence_id)}
+                                  >
+                                    <span className="mt-1 inline-flex cursor-help text-xs text-text-muted underline decoration-dotted underline-offset-4">
+                                      Verified observed fact — causation is not confirmed
+                                    </span>
+                                  </UiTooltip>
                                 ) : null}
                               </div>
                               <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-text-muted">
@@ -850,6 +976,15 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
             <p className="mt-2 text-sm text-text-secondary">
               Diagnostic summary from the current investigation snapshot.
             </p>
+            {explanationFallbackUsed ? (
+              <div
+                role="status"
+                data-testid={TEST_IDS.explanationFallbackBanner}
+                className="mt-4 rounded-xl border border-accent-amber/30 bg-accent-amber/10 p-3 text-sm text-accent-amber"
+              >
+                Explanation validation fallback: the deterministic template was used after the optional LLM result was rejected.
+              </div>
+            ) : null}
             <div className="glass-inset mt-4 p-4 text-sm text-text-secondary">
               <p className="font-semibold text-text-primary">
                 {investigation.explanation.summary}
@@ -929,6 +1064,8 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 <SearchIcon className="h-4 w-4" />
               </span>
               <input
+                data-testid={TEST_IDS.auditFilter}
+                aria-label="Filter audit entries"
                 value={auditFilter}
                 onChange={(event) => setAuditFilter(event.target.value)}
                 className="mt-2 block w-full rounded-xl border border-border-strong bg-surface py-2 pl-9 pr-3 text-sm text-text-primary shadow-sm outline-none focus:border-accent-cyan focus:ring-2 focus:ring-accent-cyan/30"
@@ -964,6 +1101,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     filteredAuditTrail.map((record) => (
                       <tr
                         key={record.audit_id}
+                        data-testid={auditRowTestId(record.audit_id)}
                         className="border-t border-border-subtle transition-colors hover:bg-white/[0.03]"
                       >
                         <td className="px-4 py-3 text-text-secondary">
@@ -988,31 +1126,48 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
         </aside>
       </section>
 
-      {selectedEvent ? (
+      {selectedDetail ? (
         <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-          <div className="glass-panel animate-scale-in max-h-[90vh] w-full max-w-3xl overflow-auto p-6">
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="event-detail-title"
+            data-testid={TEST_IDS.eventModal}
+            className="glass-panel animate-scale-in max-h-[90vh] w-full max-w-3xl overflow-auto p-6"
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-text-primary">
-                  Raw CanonicalEvent
+                <h2 id="event-detail-title" className="text-xl font-semibold text-text-primary">
+                  {selectedDetail.kind === "event" ? "Raw CanonicalEvent" : "Evidence collection request"}
                 </h2>
                 <p className="mt-1 text-sm text-text-secondary">
-                  Attachment score and reasons accompany the raw event.
+                  {selectedDetail.kind === "event"
+                    ? "Attachment decision, score, and reasons accompany the raw event when available."
+                    : "This missing evidence is a concrete request from the hypothesis catalogue."}
                 </p>
               </div>
               <Button
+                ref={closeButtonRef}
                 variant="ghost"
                 data-testid={TEST_IDS.evidenceCloseModal}
                 aria-label="Close event details modal"
                 icon={<XIcon className="h-4 w-4" />}
-                onClick={closeEventModal}
+                onClick={closeDetailModal}
                 className="px-3 py-2"
               />
             </div>
-            <div className="glass-inset mt-6 p-4 text-sm text-text-secondary">
-              <pre className="whitespace-pre-wrap break-words text-xs">
-                {JSON.stringify(selectedEvent, null, 2)}
-              </pre>
+            <div data-testid={TEST_IDS.eventModalBody} className="glass-inset mt-6 p-4 text-sm text-text-secondary">
+              {selectedDetail.kind === "event" ? (
+                <>
+                  {selectedDetail.attachment_decision ? <p><strong className="text-text-primary">Attachment:</strong> {selectedDetail.attachment_decision}</p> : null}
+                  {selectedDetail.attachment_score !== undefined ? <p className="mt-2"><strong className="text-text-primary">Attachment score:</strong> {selectedDetail.attachment_score}</p> : null}
+                  {selectedDetail.attachment_reasons ? <p className="mt-2"><strong className="text-text-primary">Reasons:</strong> {selectedDetail.attachment_reasons.join(", ")}</p> : null}
+                  <pre className="mt-4 whitespace-pre-wrap break-words text-xs">{JSON.stringify(selectedDetail.event, null, 2)}</pre>
+                </>
+              ) : (
+                <dl className="space-y-3"><div><dt className="font-semibold text-text-primary">Request</dt><dd>{selectedDetail.statement}</dd></div><div><dt className="font-semibold text-text-primary">Reason code</dt><dd>{selectedDetail.reason_code}</dd></div><div><dt className="font-semibold text-text-primary">Evidence ID</dt><dd>{selectedDetail.evidence_id}</dd></div></dl>
+              )}
             </div>
           </div>
         </div>

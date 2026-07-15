@@ -1,4 +1,4 @@
-import investigationFixture from "../../test-fixtures/golden-investigation-response.json";
+import { TEST_IDS } from "../../test-fixtures/testid-manifest";
 import { ActivityIcon, HomeIcon } from "../icons";
 
 type TopbarProps = {
@@ -6,9 +6,9 @@ type TopbarProps = {
 };
 
 export function Topbar({ activePath }: TopbarProps) {
-  const incidentId = investigationFixture.incident.incident_id;
-  const incidentPath = `/incidents/${incidentId}`;
   const isInvestigation = activePath.startsWith("/incidents/");
+  const incidentId = isInvestigation ? activePath.split("/")[2] : null;
+  const incidentPath = isInvestigation ? activePath : null;
 
   return (
     <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg-base/70 backdrop-blur-xl">
@@ -35,6 +35,8 @@ export function Topbar({ activePath }: TopbarProps) {
       <nav className="flex items-center gap-2 border-t border-border-subtle px-4 py-2 md:hidden">
         <a
           href="/"
+          data-testid={TEST_IDS.mobileOverviewLink}
+          aria-label="Open operations overview"
           className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             activePath === "/"
               ? "bg-accent-cyan/10 text-accent-cyan"
@@ -43,8 +45,10 @@ export function Topbar({ activePath }: TopbarProps) {
         >
           <HomeIcon className="h-3.5 w-3.5" /> Overview
         </a>
-        <a
+        {incidentPath ? <a
           href={incidentPath}
+          data-testid={TEST_IDS.mobileIncidentLink}
+          aria-label="Open current incident investigation"
           className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             activePath === incidentPath
               ? "bg-accent-purple/10 text-accent-purple"
@@ -52,7 +56,7 @@ export function Topbar({ activePath }: TopbarProps) {
           }`}
         >
           <ActivityIcon className="h-3.5 w-3.5" /> Incident
-        </a>
+        </a> : null}
       </nav>
     </header>
   );

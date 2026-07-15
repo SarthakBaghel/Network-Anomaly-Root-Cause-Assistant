@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success" | "warning";
 
@@ -22,17 +22,18 @@ type ButtonProps = ComponentPropsWithoutRef<"button"> & {
   loading?: boolean;
 };
 
-export function Button({
-  variant = "secondary",
-  icon,
-  loading = false,
-  disabled,
-  className = "",
-  children,
-  ...rest
-}: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
+    variant = "secondary",
+    icon,
+    loading = false,
+    disabled,
+    className = "",
+    children,
+    ...rest
+  }, ref) {
   return (
     <button
+      ref={ref}
       disabled={disabled || loading}
       className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
@@ -45,4 +46,4 @@ export function Button({
       {children}
     </button>
   );
-}
+});

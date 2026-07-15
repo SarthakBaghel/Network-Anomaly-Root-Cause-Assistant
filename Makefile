@@ -45,5 +45,6 @@ test: guard
 build:
 	cd frontend && npm run build
 
-# Full CI gate: validate + test + build
-verify: check-fixtures check-types validate-fixtures test build
+# Final release gate: two complete passes with a production reset and semantic comparison.
+verify:
+	.venv/bin/python scripts/run_release_gate.py

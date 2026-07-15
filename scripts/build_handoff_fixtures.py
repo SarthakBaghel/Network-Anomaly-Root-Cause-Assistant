@@ -331,11 +331,157 @@ def build_outputs() -> dict[Path, str]:
     }
 
 
+def semantic_projection(outputs: dict[Path, str]) -> dict[str, Any]:
+    """Return the stable behavior contract produced by one real reset/replay."""
+
+    investigation = json.loads(
+        outputs[BACKEND_FIXTURES / "golden_investigation_response.json"]
+    )
+    expected = json.loads(
+        outputs[BACKEND_FIXTURES / "golden_expected_analysis.json"]
+    )
+    reviews = json.loads(
+        outputs[BACKEND_FIXTURES / "golden_review_examples.json"]
+    )["records"]
+    audits = json.loads(
+        outputs[BACKEND_FIXTURES / "golden_audit_examples.json"]
+    )["records"]
+    events = json.loads(outputs[FRONTEND_FIXTURES / "golden-events.json"])
+    hypothesis_type = {
+        item["hypothesis_id"]: item["hypothesis_type"]
+        for item in investigation["hypotheses"]
+    }
+    source_record = {
+        item["event"]["event_id"]: item["event"]["source_record_id"]
+        for item in investigation["timeline"]
+    }
+    return {
+        "schema_version": "production-release-semantics-1.0",
+        "input": {
+            "event_count": len(events),
+            "source_records": [item["source_record_id"] for item in events],
+        },
+        "incident": {
+            field: investigation["incident"][field]
+            for field in (
+                "title",
+                "status",
+                "severity",
+                "primary_entity_id",
+                "affected_entity_ids",
+                "anomaly_count",
+            )
+        },
+        "analysis": {
+            "revision": investigation["analysis_run"]["revision"],
+            "status": investigation["analysis_run"]["status"],
+            "input_fingerprint": investigation["analysis_run"]["input_fingerprint"],
+            "algorithm_version": investigation["analysis_run"]["algorithm_version"],
+            "typed_paths": expected["typed_paths"],
+            "conflict_reason_codes": expected["conflict_reason_codes"],
+        },
+        "timeline": [
+            {
+                "source_record_id": item["event"]["source_record_id"],
+                "decision": item["attachment_decision"],
+                "score": item["attachment_score"],
+                "reasons": item["attachment_reasons"],
+            }
+            for item in investigation["timeline"]
+        ],
+        "hypotheses": [
+            {
+                field: item[field]
+                for field in (
+                    "hypothesis_type",
+                    "candidate_entity_id",
+                    "rank",
+                    "evidence_score",
+                    "evidence_coverage",
+                    "factor_scores",
+                    "summary",
+                )
+            }
+            for item in investigation["hypotheses"]
+        ],
+        "evidence": {
+            hypothesis_type[hypothesis_id]: [
+                {
+                    "kind": item["kind"],
+                    "source_record_id": source_record.get(item["source_event_id"]),
+                    "statement": item["statement"],
+                    "relevance": item["relevance"],
+                    "reason_code": item["reason_code"],
+                }
+                for item in rows
+            ]
+            for hypothesis_id, rows in investigation[
+                "evidence_by_hypothesis"
+            ].items()
+        },
+        "recommendations": {
+            hypothesis_type[hypothesis_id]: [
+                {
+                    field: item[field]
+                    for field in (
+                        "step_id",
+                        "title",
+                        "step_type",
+                        "risk_level",
+                        "requires_human_approval",
+                        "instructions",
+                        "rationale",
+                    )
+                }
+                for item in rows
+            ]
+            for hypothesis_id, rows in investigation[
+                "recommendations_by_hypothesis"
+            ].items()
+        },
+        "topology": {
+            "nodes": [
+                (item["id"], item["state"])
+                for item in investigation["topology"]["nodes"]
+            ],
+            "edges": [
+                (
+                    item["source"],
+                    item["target"],
+                    item["relation_type"],
+                    item["state"],
+                )
+                for item in investigation["topology"]["edges"]
+            ],
+        },
+        "explanation": {
+            "generator": investigation["explanation"]["generator"],
+            "summary": investigation["explanation"]["summary"],
+            "claims": [
+                item["claim"] for item in investigation["explanation"]["claims"]
+            ],
+            "diagnostic_step_ids": investigation["explanation"][
+                "diagnostic_step_ids"
+            ],
+            "remediation_step_ids": investigation["explanation"][
+                "remediation_step_ids"
+            ],
+        },
+        "review_decisions": [item["decision"] for item in reviews],
+        "audit_actions": [item["action"] for item in audits],
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate normalized handoff artifacts from a real production replay."
     )
     parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--semantic-output",
+        type=Path,
+        help="write the normalized runtime semantic projection for release comparison",
+    )
     args = parser.parse_args()
     outputs = build_outputs()
     stale: list[str] = []
@@ -348,6 +494,12 @@ def main() -> None:
             path.write_text(content, encoding="utf-8")
     if stale:
         raise SystemExit("production-generated handoff artifacts are stale: " + ", ".join(stale))
+    if args.semantic_output is not None:
+        args.semantic_output.parent.mkdir(parents=True, exist_ok=True)
+        args.semantic_output.write_text(
+            pretty(semantic_projection(outputs)), encoding="utf-8"
+        )
+        print(f"wrote semantic replay snapshot to {args.semantic_output}")
     print(
         f"{'validated' if args.check else 'generated'} {len(outputs)} "
         "handoff artifacts from production replay"

@@ -251,3 +251,22 @@ contracts only when its affected owners have reviewed it.
   FastAPI, and Vite processes and discovers incident, run, hypothesis, evidence,
   review, and audit identities from production responses at runtime.
 - **Affected owners:** Persons 1, 2, 4, and 5
+
+## M0-018 — Two-pass final integration release gate
+
+- **Status:** accepted for the P0 release boundary
+- **Decision:** `make verify` owns the final release decision and runs two
+  complete passes. Each pass includes production artifact reproduction,
+  OpenAPI and generated TypeScript drift checks, contract/runtime-firewall
+  validation, the focused production pipeline/failure/reset suite, all other
+  backend tests, frontend tests/build, and MSW-disabled live Playwright.
+- **Reset boundary:** both live passes share one migrated SQLite database. The
+  P1 production reset service clears and reseeds that database after pass one,
+  before any pass-two check executes.
+- **Determinism:** each pass captures a runtime projection that excludes only
+  volatile identities and wall-clock fields. The gate compares event order,
+  incident semantics, analysis metadata, timeline decisions, hypotheses,
+  evidence, recommendations, topology states, explanation, review decision,
+  and audit actions byte-for-byte and reports a SHA-256 digest.
+- **Affected owners:** Person 1 owns the runner; all persons own their included
+  boundary tests.

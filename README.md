@@ -17,11 +17,18 @@ cp .env.example .env       # optional; defaults work without it
 ./scripts/dev.sh
 python3 scripts/build_scenario_bundle.py --check
 python3 scripts/validate_milestone0.py
+make verify
 ```
 
 `bootstrap.sh` creates `.venv`, installs the locked backend and frontend
 dependencies, applies the Alembic migration, rebuilds deterministic fixtures,
 and validates all Milestone-0 handoffs.
+
+`make verify` is the final integration release gate. It runs every backend and
+frontend boundary, generated-artifact check, and MSW-disabled live Playwright
+flow twice. A production reset is executed against the live-test database
+between passes, and the command fails unless both production replays produce
+the same normalized semantic snapshot.
 
 ## Optional local LLM explanation
 

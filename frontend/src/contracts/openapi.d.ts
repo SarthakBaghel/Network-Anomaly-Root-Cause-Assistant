@@ -303,7 +303,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reset */
+        /**
+         * Reset
+         * @description Execute the full demo reset sequence (blueprint §5.2, P1-22).
+         *
+         *     Stops the simulator, clears demo rows, reloads topology,
+         *     re-seeds history, resets the simulator clock, and writes DEMO_RESET audit.
+         */
         post: operations["reset_api_v1_simulator_reset_post"];
         delete?: never;
         options?: never;
@@ -994,7 +1000,13 @@ export interface operations {
     };
     list_incidents_api_v1_incidents_get: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: components["schemas"]["IncidentStatus"] | null;
+                primary_entity_id?: string | null;
+                min_severity?: number | null;
+                limit?: number;
+                cursor?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1008,6 +1020,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1316,7 +1337,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["TimelineItem"][];
                 };
             };
             /** @description Validation Error */

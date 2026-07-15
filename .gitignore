@@ -3,7 +3,6 @@
 .venv/
 __pycache__/
 *.py[cod]
-*.egg-info/
 .pytest_cache/
 .ruff_cache/
 network_anomaly_rca.db
@@ -12,4 +11,6 @@ frontend/node_modules/
 frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
-
+data/
+Tech_Mcode/
+Mock Real World Case/

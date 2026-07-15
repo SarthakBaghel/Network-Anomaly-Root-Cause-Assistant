@@ -68,7 +68,9 @@ def readiness_report() -> tuple[bool, dict[str, Any]]:
     checks = {
         "database": database_status,
         "catalogues": catalogue_status,
-        "orchestrator": lambda: "foundation_stub_ready",
+        "orchestrator": lambda: __import__(
+            "app.orchestration", fromlist=["orchestrator"]
+        ).orchestrator.status(),
     }
     for name, check in checks.items():
         try:

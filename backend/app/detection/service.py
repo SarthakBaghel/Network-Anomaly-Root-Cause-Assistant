@@ -72,3 +72,53 @@ class DetectionPublisher:
                 records.append(anomaly)
         self.session.flush()
         return records
+
+
+class DetectorService:
+    """Implement DetectorProtocol for the AnalysisOrchestrator."""
+
+    def __init__(self, detectors: tuple[Detector, ...] = DETECTORS) -> None:
+        self.detectors = detectors
+
+    def evaluate_event(self, event: Event, session: Session) -> list[Anomaly]:
+        from app.ingestion.pipeline import event_to_contract
+        from app.detection.detector import DetectionContext
+
+        contract_event = event_to_contract(event)
+        history_rows = session.scalars(
+            select(Event).where(
+                Event.timestamp >= event.timestamp - timedelta(seconds=settings.detector_window_seconds),
+                Event.timestamp < event.timestamp,
+            ).order_by(Event.timestamp, Event.id)
+        )
+        context = DetectionContext(history=[event_to_contract(row) for row in history_rows])
+
+        records: list[Anomaly] = []
+        for detector in self.detectors:
+            for anomaly in detector.evaluate(contract_event, context):
+                exists = session.scalar(
+                    select(Anomaly.id).where(
+                        Anomaly.event_id == anomaly.event_id,
+                        Anomaly.detector_id == anomaly.detector_id,
+                    )
+                )
+                if exists is not None:
+                    continue
+                records.append(
+                    Anomaly(
+                        id=anomaly.anomaly_id,
+                        event_id=anomaly.event_id,
+                        detector_id=anomaly.detector_id,
+                        type=anomaly.anomaly_type,
+                        detected_at=anomaly.detected_at,
+                        score=anomaly.score,
+                        threshold=anomaly.threshold,
+                        context_only=anomaly.context_only,
+                        can_open_incident=anomaly.can_open_incident,
+                        window_start=anomaly.window_start,
+                        window_end=anomaly.window_end,
+                        features=anomaly.features,
+                        explanation=anomaly.explanation,
+                    )
+                )
+        return records

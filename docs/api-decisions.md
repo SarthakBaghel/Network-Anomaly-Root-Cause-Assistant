@@ -83,19 +83,9 @@ contracts only when its affected owners have reviewed it.
   explanation modules may not import or open them.
 - **Affected owners:** all backend owners
 
-## M0-009 — Expanded reference dataset and leakage firewall
+## M0-009 — Engine-to-Orchestrator Adapter Contract Freeze
 
-- **Status:** accepted for dataset integration
-- **Decision:** NSL-KDD, UNSW-NB15, Loghub HDFS/BGL, GAIA MicroSS, and the
-  sample distributed-trace dataset remain reference-only. They may produce
-  attributed profiles, templates, mapping proposals, and offline evaluation
-  samples, but the live incident remains the deterministic simulator scenario.
-- **Forbidden transformations:** dataset class/anomaly labels may not derive
-  runtime severity, alerts, hypotheses, incident membership, RCA factors, or
-  signal values; time buckets may not manufacture trace IDs; approximate
-  network formulas may not be named as measured operational metrics; GAIA
-  identities may not replace the frozen topology without a full contract change.
-- **Reason:** these restrictions prevent target leakage, false time-based
-  correlation, misleading measurement semantics, and fixture incompatibility.
-- **Affected owners:** all; Persons 3 and 4 resolve dataset/source and
-  topology/RCA semantics respectively.
+- **Status:** accepted
+- **Decision:** The adapter contract between the pure analysis engine and the orchestrator is frozen via `AnalysisEngineProtocol` and `AnalysisResult`. The analysis engine must execute as a pure function, returning uncommitted ORM rows (hypotheses, evidence, recommendations) and raw explanation payloads to be persisted atomically by the orchestrator.
+- **Affected owners:** Persons 1 and 4
+

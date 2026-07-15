@@ -16,13 +16,13 @@ competing copies.
 
 | Artifact | SHA-256 |
 |---|---|
-| `backend/openapi.json` | `7d3b4623622c43d16fc2c04d770b64dceb7c5702e66f519e9c927fc49c2e50d8` |
+| `backend/openapi.json` | `a0eb1cdb7d3f413fca55b2792cd75e801041bc5bb52474a7c2e2f3744d216d0c` |
 | `backend/tests/fixtures/golden_events.jsonl` | `06612568cea892f214b245d95f2ebff0c04d659d1c931c2b74e26df82f60659a` |
 | `backend/tests/fixtures/golden_anomalies.json` | `fa57ab8b3052648592ef1c48d281905cba3b38e8ff12a905168e966ff362eb8f` |
 | `backend/tests/fixtures/golden_incident_bundle.json` | `fbcb25d76bbfc52ae14c8686a36b853eca4d36a89fbd897eb0a392f635914cfe` |
 | `backend/tests/fixtures/golden_expected_analysis.json` | `4a84ab7a52b764743da9aea20a05c8ed444e63116af9c11feff0fd9a0a839cb7` |
-| `backend/tests/fixtures/golden_investigation_response.json` | `166be89d2183d68e837db299dd72e0c83e3b35fb1d99c7597143dccd4e56d5d5` |
+| `backend/tests/fixtures/golden_investigation_response.json` | `3c76cc14fca16f8c5bd97c46fda875efc1d9d834fd7a3601752abd0ec1d47e8c` |
 | `backend/tests/fixtures/golden_review_examples.json` | `e43586e25df9f8d63db59294f066c5a29ebbf420adfb71a9f35e76b2a778f963` |
 | `backend/tests/fixtures/golden_audit_examples.json` | `586294cf61944e2ebeadc0dd6e51397ffc1e4e28f65b24d3b432b467e8dbac6f` |
 | `frontend/src/routes.ts` | `03063934eaca8276bb85d47785d23ec2f5698f12bcb4ca824c76d674aaa15560` |
-| `frontend/src/test-fixtures/testid-manifest.ts` | `39c3caee0dd17a2c4ee66df079178dcffbb5c9450f39e97256c276fc0dac7f4f` |
+| `frontend/src/test-fixtures/testid-manifest.ts` | `9207b6b1a819d4525e5e9030881318af5bc1d92289ce52643eb88e9cc9ebbd6b` |

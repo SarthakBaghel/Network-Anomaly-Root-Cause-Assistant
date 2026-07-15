@@ -1,26 +1,70 @@
-import { Background, Controls, ReactFlow, type Edge, type Node } from '@xyflow/react'
+import { Background, ReactFlow, type Edge, type Node } from '@xyflow/react'
+import { useCallback, useMemo, useState } from 'react'
 
-import type { components } from '../contracts/openapi'
-import investigationFixture from '../test-fixtures/golden-investigation-response.json'
+import { incidentsApi } from '../api/incidents'
+import { type ApiClientError } from '../api/client'
+import { usePolling } from '../hooks/usePolling'
+import { assertInvestigationResponse, type InvestigationResponse } from '../test-fixtures/fixture-validation'
 import { TEST_IDS, hypothesisRowTestId } from '../test-fixtures/testid-manifest'
 
-type InvestigationResponse = components['schemas']['InvestigationResponse']
+type ReviewDecision = 'confirmed' | 'rejected' | 'evidence_requested'
 
-const investigation = investigationFixture as unknown as InvestigationResponse
-const nodes: Node[] = investigation.topology.nodes.map((node, index) => ({
-  id: node.id,
-  position: { x: (index % 3) * 220, y: Math.floor(index / 3) * 140 },
-  data: { label: `${node.name} · ${node.state ?? 'normal'}` },
-}))
-const edges: Edge[] = investigation.topology.edges.map((edge, index) => ({
-  id: `${edge.source}-${edge.target}-${edge.relation_type}-${index}`,
-  source: edge.source,
-  target: edge.target,
-  label: edge.relation_type,
-  type: 'smoothstep',
-}))
+function graphFromInvestigation(investigation: InvestigationResponse): { nodes: Node[]; edges: Edge[] } {
+  return {
+    nodes: investigation.topology.nodes.map((node, index) => ({
+      id: node.id,
+      position: { x: (index % 3) * 220, y: Math.floor(index / 3) * 140 },
+      data: { label: `${node.name} · ${node.state ?? 'normal'}` },
+    })),
+    edges: investigation.topology.edges.map((edge, index) => ({
+      id: `${edge.source}-${edge.target}-${edge.relation_type}-${index}`,
+      source: edge.source,
+      target: edge.target,
+      label: edge.relation_type,
+      type: 'smoothstep',
+    })),
+  }
+}
 
-export function InvestigationPage() {
+export function InvestigationPage({ incidentId }: { incidentId: string }) {
+  const loadInvestigation = useCallback(async () => {
+    const response = await incidentsApi.getInvestigation(incidentId)
+    assertInvestigationResponse(response)
+    return response
+  }, [incidentId])
+  const { data: investigation, error, isLoading } = usePolling(loadInvestigation)
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null)
+
+  const graph = useMemo(
+    () => (investigation ? graphFromInvestigation(investigation) : { nodes: [], edges: [] }),
+    [investigation],
+  )
+
+  const submitReview = async (decision: ReviewDecision) => {
+    if (!investigation) return
+    const missingEvidence = Object.values(investigation.evidence_by_hypothesis)
+      .flat()
+      .find((item) => item.kind === 'missing')
+    await incidentsApi.submitReview(incidentId, {
+      analysis_run_id: investigation.analysis_run_id,
+      hypothesis_id: investigation.hypotheses[0].hypothesis_id,
+      decision,
+      client_action_id: `ui-${decision}-${investigation.analysis_run_id}`,
+      reviewer: 'demo-operator',
+      comment: 'Mock UI action submitted.',
+      requested_evidence_id: decision === 'evidence_requested' ? missingEvidence?.evidence_id ?? null : null,
+    })
+    setReviewMessage(`Mock ${decision.replace('_', ' ')} action submitted.`)
+  }
+
+  if (isLoading && !investigation) {
+    return <main className="p-8" data-testid={TEST_IDS.apiLoading}>Loading investigation…</main>
+  }
+  if (error || !investigation) {
+    const message = (error as ApiClientError | null)?.message ?? 'Investigation is unavailable.'
+    return <main className="p-8" data-testid={TEST_IDS.apiError} role="alert">{message}</main>
+  }
+
   return (
     <main data-testid={TEST_IDS.investigationPanel} className="mx-auto max-w-7xl space-y-6 p-8">
       <header>
@@ -47,18 +91,17 @@ export function InvestigationPage() {
         <p>{investigation.timeline.length} evaluated events</p>
       </section>
       <section data-testid={TEST_IDS.topologyGraph} className="h-[420px] rounded border">
-        <ReactFlow nodes={nodes} edges={edges} fitView>
+        <ReactFlow nodes={graph.nodes} edges={graph.edges} fitView>
           <Background />
-          <Controls />
         </ReactFlow>
       </section>
       <section className="flex gap-3">
-        <button data-testid={TEST_IDS.hypothesisConfirm}>Confirm</button>
-        <button data-testid={TEST_IDS.hypothesisReject}>Reject</button>
-        <button data-testid={TEST_IDS.evidenceRequest}>Request evidence</button>
+        <button data-testid={TEST_IDS.hypothesisConfirm} onClick={() => void submitReview('confirmed')}>Confirm</button>
+        <button data-testid={TEST_IDS.hypothesisReject} onClick={() => void submitReview('rejected')}>Reject</button>
+        <button data-testid={TEST_IDS.evidenceRequest} onClick={() => void submitReview('evidence_requested')}>Request evidence</button>
       </section>
+      {reviewMessage ? <p aria-live="polite">{reviewMessage}</p> : null}
       <section data-testid={TEST_IDS.auditTrailPanel}><h2>Audit trail</h2></section>
     </main>
   )
 }
-

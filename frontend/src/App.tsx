@@ -1,7 +1,18 @@
-import { InvestigationPage } from './pages/InvestigationPage'
-import { OverviewPage } from './pages/OverviewPage'
+import { AppShell } from "./components/layout/AppShell";
+import { InvestigationPage } from "./pages/InvestigationPage";
+import { OverviewPage } from "./pages/OverviewPage";
 
 export default function App() {
-  const match = window.location.pathname.match(/^\/incidents\/([^/]+)$/)
-  return match ? <InvestigationPage incidentId={decodeURIComponent(match[1])} /> : <OverviewPage />
+  const path = window.location.pathname;
+  const incidentMatch = path.match(/^\/incidents\/([^/]+)$/);
+
+  return (
+    <AppShell>
+      {incidentMatch ? (
+        <InvestigationPage incidentId={incidentMatch[1]} />
+      ) : (
+        <OverviewPage />
+      )}
+    </AppShell>
+  );
 }

@@ -75,6 +75,10 @@ class SimulatorEngine:
             self.counters.clear()
             return self.status()
 
+    def reset_state(self) -> None:
+        """Satisfy SimulatorResetHook protocol."""
+        self.reset()
+
     def tick(self) -> dict:
         with self._lock:
             if self.state != "running":
@@ -161,3 +165,7 @@ class SimulatorEngine:
 
 
 simulator_engine = SimulatorEngine()
+
+# Register the simulator engine with the reset service
+from app.orchestration.reset_service import reset_service
+reset_service.register_simulator(simulator_engine)

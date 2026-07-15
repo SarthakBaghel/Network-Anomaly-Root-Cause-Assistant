@@ -315,20 +315,29 @@ class AnalysisOrchestrator:
         run_repo.create(new_run)
 
         # Run the pure analysis engine (no DB commits inside)
-        analysis_result: AnalysisResult | None = None
-        if self._analysis_engine is not None:
-            analysis_result = self._analysis_engine.analyse(incident, session)
+        try:
+            analysis_result: AnalysisResult | None = None
+            if self._analysis_engine is not None:
+                analysis_result = self._analysis_engine.analyse(incident, session)
 
-        # Atomically publish: insert children → supersede prior → swap pointer
-        self._atomic_publish(
-            new_run=new_run,
-            analysis_result=analysis_result,
-            incident=incident,
-            session=session,
-            run_repo=run_repo,
-            incident_repo=incident_repo,
-            audit_repo=audit_repo,
-        )
+            # Atomically publish: insert children → supersede prior → swap pointer
+            self._atomic_publish(
+                new_run=new_run,
+                analysis_result=analysis_result,
+                incident=incident,
+                session=session,
+                run_repo=run_repo,
+                incident_repo=incident_repo,
+                audit_repo=audit_repo,
+            )
+        except Exception as exc:
+            self._persist_failed_run(
+                run_id=new_run_id,
+                incident_id=incident.id,
+                reason=f"rca_publication: {type(exc).__name__}: {exc}",
+                session=session,
+            )
+            raise
 
         return new_run_id
 

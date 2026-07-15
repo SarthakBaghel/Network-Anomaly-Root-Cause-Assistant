@@ -83,3 +83,9 @@ contracts only when its affected owners have reviewed it.
   explanation modules may not import or open them.
 - **Affected owners:** all backend owners
 
+## M0-009 — Engine-to-Orchestrator Adapter Contract Freeze
+
+- **Status:** accepted
+- **Decision:** The adapter contract between the pure analysis engine and the orchestrator is frozen via `AnalysisEngineProtocol` and `AnalysisResult`. The analysis engine must execute as a pure function, returning uncommitted ORM rows (hypotheses, evidence, recommendations) and raw explanation payloads to be persisted atomically by the orchestrator.
+- **Affected owners:** Persons 1 and 4
+

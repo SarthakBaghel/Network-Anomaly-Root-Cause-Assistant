@@ -107,8 +107,8 @@ class IngestionPipeline:
     ) -> None:
         self.session = session
         if publisher is None:
-            from app.detection.service import DetectionPublisher
-            self.publisher: AcceptedEventPublisher = DetectionPublisher(session)
+            from app.orchestration.publisher import OrchestrationPublisher
+            self.publisher: AcceptedEventPublisher = OrchestrationPublisher(session)
         else:
             self.publisher = publisher
         self.adapters = adapters or ADAPTERS

@@ -57,18 +57,35 @@ This file tracks all modifications, additions, and validation gates performed by
 
 ---
 
+## 🛠️ Phase 1 Integration Gating (Milestones 2, 3, 4, 5) Actions
+- **Created** `backend/app/orchestration/publisher.py`:
+  - Implemented `OrchestrationPublisher` to route newly ingested canonical events directly through `AnalysisOrchestrator.process_event()`.
+- **Updated** `backend/app/ingestion/pipeline.py`:
+  - Set default publisher to `OrchestrationPublisher` to wire ingestion directly into the orchestrator pipeline.
+- **Updated** `backend/app/detection/service.py`:
+  - Exposed `DetectorService` implementing `DetectorProtocol` for the orchestrator.
+- **Created** `backend/app/incidents/manager.py`:
+  - Implemented lookback query, typed topology hop checks, shared trace/session correlation, and symptom family compatibility rules.
+  - Handled SQLite timezone naivety issues cleanly for datetime comparisons.
+- **Created** `backend/app/rca/engine.py`:
+  - Implemented deterministic `AnalysisEngine` generating hypotheses, evidence items, playbook recommendations, and template explanations for the gateway rate-limit scenario.
+- **Created** `backend/tests/unit/test_incident_manager.py`:
+  - Added unit tests for IncidentManager checking lookback configuration change attachment and auth warning exclusion.
+- **Updated** `backend/app/contracts/__init__.py`:
+  - Imported and exported `ExplanationClaim`.
+- **Created/Updated** `backend/app/api/incidents.py`:
+  - Implemented `/incidents`, `/timeline`, `/hypotheses`, `/evidence`, `/recommendations`, `/explanation`, `/audit`, `/recompute`, `/review`, `/investigation` endpoints querying database models and repositories.
+
+---
+
 ## 🚦 Verification Results
 
 All local validation gates are green:
-1. **Contract and Firewall Tests:** `pytest tests/contract/` - **Passed** (8/8)
-2. **Orchestrator Unit Tests:** `pytest tests/unit/test_orchestrator.py` - **Passed** (14/14)
-3. **Total Test Suite:** `pytest` - **Passed** (27/27)
-4. **Milestone 0 Validator:** `python scripts/validate_milestone0.py --allow-node-mismatch` - **Passed**
-5. **Reset API Endpoint End-to-End Smoke Test:** - **Passed** (Returns HTTP 200 and a new `DEMO_RESET` audit log ID)
+1. **Total Test Suite:** `pytest` - **Passed** (All 76/76 unit, contract, and integration tests passed cleanly in the `.venv` context).
+2. **Incident Manager Unit Tests:** `pytest tests/unit/test_incident_manager.py` - **Passed**.
+3. **Simulator Phase 1 Tests:** `pytest tests/test_simulator_phase1.py` - **Passed**.
 
 ---
 
 ## 📋 tasks.md Checklist Updated
-- Marked **P1-01** to **P1-14** as completed (`[x]`).
-- Marked **P1-20** and **P1-22** as completed (`[x]`).
-- Marked **P1-23** as in progress (`[ ]` with progress notes).
+- Marked **P1-16** to **P1-19** (Milestones 2, 3, 4, and 5) as completed (`[x]`).

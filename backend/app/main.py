@@ -35,6 +35,16 @@ def _startup() -> None:
     from app.db import models
     from sqlalchemy import select
 
+    # Register components on the orchestrator
+    from app.orchestration.orchestrator import orchestrator
+    from app.detection.service import DetectorService
+    from app.incidents import IncidentManager
+    from app.rca.engine import AnalysisEngine
+
+    orchestrator.register_detector(DetectorService())
+    orchestrator.register_incident_manager(IncidentManager())
+    orchestrator.register_analysis_engine(AnalysisEngine())
+
     try:
         with session_scope() as session:
             # Only reload if entities table is empty (idempotent)

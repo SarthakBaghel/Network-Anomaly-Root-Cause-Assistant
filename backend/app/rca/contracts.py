@@ -179,6 +179,7 @@ class RcaComputationResult(RcaBoundaryModel):
     conflict_evidence: tuple[ConflictEvidenceDraft, ...] = ()
     conflict_reason_codes: tuple[str, ...] = ()
     topology_states: TopologyStates = Field(default_factory=TopologyStates)
+    typed_paths: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     evidence_requirements: dict[str, tuple[str, ...]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -212,6 +213,8 @@ class RcaComputationResult(RcaBoundaryModel):
         }
         if not set(self.evidence_requirements).issubset(valid_requirement_keys):
             raise ValueError("evidence requirements reference an unknown hypothesis")
+        if any(len(path) < 1 for path in self.typed_paths.values()):
+            raise ValueError("typed topology paths cannot be empty")
         return self
 
 

@@ -120,3 +120,20 @@ contracts only when its affected owners have reviewed it.
   The adapter creates the run-scoped evidence representation, avoiding a
   pending database-run dependency inside the pure engine.
 - **Affected owners:** Persons 1, 4, and 5
+
+## M0-011 — Machine-readable deterministic RCA catalogue
+
+- **Status:** accepted for Milestone 0
+- **Decision:** `hypotheses.yaml` version `hypotheses-1.2` contains the
+  machine-readable anomaly/event patterns, candidate selectors, metric anomaly
+  types, change-fit keys, typed traversal origins, conflict match conditions,
+  and deterministic summaries consumed by Person 4. Runtime ranking never
+  reads the frozen expected-analysis fixture and never infers values from prose.
+- **Golden DoS rule:** the observed forwarded-traffic symptom supplies one of
+  two declared symptoms. `STABLE_RAW_INGRESS` caps that factor at `0.5` and
+  emits conflict evidence without applying an additional penalty.
+- **Golden DB rule:** checkout degradation is the declared typed dependency
+  origin, producing `checkout-api-01 -> payment-api-01 -> payment-db-01` and a
+  two-hop topology factor of `0.5`. Normal DB utilization caps metric support
+  at zero and emits `NORMAL_DB_UTILIZATION` conflict evidence.
+- **Affected owners:** Persons 1, 4, and 5

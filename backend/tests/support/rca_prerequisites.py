@@ -242,3 +242,23 @@ def golden_computation_result() -> RcaComputationResult:
             )
         },
     )
+
+
+def build_golden_analysis_bundle():
+    """Build and detach the canonical P4 input used by RCA unit tests."""
+
+    from sqlalchemy import create_engine
+
+    from app.orchestration.analysis_bundle import build_incident_analysis_bundle
+
+    engine = create_engine("sqlite://")
+    models.Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        seed_golden_incident(session)
+        bundle = build_incident_analysis_bundle(
+            "inc_001",
+            session,
+            input_fingerprint=f"sha256:{'a' * 64}",
+        )
+    engine.dispose()
+    return bundle

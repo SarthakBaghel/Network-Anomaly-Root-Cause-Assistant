@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Network NOC — Traditional Anomaly Detection Pipeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════ TOP BAR ═══════════════════ -->
+<header class="topbar">
+  <div class="tl">
+    <div class="org-name">TechM NOC — Hyderabad Operations Centre</div>
+    <div class="env-tag">Environment: PROD · Shift: 2B · Supervisor: Ramesh Iyer</div>
+  </div>
+  <div class="tr">
+    <div class="clock-block">
+      <div class="clock-label">LOCAL TIME</div>
+      <div class="clock-val" id="live-clock">--:--:--</div>
+    </div>
+    <div class="clock-block">
+      <div class="clock-label">OPEN P1 INCIDENTS</div>
+      <div class="clock-val crit-col">1</div>
+    </div>
+    <div class="clock-block">
+      <div class="clock-label">ACTIVE ALERTS</div>
+      <div class="clock-val warn-col" id="alert-count">3</div>
+    </div>
+    <div class="eng-pill">
+      <div class="eng-avatar">PK</div>
+      <div>
+        <div class="eng-name">Priya Krishnan</div>
+        <div class="eng-role">L2 NOC Engineer</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════ INCIDENT BANNER ═══════════════════ -->
+<div class="incident-banner">
+  <div class="ib-left">
+    <span class="ib-sev">P1</span>
+    <div>
+      <div class="ib-title">INC-2024-0847 — Sustained SYN Flood / DoS Pattern Detected on Core Router</div>
+      <div class="ib-meta">
+        Opened: 14:22:03 IST &nbsp;|&nbsp; 
+        Assigned: Priya Krishnan (L2) &nbsp;|&nbsp; 
+        SLA: Resolve by 15:22 IST &nbsp;|&nbsp; 
+        Elapsed: <span id="elapsed" class="crit-col">00:38:14</span>
+      </div>
+    </div>
+  </div>
+  <div class="ib-right">
+    <div class="pipeline-steps">
+      <div class="ps-step done">SNMP Poll</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps-step done">Threshold Alert</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps-step done">NetFlow Review</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps-step done">Syslog Check</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps-step active">Manual RCA</div>
+      <div class="ps-arrow">→</div>
+      <div class="ps-step">Mitigation</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TOOL TABS ═══════════════════ -->
+<div class="tabs">
+  <button class="tab active" onclick="show('snmp')" id="t-snmp">
+    📡 SNMP / PRTG Monitor
+  </button>
+  <button class="tab" onclick="show('netflow')" id="t-netflow">
+    📶 NetFlow Analyser
+    <span class="tab-badge warn">ANOMALY</span>
+  </button>
+  <button class="tab" onclick="show('syslog')" id="t-syslog">
+    📋 Syslog Viewer
+    <span class="tab-badge crit">ERRORs</span>
+  </button>
+  <button class="tab" onclick="show('alerts')" id="t-alerts">
+    🔔 Alert Console
+    <span class="tab-badge crit">3 FIRING</span>
+  </button>
+  <button class="tab" onclick="show('runbook')" id="t-runbook">
+    📖 Runbook / Manual RCA
+  </button>
+  <button class="tab" onclick="show('ticket')" id="t-ticket">
+    🎫 Incident Ticket
+  </button>
+</div>
+
+<!-- ═══════════════════ PANELS ═══════════════════ -->
+<div class="panels">
+
+  <!-- ──────── SNMP / PRTG ──────── -->
+  <div class="panel active" id="p-snmp">
+    <div class="panel-hdr">
+      <span class="panel-title">PRTG / Zabbix — SNMP Polling · Core Network Devices</span>
+      <span class="panel-sub">Poll interval: 60s · Protocol: SNMPv2c · OID-based thresholds</span>
+    </div>
+
+    <div class="device-grid">
+
+      <!-- CORE ROUTER -->
+      <div class="device-card critical">
+        <div class="device-hdr">
+          <div class="status-led red"></div>
+          <div>
+            <div class="device-name">CORE-RTR-01 <span class="device-model">(Cisco ASR 9001)</span></div>
+            <div class="device-ip">10.0.0.1 · AS65001 · SNMP Community: public_ro</div>
+          </div>
+        </div>
+        <div class="oid-table">
+          <div class="oid-hdr"><span>OID / Metric</span><span>Polled Value</span><span>Threshold</span><span>Status</span></div>
+          <div class="oid-row alert-row">
+            <span>ifInOctets (Gi0/0/0)</span>
+            <span class="mono">2.41 Gbps</span>
+            <span class="mono">1.5 Gbps</span>
+            <span class="badge red-b">CRITICAL</span>
+          </div>
+          <div class="oid-row alert-row">
+            <span>tcpAttemptFails (OID .1.3.6.1.2.1.6.9)</span>
+            <span class="mono">18,402 /min</span>
+            <span class="mono">&lt; 200 /min</span>
+            <span class="badge red-b">CRITICAL</span>
+          </div>
+          <div class="oid-row alert-row">
+            <span>tcpEstabResets (OID .1.3.6.1.2.1.6.8)</span>
+            <span class="mono">12,871 /min</span>
+            <span class="mono">&lt; 500 /min</span>
+            <span class="badge red-b">CRITICAL</span>
+          </div>
+          <div class="oid-row warn-row">
+            <span>CPU Utilisation (cpmCPUTotal1min)</span>
+            <span class="mono">87%</span>
+            <span class="mono">&lt; 80%</span>
+            <span class="badge warn-b">WARNING</span>
+          </div>
+          <div class="oid-row ok-row">
+            <span>ifOperStatus (Gi0/0/0)</span>
+            <span class="mono">up (1)</span>
+            <span class="mono">up (1)</span>
+            <span class="badge ok-b">OK</span>
+          </div>
+          <div class="oid-row ok-row">
+            <span>sysUpTime</span>
+            <span class="mono">47d 3h 22m</span>
+            <span class="mono">—</span>
+            <span class="badge ok-b">OK</span>
+          </div>
+        </div>
+        <canvas id="c-bw" class="dev-chart" width="640" height="80"></canvas>
+        <div class="chart-label">Interface Gi0/0/0 — Inbound throughput (Gbps) · last 60 mins</div>
+      </div>
+
+      <!-- FIREWALL -->
+      <div class="device-card warning">
+        <div class="device-hdr">
+          <div class="status-led orange"></div>
+          <div>
+            <div class="device-name">FW-PERIMETER-01 <span class="device-model">(Palo Alto PA-5250)</span></div>
+            <div class="device-ip">10.0.0.2 · DMZ boundary · SNMP Community: public_ro</div>
+          </div>
+        </div>
+        <div class="oid-table">
+          <div class="oid-hdr"><span>OID / Metric</span><span>Polled Value</span><span>Threshold</span><span>Status</span></div>
+          <div class="oid-row alert-row">
+            <span>panSessionUtilization</span>
+            <span class="mono">94%</span>
+            <span class="mono">&lt; 85%</span>
+            <span class="badge red-b">CRITICAL</span>
+          </div>
+          <div class="oid-row warn-row">
+            <span>panSynCookieLimit (half-open sessions)</span>
+            <span class="mono">48,200</span>
+            <span class="mono">&lt; 10,000</span>
+            <span class="badge warn-b">WARNING</span>
+          </div>
+          <div class="oid-row ok-row">
+            <span>panHAStatus</span>
+            <span class="mono">active</span>
+            <span class="mono">active</span>
+            <span class="badge ok-b">OK</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCESS SWITCH -->
+      <div class="device-card ok">
+        <div class="device-hdr">
+          <div class="status-led green"></div>
+          <div>
+            <div class="device-name">ACC-SW-04 <span class="device-model">(Cisco Catalyst 9300)</span></div>
+            <div class="device-ip">10.0.1.44 · Floor 3 · SNMP Community: public_ro</div>
+          </div>
+        </div>
+        <div class="oid-table">
+          <div class="oid-hdr"><span>OID / Metric</span><span>Polled Value</span><span>Threshold</span><span>Status</span></div>
+          <div class="oid-row ok-row">
+            <span>ifInOctets (aggregated)</span>
+            <span class="mono">240 Mbps</span>
+            <span class="mono">1 Gbps</span>
+            <span class="badge ok-b">OK</span>
+          </div>
+          <div class="oid-row ok-row">
+            <span>dot1dBasePortIfIndex (all ports)</span>
+            <span class="mono">up: 24 / 28</span>
+            <span class="mono">—</span>
+            <span class="badge ok-b">OK</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /device-grid -->
+
+    <div class="snmp-note">
+      <strong>SNMP Polling Limitation:</strong> SNMP provides counter snapshots every 60 seconds via polling. It cannot show <em>which source IPs</em> are causing the traffic surge or give per-flow breakdown. The engineer must cross-reference with NetFlow to identify the offending traffic.
+    </div>
+  </div><!-- /snmp -->
+
+  <!-- ──────── NETFLOW ──────── -->
+  <div class="panel" id="p-netflow">
+    <div class="panel-hdr">
+      <span class="panel-title">NetFlow v9 Analyser — CORE-RTR-01 · Exporter: 10.0.0.1:2055</span>
+      <span class="panel-sub">Collector: ntopng · Sampling rate: 1:1 · Interval: 5 min aggregates · Viewing: 14:00–14:40 IST</span>
+    </div>
+
+    <div class="nf-summary-row">
+      <div class="nf-stat">
+        <div class="nf-stat-lbl">Total Flows (14:00–14:40)</div>
+        <div class="nf-stat-val">2,841,903</div>
+      </div>
+      <div class="nf-stat">
+        <div class="nf-stat-lbl">Unique Src IPs</div>
+        <div class="nf-stat-val crit-col">38,492</div>
+      </div>
+      <div class="nf-stat">
+        <div class="nf-stat-lbl">Dominant Protocol</div>
+        <div class="nf-stat-val warn-col">TCP</div>
+      </div>
+      <div class="nf-stat">
+        <div class="nf-stat-lbl">Avg Flow Duration</div>
+        <div class="nf-stat-val crit-col">0.0 s</div>
+      </div>
+      <div class="nf-stat">
+        <div class="nf-stat-lbl">SYN-only Flows</div>
+        <div class="nf-stat-val crit-col">96.4%</div>
+      </div>
+    </div>
+
+    <canvas id="c-flows" width="900" height="110" class="nf-chart"></canvas>
+    <div class="chart-label">TCP flow count per 5-min bucket · SYN-only flows (red) vs established (green) · 14:00–14:40 IST</div>
+
+    <div class="nf-sections">
+      <div class="nf-section">
+        <div class="section-hdr">Top Talkers — Source IPs (by volume, 14:20–14:40)</div>
+        <table class="flow-table">
+          <thead><tr><th>#</th><th>Src IP</th><th>Dst IP</th><th>Dst Port</th><th>Protocol</th><th>Flags</th><th>Packets</th><th>Bytes</th><th>Flows</th><th>Flag (NSL-KDD)</th></tr></thead>
+          <tbody>
+            <tr class="tr-crit">
+              <td>1</td><td class="mono">203.0.113.47</td><td class="mono">10.0.0.1</td><td class="mono">80</td><td>TCP</td><td class="mono warn-col">SYN</td><td class="mono">182,304</td><td class="mono">10.9 MB</td><td class="mono">182,304</td><td class="badge warn-b">S0 (no reply)</td>
+            </tr>
+            <tr class="tr-crit">
+              <td>2</td><td class="mono">198.51.100.12</td><td class="mono">10.0.0.1</td><td class="mono">80</td><td>TCP</td><td class="mono warn-col">SYN</td><td class="mono">169,841</td><td class="mono">10.2 MB</td><td class="mono">169,841</td><td class="badge warn-b">S0 (no reply)</td>
+            </tr>
+            <tr class="tr-crit">
+              <td>3</td><td class="mono">192.0.2.198</td><td class="mono">10.0.0.1</td><td class="mono">80</td><td>TCP</td><td class="mono warn-col">SYN</td><td class="mono">155,092</td><td class="mono">9.3 MB</td><td class="mono">155,092</td><td class="badge warn-b">S0 (no reply)</td>
+            </tr>
+            <tr class="tr-warn">
+              <td>4</td><td class="mono">203.0.113.201</td><td class="mono">10.0.0.1</td><td class="mono">443</td><td>TCP</td><td class="mono warn-col">SYN</td><td class="mono">98,210</td><td class="mono">5.9 MB</td><td class="mono">98,210</td><td class="badge warn-b">S0 (no reply)</td>
+            </tr>
+            <tr class="tr-warn">
+              <td>5</td><td class="mono">198.51.100.87</td><td class="mono">10.0.0.1</td><td class="mono">22</td><td>TCP</td><td class="mono warn-col">SYN</td><td class="mono">74,531</td><td class="mono">4.5 MB</td><td class="mono">74,531</td><td class="badge warn-b">S0 (no reply)</td>
+            </tr>
+            <tr>
+              <td>6</td><td class="mono">10.10.4.22</td><td class="mono">10.0.0.1</td><td class="mono">8080</td><td>TCP</td><td class="mono ok-col">SYN ACK</td><td class="mono">4,201</td><td class="mono">6.1 MB</td><td class="mono">210</td><td class="badge ok-b">SF (normal)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="nf-section">
+        <div class="section-hdr">Flow Feature Analysis — NSL-KDD Derived Fields (manual mapping)</div>
+        <table class="flow-table">
+          <thead><tr><th>NSL-KDD Field</th><th>Observed Value</th><th>Normal Baseline</th><th>Interpretation</th></tr></thead>
+          <tbody>
+            <tr class="tr-crit">
+              <td class="mono">count</td><td class="mono crit-col">255</td><td class="mono">8–30</td><td>Connections to same host in 2s window — saturated (max=255)</td>
+            </tr>
+            <tr class="tr-crit">
+              <td class="mono">serror_rate</td><td class="mono crit-col">0.97</td><td class="mono">&lt; 0.05</td><td>97% of connections have SYN errors — classic SYN flood signature</td>
+            </tr>
+            <tr class="tr-crit">
+              <td class="mono">dst_host_count</td><td class="mono crit-col">255</td><td class="mono">20–80</td><td>Unique src IPs per destination — distributed source (botnet pattern)</td>
+            </tr>
+            <tr class="tr-crit">
+              <td class="mono">dst_host_serror_rate</td><td class="mono crit-col">0.96</td><td class="mono">&lt; 0.02</td><td>96% of dst-host connections have SYN errors</td>
+            </tr>
+            <tr class="tr-warn">
+              <td class="mono">flag</td><td class="mono warn-col">S0</td><td class="mono">SF</td><td>S0 = SYN sent, no reply received — half-open connections piling up</td>
+            </tr>
+            <tr class="tr-warn">
+              <td class="mono">src_bytes</td><td class="mono">60</td><td class="mono">200–5000</td><td>Very small packets — SYN only, no data payload (60 byte IP+TCP header)</td>
+            </tr>
+            <tr>
+              <td class="mono">dst_bytes</td><td class="mono ok-col">0</td><td class="mono">400–8000</td><td>Zero bytes from destination — server never completes handshake</td>
+            </tr>
+            <tr>
+              <td class="mono">duration</td><td class="mono ok-col">0</td><td class="mono">1–300</td><td>0-second connections — never established</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="nf-classify">
+          <strong>Manual Classification (L2 Engineer — 14:38 IST):</strong>
+          Pattern matches NSL-KDD <code>neptune</code> category — TCP SYN Flood DoS. 
+          Characteristics: serror_rate=0.97, flag=S0, count=255, dst_host_count=255, src_bytes=60, dst_bytes=0, duration=0.
+          Distributed source IPs suggest botnet-assisted flood, not a single attacker.
+        </div>
+      </div>
+    </div><!-- /nf-sections -->
+  </div><!-- /netflow -->
+
+  <!-- ──────── SYSLOG ──────── -->
+  <div class="panel" id="p-syslog">
+    <div class="panel-hdr">
+      <span class="panel-title">Syslog Viewer — rsyslog Collector · Facility: kern, daemon · 14:00–14:45 IST</span>
+      <span class="panel-sub">Sources: CORE-RTR-01 (10.0.0.1) · FW-PERIMETER-01 (10.0.0.2) · Filter: severity ≥ WARNING</span>
+    </div>
+
+    <div class="syslog-filter-bar">
+      <div class="sf-item">Severity: <span class="sf-val">≥ WARNING</span></div>
+      <div class="sf-item">Host: <span class="sf-val">All</span></div>
+      <div class="sf-item">Facility: <span class="sf-val">kern, daemon, local0</span></div>
+      <div class="sf-item">Results: <span class="sf-val crit-col">47 entries</span></div>
+    </div>
+
+    <div class="syslog-list">
+
+      <div class="sl-row sl-crit">
+        <div class="sl-meta">
+          <span class="sl-ts">14:22:01</span>
+          <span class="sl-host">CORE-RTR-01</span>
+          <span class="sl-fac">kern</span>
+          <span class="sl-sev crit-sev">CRIT</span>
+        </div>
+        <div class="sl-msg">%SYS-3-CPUQ: CPU queue hog process: NetIO chunk 0, blocked for &gt;500ms. Input queue 3/75 drops on Gi0/0/0.</div>
+      </div>
+
+      <div class="sl-row sl-crit">
+        <div class="sl-meta">
+          <span class="sl-ts">14:22:03</span>
+          <span class="sl-host">CORE-RTR-01</span>
+          <span class="sl-fac">kern</span>
+          <span class="sl-sev crit-sev">CRIT</span>
+        </div>
+        <div class="sl-msg">%TCP-3-HALFOPEN: Half-open TCP connections reached limit 16384. New TCP SYN connections will be dropped. SynAttack state entered.</div>
+      </div>
+
+      <div class="sl-row sl-err">
+        <div class="sl-meta">
+          <span class="sl-ts">14:22:05</span>
+          <span class="sl-host">FW-PERIMETER-01</span>
+          <span class="sl-fac">daemon</span>
+          <span class="sl-sev err-sev">ERROR</span>
+        </div>
+        <div class="sl-msg">threat-id=40010 type=THREAT subtype=dos action=drop src=203.0.113.47 dst=10.0.0.1 dport=80 proto=TCP flags=SYN bytes=60. SYN flood threshold exceeded: 5000 pkts/s limit reached.</div>
+      </div>
+
+      <div class="sl-row sl-err">
+        <div class="sl-meta">
+          <span class="sl-ts">14:22:09</span>
+          <span class="sl-host">FW-PERIMETER-01</span>
+          <span class="sl-fac">daemon</span>
+          <span class="sl-sev err-sev">ERROR</span>
+        </div>
+        <div class="sl-msg">zone-protection-profile=OUTSIDE_ZONE syn-cookies-activated=yes half-open-sessions=48200 limit=50000 utilization=96.4%</div>
+      </div>
+
+      <div class="sl-row sl-warn">
+        <div class="sl-meta">
+          <span class="sl-ts">14:22:14</span>
+          <span class="sl-host">CORE-RTR-01</span>
+          <span class="sl-fac">local0</span>
+          <span class="sl-sev warn-sev">WARN</span>
+        </div>
+        <div class="sl-msg">%BGP-5-ADJCHANGE: neighbor 203.0.113.1 Down — hold time expired. BGP flap triggered by CPU overload. Routes withdrawn: 1,240.</div>
+      </div>
+
+      <div class="sl-row sl-warn">
+        <div class="sl-meta">
+          <span class="sl-ts">14:22:18</span>
+          <span class="sl-host">CORE-RTR-01</span>
+          <span class="sl-fac">kern</span>
+          <span class="sl-sev warn-sev">WARN</span>
+        </div>
+        <div class="sl-msg">%PLATFORM-3-ELEMENT_WARNING: CPU alert: 87% 1min avg. Process IP Input consuming 62% CPU (normal baseline: 5%). Punt path congested.</div>
+      </div>
+
+      <div class="sl-row sl-warn">
+        <div class="sl-meta">
+          <span class="sl-ts">14:23:42</span>
+          <span class="sl-host">FW-PERIMETER-01</span>
+          <span class="sl-fac">daemon</span>
+          <span class="sl-sev warn-sev">WARN</span>
+        </div>
+        <div class="sl-msg">session-table-util=94% session-limit=4000000 active-sessions=3760000. Approaching session table capacity. New session establishment may fail.</div>
+      </div>
+
+      <div class="sl-row sl-warn">
+        <div class="sl-meta">
+          <span class="sl-ts">14:25:11</span>
+          <span class="sl-host">CORE-RTR-01</span>
+          <span class="sl-fac">local0</span>
+          <span class="sl-sev warn-sev">WARN</span>
+        </div>
+        <div class="sl-msg">%LINEPROTO-5-UPDOWN: Line protocol on Interface Gi0/0/0 changed state to down. Interface flapping under load.</div>
+      </div>
+
+      <div class="sl-row sl-warn">
+        <div class="sl-meta">
+          <span class="sl-ts">14:25:14</span>
+          <span class="sl-host">CORE-RTR-01</span>
+          <span class="sl-fac">local0</span>
+          <span class="sl-sev warn-sev">WARN</span>
+        </div>
+        <div class="sl-msg">%LINEPROTO-5-UPDOWN: Line protocol on Interface Gi0/0/0 changed state to up. Flap duration: 3 seconds.</div>
+      </div>
+
+      <div class="sl-row sl-info">
+        <div class="sl-meta">
+          <span class="sl-ts">14:38:55</span>
+          <span class="sl-host">CORE-RTR-01</span>
+          <span class="sl-fac">local0</span>
+          <span class="sl-sev info-sev">INFO</span>
+        </div>
+        <div class="sl-msg">ip access-list extended ACL_BLOCK_DOS: 38,492 source IPs denied (manual ACL applied by engineer priya.krishnan via SSH at 14:38:48 IST)</div>
+      </div>
+
+    </div>
+
+    <div class="syslog-note">
+      <strong>Loghub/BGL pattern reference:</strong> The <code>%SYN-3-HALFOPEN</code> and CPU queue messages match BGL-style RAS kernel fault patterns where a resource limit (here, the TCP half-open table) is breached and system protection kicks in. Format: <code>%FACILITY-SEVERITY-MNEMONIC: message</code> — standard Cisco IOS syslog format (RFC 5424 Severity 3/4).
+    </div>
+  </div><!-- /syslog -->
+
+  <!-- ──────── ALERTS ──────── -->
+  <div class="panel" id="p-alerts">
+    <div class="panel-hdr">
+      <span class="panel-title">Alert Console — Zabbix / PagerDuty · Threshold-Based Alerting</span>
+      <span class="panel-sub">All alerts are rule-based (no ML): SNMP OID value vs static/EWMA thresholds configured by NOC team</span>
+    </div>
+
+    <div class="alert-legend">
+      <div class="al-item"><span class="al-dot red"></span> CRITICAL (P1)</div>
+      <div class="al-item"><span class="al-dot orange"></span> WARNING (P2)</div>
+      <div class="al-item"><span class="al-dot grey"></span> INFORMATIONAL</div>
+    </div>
+
+    <div class="alert-list">
+
+      <div class="al-card al-crit">
+        <div class="al-card-hdr">
+          <span class="al-sev-tag crit-tag">CRITICAL</span>
+          <span class="al-name">CORE-RTR-01 — TCP Attempt Failures Threshold Exceeded</span>
+          <span class="al-fired">Fired: 14:22:06 IST · Duration: <span id="dur1">00:38:08</span></span>
+        </div>
+        <div class="al-card-body">
+          <div class="al-row"><span class="al-lbl">Trigger rule:</span> tcpAttemptFails (OID .1.3.6.1.2.1.6.9) &gt; 200/min for 2 consecutive polls</div>
+          <div class="al-row"><span class="al-lbl">Current value:</span> <strong class="crit-col">18,402 /min</strong> &nbsp; | &nbsp; <span class="al-lbl">Threshold:</span> 200 /min</div>
+          <div class="al-row"><span class="al-lbl">Host:</span> 10.0.0.1 (CORE-RTR-01) &nbsp; | &nbsp; <span class="al-lbl">Check interval:</span> 60s</div>
+          <div class="al-row"><span class="al-lbl">Notification:</span> PagerDuty → L2 on-call (Priya Krishnan) → SMS + App push</div>
+          <div class="al-row"><span class="al-lbl">Acknowledgement:</span> Priya Krishnan @ 14:24:11 IST</div>
+        </div>
+      </div>
+
+      <div class="al-card al-crit">
+        <div class="al-card-hdr">
+          <span class="al-sev-tag crit-tag">CRITICAL</span>
+          <span class="al-name">FW-PERIMETER-01 — Session Table Utilisation &gt; 90%</span>
+          <span class="al-fired">Fired: 14:22:09 IST · Duration: <span id="dur2">00:38:05</span></span>
+        </div>
+        <div class="al-card-body">
+          <div class="al-row"><span class="al-lbl">Trigger rule:</span> panSessionUtilization &gt; 90% for 1 poll</div>
+          <div class="al-row"><span class="al-lbl">Current value:</span> <strong class="crit-col">94%</strong> &nbsp; | &nbsp; <span class="al-lbl">Threshold:</span> 90%</div>
+          <div class="al-row"><span class="al-lbl">Host:</span> 10.0.0.2 (FW-PERIMETER-01)</div>
+          <div class="al-row"><span class="al-lbl">Correlated to:</span> <em class="manual-corr">manually linked to INC-2024-0847 by engineer after reviewing timestamps</em></div>
+        </div>
+      </div>
+
+      <div class="al-card al-warn">
+        <div class="al-card-hdr">
+          <span class="al-sev-tag warn-tag">WARNING</span>
+          <span class="al-name">CORE-RTR-01 — CPU Utilisation &gt; 80%</span>
+          <span class="al-fired">Fired: 14:22:18 IST · Duration: <span id="dur3">00:37:56</span></span>
+        </div>
+        <div class="al-card-body">
+          <div class="al-row"><span class="al-lbl">Trigger rule:</span> cpmCPUTotal1min &gt; 80 for 2 consecutive polls</div>
+          <div class="al-row"><span class="al-lbl">Current value:</span> <strong class="warn-col">87%</strong> &nbsp; | &nbsp; <span class="al-lbl">Threshold:</span> 80%</div>
+          <div class="al-row"><span class="al-lbl">Root cause (manual):</span> High CPU caused by software-switched SYN flood — IP Input process consuming 62%</div>
+          <div class="al-row"><span class="al-lbl">Correlated to:</span> <em class="manual-corr">manually linked to INC-2024-0847 — same time window as TCP failure spike</em></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="correlation-gap">
+      <div class="cg-title">⚠ Alert Correlation Gap (Traditional Approach)</div>
+      <div class="cg-body">
+        The 3 alerts above fired from <strong>2 different monitoring systems</strong> (Zabbix SNMP + PagerDuty webhook from Palo Alto SNMP trap). 
+        They were NOT automatically grouped — the engineer manually identified they share a root cause by comparing:
+        <ul>
+          <li>Timestamps (all within a 12-second window starting 14:22:01)</li>
+          <li>Affected device hostnames vs the interface showing traffic surge</li>
+          <li>Checking Syslog for the same time window to confirm the SYN flood message</li>
+        </ul>
+        This manual grouping took <strong>approximately 14 minutes</strong> of the 38-minute elapsed time.
+      </div>
+    </div>
+  </div><!-- /alerts -->
+
+  <!-- ──────── RUNBOOK ──────── -->
+  <div class="panel" id="p-runbook">
+    <div class="panel-hdr">
+      <span class="panel-title">Runbook — SYN Flood / DoS Response · Rev 2.3 · NOC-RB-NET-004</span>
+      <span class="panel-sub">Engineer: Priya Krishnan · Started: 14:24 IST · Supervisor notified: yes</span>
+    </div>
+
+    <div class="rb-layout">
+      <div class="rb-steps">
+
+        <div class="rb-step done">
+          <div class="rb-num done-num">1</div>
+          <div class="rb-content">
+            <div class="rb-step-title">Verify alert authenticity — rule out false positive</div>
+            <div class="rb-step-body">
+              Check SNMP: tcpAttemptFails &gt; 200/min confirmed on 2 consecutive 60s polls.
+              Check interface counter: ifInOctets on Gi0/0/0 = 2.41 Gbps (sustained, not a counter wrap artifact).
+              Login to CORE-RTR-01 via SSH → <code>show tcp brief</code> → confirmed 16,384 half-open sessions.
+            </div>
+            <div class="rb-done-by">✓ Completed 14:24:45 IST — Priya Krishnan</div>
+          </div>
+        </div>
+
+        <div class="rb-step done">
+          <div class="rb-num done-num">2</div>
+          <div class="rb-content">
+            <div class="rb-step-title">Characterise the traffic — use NetFlow to identify source</div>
+            <div class="rb-step-body">
+              Open ntopng → filter by destination 10.0.0.1 → sort by flow count.
+              Observations: 38,492 unique source IPs, all sending TCP SYN only (flag=S0, 60-byte packets).
+              dst_bytes=0 on all anomalous flows, duration=0 — confirms SYN flood pattern.
+              Top 5 source IPs are from three different /24 netblocks (203.0.113.0/24, 198.51.100.0/24, 192.0.2.0/24).
+              <div class="rb-cmd">router# show ip flow export | grep 203.0.113</div>
+            </div>
+            <div class="rb-done-by">✓ Completed 14:31:20 IST — Priya Krishnan</div>
+          </div>
+        </div>
+
+        <div class="rb-step done">
+          <div class="rb-num done-num">3</div>
+          <div class="rb-content">
+            <div class="rb-step-title">Classify attack type — manual pattern matching</div>
+            <div class="rb-step-body">
+              Manual check against internal attack reference card (NOC-REF-002):
+              <ul>
+                <li>serror_rate ≈ 0.97 → SYN flood indicator (threshold &gt; 0.50)</li>
+                <li>dst_host_count = 255 (max) → distributed sources</li>
+                <li>All flows have flag=S0 → SYN sent, no ACK received</li>
+                <li>No ICMP or UDP amplification seen → not smurf / DNS amplification</li>
+              </ul>
+              <strong>Classification: neptune-type TCP SYN Flood DoS (distributed)</strong> — matches NSL-KDD neptune signature.
+              Escalated to Tier 3 network team + ISP abuse contact initiated.
+            </div>
+            <div class="rb-done-by">✓ Completed 14:34:00 IST — Priya Krishnan</div>
+          </div>
+        </div>
+
+        <div class="rb-step done">
+          <div class="rb-num done-num">4</div>
+          <div class="rb-content">
+            <div class="rb-step-title">Apply immediate mitigation — ACL block + rate-limiting</div>
+            <div class="rb-step-body">
+              SSH into CORE-RTR-01 → configure extended ACL on Gi0/0/0 inbound:
+              <div class="rb-cmd-block">
+                <div class="rb-cmd">ip access-list extended ACL_BLOCK_DOS</div>
+                <div class="rb-cmd">&nbsp;deny tcp 203.0.113.0 0.0.0.255 any syn</div>
+                <div class="rb-cmd">&nbsp;deny tcp 198.51.100.0 0.0.0.255 any syn</div>
+                <div class="rb-cmd">&nbsp;deny tcp 192.0.2.0 0.0.0.255 any syn</div>
+                <div class="rb-cmd">&nbsp;permit ip any any</div>
+                <div class="rb-cmd">interface Gi0/0/0</div>
+                <div class="rb-cmd">&nbsp;ip access-group ACL_BLOCK_DOS in</div>
+              </div>
+              Also configured TCP intercept (SYN proxy) on IOS:
+              <div class="rb-cmd">ip tcp intercept list ACL_WATCH mode intercept</div>
+              Called ISP NOC to apply upstream null-routing for the 3 source /24 blocks.
+            </div>
+            <div class="rb-done-by">✓ Completed 14:38:48 IST — Priya Krishnan (approved by Ramesh Iyer)</div>
+          </div>
+        </div>
+
+        <div class="rb-step active">
+          <div class="rb-num active-num">5</div>
+          <div class="rb-content">
+            <div class="rb-step-title">Monitor — confirm traffic returns to baseline</div>
+            <div class="rb-step-body">
+              Watch SNMP counters every 60s for 3 consecutive clean polls (tcpAttemptFails &lt; 200/min).
+              Verify NetFlow: SYN-only flow % should drop below 5%.
+              Check BGP reconvergence: neighbor 203.0.113.1 should re-establish.
+              Current status: traffic dropping but not yet at baseline — ISP null-route pending.
+            </div>
+            <div class="rb-in-progress">⟳ IN PROGRESS — monitoring since 14:39 IST</div>
+          </div>
+        </div>
+
+        <div class="rb-step pending">
+          <div class="rb-num pend-num">6</div>
+          <div class="rb-content">
+            <div class="rb-step-title">Document and close incident</div>
+            <div class="rb-step-body">
+              Update INC-2024-0847 with full timeline, root cause, and mitigation actions taken.
+              Submit post-incident report within 4 hours (SLA requirement).
+              Review ACL — determine if permanent block or time-limited.
+              Recommend: implement SYN cookie defence at perimeter firewall as permanent countermeasure.
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /rb-steps -->
+
+      <div class="rb-sidebar">
+        <div class="rb-sidebar-title">Reference — Attack Signature</div>
+        <div class="rb-ref-item"><span class="ref-lbl">Attack type:</span> TCP SYN Flood (neptune)</div>
+        <div class="rb-ref-item"><span class="ref-lbl">Protocol:</span> TCP</div>
+        <div class="rb-ref-item"><span class="ref-lbl">Flag:</span> S0 (SYN, no ACK)</div>
+        <div class="rb-ref-item"><span class="ref-lbl">serror_rate:</span> 0.97</div>
+        <div class="rb-ref-item"><span class="ref-lbl">dst_host_count:</span> 255 (max)</div>
+        <div class="rb-ref-item"><span class="ref-lbl">src_bytes:</span> 60</div>
+        <div class="rb-ref-item"><span class="ref-lbl">dst_bytes:</span> 0</div>
+        <div class="rb-ref-item"><span class="ref-lbl">duration:</span> 0s</div>
+        <div class="rb-ref-item"><span class="ref-lbl">Dataset ref:</span> NSL-KDD neptune class</div>
+
+        <div class="rb-sidebar-title mt">Timeline</div>
+        <div class="timeline">
+          <div class="tl-item done-tl"><span class="tl-ts">14:22:01</span> Syslog: CPU queue hog detected</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:22:03</span> Syslog: Half-open limit reached</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:22:06</span> Zabbix alert: tcpAttemptFails</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:22:09</span> FW alert: Session 94%</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:24:11</span> Engineer acknowledged</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:24:45</span> Step 1 verified</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:31:20</span> NetFlow analysis done</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:34:00</span> Attack classified</div>
+          <div class="tl-item done-tl"><span class="tl-ts">14:38:48</span> ACL applied</div>
+          <div class="tl-item active-tl"><span class="tl-ts">NOW</span> Monitoring recovery</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /runbook -->
+
+  <!-- ──────── TICKET ──────── -->
+  <div class="panel" id="p-ticket">
+    <div class="panel-hdr">
+      <span class="panel-title">ServiceNow — Incident INC-2024-0847</span>
+      <span class="panel-sub">Category: Network · Sub-category: Security — DoS/DDoS · CI: CORE-RTR-01</span>
+    </div>
+
+    <div class="ticket-layout">
+      <div class="ticket-form">
+        <div class="tf-section">INCIDENT DETAILS</div>
+        <div class="tf-row"><label>Number</label><span>INC-2024-0847</span></div>
+        <div class="tf-row"><label>Priority</label><span class="crit-col">1 — Critical</span></div>
+        <div class="tf-row"><label>State</label><span class="warn-col">In Progress</span></div>
+        <div class="tf-row"><label>Category</label><span>Network / Security</span></div>
+        <div class="tf-row"><label>Subcategory</label><span>DoS / DDoS Attack</span></div>
+        <div class="tf-row"><label>Configuration Item</label><span>CORE-RTR-01 (CI00128)</span></div>
+        <div class="tf-row"><label>Affected CIs</label><span>FW-PERIMETER-01, BGP peer 203.0.113.1</span></div>
+        <div class="tf-row"><label>Assigned To</label><span>Priya Krishnan — L2 NOC</span></div>
+        <div class="tf-row"><label>Escalated To</label><span>Tier 3 Network Team (Vikram Shetty)</span></div>
+        <div class="tf-row"><label>Opened At</label><span>14:22:03 IST · 2024-05-17</span></div>
+        <div class="tf-row"><label>SLA Resolve By</label><span class="crit-col">15:22:03 IST (41 min remaining)</span></div>
+        <div class="tf-section mt">SHORT DESCRIPTION</div>
+        <div class="tf-desc">TCP SYN Flood DoS detected on CORE-RTR-01 Gi0/0/0. tcpAttemptFails at 18,402/min (threshold 200/min). 38,492 source IPs. Session table at 94%. ACL mitigation applied at 14:38:48 IST.</div>
+      </div>
+
+      <div class="ticket-notes">
+        <div class="tf-section">WORK NOTES</div>
+
+        <div class="wn-entry">
+          <div class="wn-who">Priya Krishnan · L2 NOC · 14:24:11 IST</div>
+          <div class="wn-body">Alert acknowledged. Logged into CORE-RTR-01 via SSH. Confirmed tcpAttemptFails counter at 18,402/min. Ran 'show tcp brief' — 16,384 half-open sessions (router limit). CPU at 87%. Proceeding to NetFlow analysis to identify source IPs.</div>
+        </div>
+
+        <div class="wn-entry">
+          <div class="wn-who">Priya Krishnan · L2 NOC · 14:31:45 IST</div>
+          <div class="wn-body">NetFlow analysis complete (ntopng). 38,492 unique source IPs across 3 netblocks (203.0.113.0/24, 198.51.100.0/24, 192.0.2.0/24). All flows: TCP port 80/443/22, flag=SYN, 60 bytes, 0 response bytes, 0-second duration. Classic SYN flood. No UDP or ICMP amplification. Not DNS amplification. Classified as distributed SYN flood (neptune-type). Escalating to Tier 3 and ISP abuse.</div>
+        </div>
+
+        <div class="wn-entry">
+          <div class="wn-who">Ramesh Iyer · NOC Supervisor · 14:33:10 IST</div>
+          <div class="wn-body">Reviewed classification. Approved ACL mitigation on CORE-RTR-01. Also opened ISP abuse ticket (ISP-ABUSE-2024-0449) for upstream null-route of the 3 source /24 blocks. ISP ETA for null-route: 15–20 minutes.</div>
+        </div>
+
+        <div class="wn-entry">
+          <div class="wn-who">Priya Krishnan · L2 NOC · 14:38:55 IST</div>
+          <div class="wn-body">ACL applied. Denying TCP SYN from 203.0.113.0/24, 198.51.100.0/24, 192.0.2.0/24 inbound on Gi0/0/0. TCP intercept also configured. Syslog confirms 38,492 IPs denied. Monitoring SNMP counters — tcpAttemptFails dropping (currently 4,200/min). BGP still flapping — awaiting ISP upstream null-route to fully clear traffic. Will confirm closure once 3 consecutive clean polls achieved.</div>
+        </div>
+
+        <div class="wn-entry wn-current">
+          <div class="wn-who">Priya Krishnan · L2 NOC · NOW</div>
+          <div class="wn-body">Monitoring. ISP null-route confirmed active at 14:48. Waiting for full traffic bleed-off and BGP reconvergence. SNMP poll at 14:49: tcpAttemptFails=310/min (still above threshold — close). Next poll in 60 seconds.</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /ticket -->
+
+</div><!-- /panels -->
+
+<!-- ═══════════════════ STATUS BAR ═══════════════════ -->
+<div class="statusbar">
+  <div class="sb-l">
+    <span>SNMP polls: every 60s</span>
+    <span class="sb-sep">|</span>
+    <span>NetFlow: 5-min aggregates</span>
+    <span class="sb-sep">|</span>
+    <span>Syslog: real-time streaming</span>
+    <span class="sb-sep">|</span>
+    <span>No automation — all correlation manual</span>
+  </div>
+  <div class="sb-r">
+    <span class="sb-dataset">Dataset: NSL-KDD (neptune signature) · Loghub (syslog format) · UNSW-NB15 (flow features)</span>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

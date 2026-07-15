@@ -3,6 +3,7 @@ from .anomalies import AnomalyRecord
 from .api import (
     AuditRecord,
     ErrorEnvelope,
+    ExplanationClaim,
     ExplanationOutput,
     InvestigationResponse,
     PlaybookRecommendation,
@@ -23,7 +24,12 @@ from .evidence import EvidenceItem
 from .events import CanonicalEvent
 from .hypotheses import EvidenceCoverage, Hypothesis
 from .incidents import IncidentSummary
-from .reviews import ReviewRecord, ReviewRequest
+from .ingestion import (
+    BatchIngestionResponse,
+    IngestionMutationResponse,
+    RawIngestionRequest,
+)
+from .reviews import ReviewMutationResponse, ReviewRecord, ReviewRequest
 
 __all__ = [
     "AnalysisRun",
@@ -32,21 +38,26 @@ __all__ = [
     "AuditRecord",
     "AuditActorType",
     "CanonicalEvent",
+    "BatchIngestionResponse",
     "ErrorEnvelope",
     "EventStatus",
     "EvidenceCoverage",
     "EvidenceItem",
     "EvidenceKind",
+    "ExplanationClaim",
     "ExplanationOutput",
     "Hypothesis",
     "IncidentStatus",
     "IncidentSummary",
+    "IngestionMutationResponse",
     "InvestigationResponse",
     "Modality",
     "PlaybookRecommendation",
     "ReviewDecision",
+    "ReviewMutationResponse",
     "ReviewRecord",
     "ReviewRequest",
+    "RawIngestionRequest",
     "TimelineItem",
     "TopologyRelation",
     "TopologySnapshot",

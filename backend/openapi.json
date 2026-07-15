@@ -167,6 +167,35 @@
         "title": "AuditRecord",
         "type": "object"
       },
+      "BatchIngestionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionMutationResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "request_id",
+          "generated_at",
+          "results"
+        ],
+        "title": "BatchIngestionResponse",
+        "type": "object"
+      },
       "CanonicalEvent": {
         "additionalProperties": false,
         "properties": {
@@ -678,6 +707,119 @@
         "title": "IncidentSummary",
         "type": "object"
       },
+      "IngestionMutationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_state": {
+            "default": "not_started",
+            "enum": [
+              "not_started",
+              "processed"
+            ],
+            "title": "Analysis State",
+            "type": "string"
+          },
+          "collapsed_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collapsed Group Id"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "quarantine_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantine Id"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "representative_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Representative Event Id"
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "source_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Record Id"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "collapsed",
+              "quarantined"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "request_id",
+          "generated_at"
+        ],
+        "title": "IngestionMutationResponse",
+        "type": "object"
+      },
       "InvestigationResponse": {
         "additionalProperties": false,
         "properties": {
@@ -843,6 +985,39 @@
         "title": "PlaybookRecommendation",
         "type": "object"
       },
+      "RawIngestionRequest": {
+        "additionalProperties": false,
+        "description": "One source-specific record plus its source-adapter identity.",
+        "properties": {
+          "raw": {
+            "title": "Raw",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "source": {
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "raw"
+        ],
+        "title": "RawIngestionRequest",
+        "type": "object"
+      },
       "ReviewDecision": {
         "enum": [
           "confirmed",
@@ -851,6 +1026,32 @@
         ],
         "title": "ReviewDecision",
         "type": "string"
+      },
+      "ReviewMutationResponse": {
+        "additionalProperties": false,
+        "description": "Idempotent mutation envelope required by blueprint \u00a718.4.",
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewRecord"
+          }
+        },
+        "required": [
+          "request_id",
+          "generated_at",
+          "review"
+        ],
+        "title": "ReviewMutationResponse",
+        "type": "object"
       },
       "ReviewRecord": {
         "additionalProperties": false,
@@ -1199,6 +1400,52 @@
     "/api/v1/events": {
       "get": {
         "operationId": "list_events_api_v1_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "modality",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Modality"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1213,6 +1460,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Events",
@@ -1226,7 +1483,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CanonicalEvent"
+                "$ref": "#/components/schemas/RawIngestionRequest"
               }
             }
           },
@@ -1237,8 +1494,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Ingest Event Api V1 Events Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/IngestionMutationResponse"
                 }
               }
             },
@@ -1269,9 +1525,9 @@
             "application/json": {
               "schema": {
                 "items": {
-                  "$ref": "#/components/schemas/CanonicalEvent"
+                  "$ref": "#/components/schemas/RawIngestionRequest"
                 },
-                "title": " Events",
+                "title": "Requests",
                 "type": "array"
               }
             }
@@ -1283,8 +1539,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Ingest Batch Api V1 Events Batch Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BatchIngestionResponse"
                 }
               }
             },
@@ -1377,6 +1632,87 @@
     "/api/v1/incidents": {
       "get": {
         "operationId": "list_incidents_api_v1_incidents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/IncidentStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "primary_entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Primary Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1388,6 +1724,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Incidents",
@@ -1784,7 +2130,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewRecord"
+                  "$ref": "#/components/schemas/ReviewMutationResponse"
                 }
               }
             },
@@ -1826,8 +2172,11 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineItem"
+                  },
                   "title": "Response Timeline Api V1 Incidents  Incident Id  Timeline Get",
-                  "type": "object"
+                  "type": "array"
                 }
               }
             },
@@ -1896,6 +2245,7 @@
     },
     "/api/v1/simulator/reset": {
       "post": {
+        "description": "Execute the full demo reset sequence (blueprint \u00a75.2, P1-22).\n\nStops the simulator, clears demo rows, reloads topology,\nre-seeds history, resets the simulator clock, and writes DEMO_RESET audit.",
         "operationId": "reset_api_v1_simulator_reset_post",
         "responses": {
           "200": {
@@ -2028,6 +2378,25 @@
     "/api/v1/topology": {
       "get": {
         "operationId": "topology_api_v1_topology_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "incident_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Incident Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -2038,6 +2407,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Topology",
@@ -2057,6 +2436,31 @@
             "schema": {
               "title": "Entity Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": true,
+            "schema": {
+              "enum": [
+                "dependency",
+                "traffic"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_hops",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Max Hops",
+              "type": "integer"
             }
           }
         ],
@@ -2092,6 +2496,49 @@
     "/api/v1/topology/path": {
       "get": {
         "operationId": "path_api_v1_topology_path_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Target",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "relation_type",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TopologyRelation"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": true,
+            "schema": {
+              "enum": [
+                "forward",
+                "reverse"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -2103,6 +2550,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Path",

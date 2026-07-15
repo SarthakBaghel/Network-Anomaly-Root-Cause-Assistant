@@ -1,0 +1,9 @@
+{
+  "analysis_run_id": "run_007",
+  "hypothesis_id": "hyp_001",
+  "decision": "confirmed",
+  "client_action_id": "review-action-001",
+  "requested_evidence_id": null,
+  "reviewer": "team-demo-user",
+  "comment": "Confirmed after reviewing the config diff and stable ingress distribution."
+}

@@ -23,13 +23,18 @@ from app.contracts import (  # noqa: E402
     Hypothesis,
     IncidentSummary,
     InvestigationResponse,
+    ReviewMutationResponse,
     ReviewRecord,
+    ReviewRequest,
 )
 from app.readiness import catalogue_status  # noqa: E402
 
 
 HANDOFFS = (
     "backend/openapi.json",
+    "backend/app/fixtures/topology.json",
+    "backend/app/fixtures/hypotheses.yaml",
+    "backend/app/fixtures/symptom_families.yaml",
     "backend/tests/fixtures/golden_events.jsonl",
     "backend/tests/fixtures/golden_anomalies.json",
     "backend/tests/fixtures/golden_incident_bundle.json",
@@ -67,6 +72,8 @@ def validate_contracts() -> None:
         "hypothesis.json": Hypothesis,
         "evidence.json": EvidenceItem,
         "review.json": ReviewRecord,
+        "review-request.json": ReviewRequest,
+        "review-mutation-response.json": ReviewMutationResponse,
         "analysis_run.json": AnalysisRun,
         "error.json": ErrorEnvelope,
     }
@@ -165,4 +172,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

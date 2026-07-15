@@ -1,9 +1,67 @@
 schema_version: "1.0"
-version: hypotheses-1.1
+version: hypotheses-1.2
+pattern_definitions:
+  symptoms:
+    forwarded_traffic_spike:
+      anomaly_types: [FORWARDED_TRAFFIC_SPIKE]
+    downstream_degradation:
+      anomaly_types: [CHECKOUT_LATENCY_HIGH, UPSTREAM_TIMEOUT, CHECKOUT_ERROR_ALERT]
+    changed_source_distribution:
+      raw_payload_true_keys: [source_distribution_changed]
+    payment_timeout:
+      anomaly_types: [UPSTREAM_TIMEOUT]
+      event_types: [UPSTREAM_CONNECTION_TIMEOUT]
+    database_utilization_high:
+      anomaly_types: [DB_CONNECTION_UTILIZATION_HIGH, DB_POOL_EXHAUSTED]
+      event_types: [DB_CONNECTION_UTILIZATION]
+      signal_value_gte: 0.90
+    packet_loss:
+      anomaly_types: [PACKET_LOSS_SPIKE]
+    retransmissions:
+      anomaly_types: [TCP_RETRANSMISSION_SPIKE]
+    upstream_errors:
+      anomaly_types: [UPSTREAM_SERVICE_FAILURE]
+    dns_errors:
+      anomaly_types: [DNS_RESOLUTION_FAILURE]
+    tls_handshake_errors:
+      anomaly_types: [TLS_HANDSHAKE_FAILURE]
+  propagation:
+    gateway_pressure:
+      anomaly_types: [FORWARDED_TRAFFIC_SPIKE, ACTIVE_CONNECTION_SPIKE, CONNECTION_UTILIZATION_HIGH]
+    checkout_latency:
+      anomaly_types: [CHECKOUT_LATENCY_HIGH]
+    payment_timeout:
+      anomaly_types: [UPSTREAM_TIMEOUT]
+      event_types: [UPSTREAM_CONNECTION_TIMEOUT]
+    database_pressure:
+      anomaly_types: [DB_CONNECTION_UTILIZATION_HIGH, DB_POOL_EXHAUSTED]
+    checkout_failure:
+      anomaly_types: [CHECKOUT_ERROR_ALERT]
+    downstream_latency:
+      anomaly_types: [CHECKOUT_LATENCY_HIGH]
+    upstream_error:
+      anomaly_types: [UPSTREAM_SERVICE_FAILURE]
+    caller_failure:
+      anomaly_types: [CHECKOUT_ERROR_ALERT]
+    dns_error:
+      anomaly_types: [DNS_RESOLUTION_FAILURE]
+    connection_failure:
+      anomaly_types: [UPSTREAM_TIMEOUT]
+    tls_error:
+      anomaly_types: [TLS_HANDSHAKE_FAILURE]
+    request_failure:
+      anomaly_types: [CHECKOUT_ERROR_ALERT]
 hypotheses:
   - hypothesis_type: configuration_regression
     entity_types: [gateway, service, database]
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: changed_entity
+      requires_recent_change: true
+      any_anomaly_types: [FORWARDED_TRAFFIC_SPIKE]
+    change_based: true
+    plausible_change_keys: [rate_limit.enabled]
+    metric_anomaly_types: [FORWARDED_TRAFFIC_SPIKE]
     required_symptoms: [forwarded_traffic_spike, downstream_degradation]
     expected_propagation: [gateway_pressure, checkout_latency, payment_timeout]
     expected_evidence:
@@ -15,12 +73,18 @@ hypotheses:
       timeout_log: "Obtain payment upstream-timeout logs."
       waf_decision_logs: "Obtain WAF decision logs for 09:25–09:35 UTC."
     conflict_patterns: []
+    summary: "A gateway rate-limit change is the highest-ranked explanation for the observed traffic and downstream errors."
     diagnostic_step_ids: [inspect-config-diff, compare-pre-post-metrics]
     remediation_step_ids: [propose-config-rollback]
   - hypothesis_type: dos_or_traffic_surge
     entity_types: [gateway]
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
-    required_symptoms: [raw_ingress_surge, changed_source_distribution]
+    generation:
+      candidate_selector: primary_entity
+      any_anomaly_types: [FORWARDED_TRAFFIC_SPIKE, GATEWAY_TRAFFIC_ALERT]
+    change_based: false
+    metric_anomaly_types: [FORWARDED_TRAFFIC_SPIKE]
+    required_symptoms: [forwarded_traffic_spike, changed_source_distribution]
     expected_propagation: [gateway_pressure, checkout_latency, payment_timeout]
     expected_evidence:
       raw_ingress: "Obtain gateway raw-ingress metrics."
@@ -31,11 +95,23 @@ hypotheses:
         factor: symptom_compatibility
         operation: cap
         value: 0.5
+        match:
+          event_types: [RAW_INGRESS_RATE]
+          absent_anomaly_types: [RAW_INGRESS_SPIKE, SOURCE_DISTRIBUTION_CHANGE]
+        statement: "Gateway raw ingress remained stable with no new source distribution."
+    summary: "A traffic surge explains the impact pattern, but stable raw ingress and source distribution conflict with an external DoS cause."
     diagnostic_step_ids: [inspect-ingress-distribution]
     remediation_step_ids: [propose-edge-rate-limit]
   - hypothesis_type: database_connection_exhaustion
     entity_types: [database]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: referenced_dependency
+      any_log_event_types: [UPSTREAM_CONNECTION_TIMEOUT]
+      referenced_entity_types: [database]
+    change_based: false
+    topology_origin_event_types: [CHECKOUT_P95_LATENCY, HIGH_CHECKOUT_ERROR_RATE]
+    metric_anomaly_types: [DB_CONNECTION_UTILIZATION_HIGH, DB_POOL_EXHAUSTED]
     required_symptoms: [payment_timeout, database_utilization_high]
     expected_propagation: [database_pressure, payment_timeout, checkout_failure]
     expected_evidence:
@@ -47,42 +123,73 @@ hypotheses:
         factor: metric_anomaly
         operation: cap
         value: 0.0
+        match:
+          event_types: [DB_CONNECTION_UTILIZATION]
+          signal_value_lte: 0.75
+        statement: "Payment database connection utilization remained normal."
+    summary: "A payment timeout references the database, but normal database utilization conflicts with connection exhaustion."
     diagnostic_step_ids: [inspect-db-pool]
     remediation_step_ids: [propose-db-pool-tuning]
   - hypothesis_type: network_path_congestion
     entity_types: [gateway, service]
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: primary_entity
+      any_anomaly_types: [PACKET_LOSS_SPIKE, NETWORK_PATH_CONGESTION]
+    change_based: false
+    metric_anomaly_types: [PACKET_LOSS_SPIKE, TCP_RETRANSMISSION_SPIKE]
     required_symptoms: [packet_loss, retransmissions]
     expected_propagation: [gateway_pressure, downstream_latency]
     expected_evidence: {path_telemetry: "Obtain packet loss and path telemetry."}
     conflict_patterns: []
+    summary: "Network path congestion may explain packet loss and retransmissions."
     diagnostic_step_ids: [inspect-network-path]
     remediation_step_ids: []
   - hypothesis_type: upstream_service_failure
     entity_types: [service]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: event_entity
+      any_anomaly_types: [UPSTREAM_SERVICE_FAILURE]
+      any_log_event_types: [UPSTREAM_SERVICE_ERROR]
+    change_based: false
+    metric_anomaly_types: [UPSTREAM_SERVICE_FAILURE]
     required_symptoms: [upstream_errors]
     expected_propagation: [upstream_error, caller_failure]
     expected_evidence: {upstream_health: "Obtain upstream health-check results."}
     conflict_patterns: []
+    summary: "An upstream service failure may explain errors observed by callers."
     diagnostic_step_ids: [inspect-upstream-health]
     remediation_step_ids: []
   - hypothesis_type: dns_resolution_failure
     entity_types: [service, gateway]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: event_entity
+      any_anomaly_types: [DNS_RESOLUTION_FAILURE]
+      any_log_event_types: [DNS_RESOLUTION_ERROR]
+    change_based: false
+    metric_anomaly_types: [DNS_RESOLUTION_FAILURE]
     required_symptoms: [dns_errors]
     expected_propagation: [dns_error, connection_failure]
     expected_evidence: {dns_queries: "Obtain DNS query and resolver logs."}
     conflict_patterns: []
+    summary: "DNS resolution failures may be preventing service connections."
     diagnostic_step_ids: [inspect-dns-resolution]
     remediation_step_ids: []
   - hypothesis_type: certificate_or_tls_failure
     entity_types: [service, gateway]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: event_entity
+      any_anomaly_types: [TLS_HANDSHAKE_FAILURE]
+      any_log_event_types: [TLS_HANDSHAKE_ERROR, CERTIFICATE_INVALID]
+    change_based: false
+    metric_anomaly_types: [TLS_HANDSHAKE_FAILURE]
     required_symptoms: [tls_handshake_errors]
     expected_propagation: [tls_error, request_failure]
     expected_evidence: {certificate_state: "Obtain certificate validity and TLS handshake details."}
     conflict_patterns: []
+    summary: "A certificate or TLS failure may be causing request failures."
     diagnostic_step_ids: [inspect-certificate-state]
     remediation_step_ids: []
-

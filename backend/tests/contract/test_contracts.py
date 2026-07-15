@@ -13,7 +13,9 @@ from app.contracts import (
     Hypothesis,
     IncidentSummary,
     InvestigationResponse,
+    ReviewMutationResponse,
     ReviewRecord,
+    ReviewRequest,
 )
 from app.main import app
 
@@ -35,6 +37,8 @@ def test_contract_examples_validate() -> None:
         "hypothesis.json": Hypothesis,
         "evidence.json": EvidenceItem,
         "review.json": ReviewRecord,
+        "review-request.json": ReviewRequest,
+        "review-mutation-response.json": ReviewMutationResponse,
         "analysis_run.json": AnalysisRun,
         "error.json": ErrorEnvelope,
     }
@@ -87,6 +91,38 @@ def test_review_and_audit_examples_validate() -> None:
     audits = load(FIXTURES / "golden_audit_examples.json")["records"]
     assert all(ReviewRecord.model_validate(item) for item in reviews)
     assert all(AuditRecord.model_validate(item) for item in audits)
+
+
+def test_phase3_review_seed_resolves_against_golden_snapshot() -> None:
+    seed = load(FIXTURES / "phase3_review_seed.json")
+    investigation = InvestigationResponse.model_validate(
+        load(FIXTURES / "golden_investigation_response.json")
+    )
+    assert seed["incident_id"] == investigation.incident.incident_id
+    assert seed["current_analysis_run_id"] == investigation.analysis_run_id
+    assert set(seed["current_hypothesis_ids"]) == {
+        item.hypothesis_id for item in investigation.hypotheses
+    }
+    evidence = [
+        item
+        for items in investigation.evidence_by_hypothesis.values()
+        for item in items
+    ]
+    assert any(
+        item.evidence_id == seed["missing_evidence_id"] and item.kind.value == "missing"
+        for item in evidence
+    )
+    assert any(
+        item.evidence_id == seed["non_missing_evidence_id"]
+        and item.kind.value != "missing"
+        for item in evidence
+    )
+    assert any(
+        item.event.event_id == seed["excluded_event_id"]
+        and item.attachment_decision == "excluded"
+        for item in investigation.timeline
+    )
+    assert seed["initial_review_ids"] == []
 
 
 def test_openapi_contains_every_frozen_endpoint() -> None:

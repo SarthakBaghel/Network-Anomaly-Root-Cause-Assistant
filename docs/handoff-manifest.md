@@ -16,13 +16,16 @@ competing copies.
 
 | Artifact | SHA-256 |
 |---|---|
-| `backend/openapi.json` | `ea1d39d04df12332e100bae4d077e0351a859611b634a9e4e25d99d3592b756d` |
+| `backend/openapi.json` | `1c30a14f220f0c5826797ad778ed8ea84150defa80685da82ae6743f7347ae58` |
+| `backend/app/fixtures/topology.json` | `69b6523e1e6e59e3a9f470be141517a7e3cbef2097d08187d8c3ca90a15ef6a0` |
+| `backend/app/fixtures/hypotheses.yaml` | `4b5e19675f8b1c0b51609207702b70c9ae11466057e648253a2d66522b762aa5` |
+| `backend/app/fixtures/symptom_families.yaml` | `dd2562735dd0537356893eb7f11f1879774ec11773c203f2749b15433c8eed53` |
 | `backend/tests/fixtures/golden_events.jsonl` | `06612568cea892f214b245d95f2ebff0c04d659d1c931c2b74e26df82f60659a` |
 | `backend/tests/fixtures/golden_anomalies.json` | `fa57ab8b3052648592ef1c48d281905cba3b38e8ff12a905168e966ff362eb8f` |
 | `backend/tests/fixtures/golden_incident_bundle.json` | `fbcb25d76bbfc52ae14c8686a36b853eca4d36a89fbd897eb0a392f635914cfe` |
 | `backend/tests/fixtures/golden_expected_analysis.json` | `4a84ab7a52b764743da9aea20a05c8ed444e63116af9c11feff0fd9a0a839cb7` |
-| `backend/tests/fixtures/golden_investigation_response.json` | `166be89d2183d68e837db299dd72e0c83e3b35fb1d99c7597143dccd4e56d5d5` |
+| `backend/tests/fixtures/golden_investigation_response.json` | `3c76cc14fca16f8c5bd97c46fda875efc1d9d834fd7a3601752abd0ec1d47e8c` |
 | `backend/tests/fixtures/golden_review_examples.json` | `e43586e25df9f8d63db59294f066c5a29ebbf420adfb71a9f35e76b2a778f963` |
 | `backend/tests/fixtures/golden_audit_examples.json` | `586294cf61944e2ebeadc0dd6e51397ffc1e4e28f65b24d3b432b467e8dbac6f` |
 | `frontend/src/routes.ts` | `03063934eaca8276bb85d47785d23ec2f5698f12bcb4ca824c76d674aaa15560` |
-| `frontend/src/test-fixtures/testid-manifest.ts` | `39c3caee0dd17a2c4ee66df079178dcffbb5c9450f39e97256c276fc0dac7f4f` |
+| `frontend/src/test-fixtures/testid-manifest.ts` | `9207b6b1a819d4525e5e9030881318af5bc1d92289ce52643eb88e9cc9ebbd6b` |

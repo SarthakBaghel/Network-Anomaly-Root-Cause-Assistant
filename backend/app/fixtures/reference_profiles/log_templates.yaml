@@ -1,16 +1,33 @@
 schema_version: "1.0"
-version: log-templates-1.0
+version: log-templates-1.1
 templates:
+  # ── Gateway / API Gateway ──────────────────────────────────────────────
   - {template_id: gateway_startup, component: api-gateway, level: info, event_code: SERVICE_STARTED, text: "Gateway listener ready on {port}", repeatable: false}
   - {template_id: gateway_health, component: api-gateway, level: info, event_code: HEALTH_CHECK_OK, text: "Gateway health check succeeded", repeatable: true}
   - {template_id: gateway_rate_limit, component: api-gateway, level: info, event_code: RATE_LIMIT_STATE, text: "Rate limiter state changed to {state}", repeatable: false}
   - {template_id: config_reload, component: api-gateway, level: info, event_code: CONFIG_RELOADED, text: "Configuration revision {revision} loaded", repeatable: false}
+  - {template_id: packet_loss_warning, component: api-gateway, level: warning, event_code: PACKET_LOSS_WARNING, text: "Packet loss reached {loss_percent}%", repeatable: true}
+  - {template_id: rate_limit_breached, component: api-gateway, level: warning, event_code: RATE_LIMIT_THRESHOLD_BREACHED, text: "Rate limit threshold breached: {current_rps} rps exceeds {limit_rps} limit", repeatable: true}
+
+  # ── Checkout API ───────────────────────────────────────────────────────
   - {template_id: checkout_health, component: checkout-api, level: info, event_code: HEALTH_CHECK_OK, text: "Checkout dependency health check succeeded", repeatable: true}
+  - {template_id: dns_resolution_error, component: checkout-api, level: error, event_code: DNS_RESOLUTION_FAILED, text: "DNS resolution failed for {hostname}", repeatable: true}
+  - {template_id: checkout_latency_high, component: checkout-api, level: warning, event_code: NETWORK_LATENCY_SPIKE, text: "P95 checkout latency {p95_ms}ms exceeds SLO threshold {slo_ms}ms", repeatable: true}
+
+  # ── Payment API ────────────────────────────────────────────────────────
   - {template_id: payment_upstream_timeout, component: payment-api, level: error, event_code: UPSTREAM_CONNECTION_TIMEOUT, text: "Upstream dependency {dependency_id} timed out after {timeout_ms} ms", repeatable: true}
   - {template_id: payment_pool_pressure, component: payment-api, level: warning, event_code: CONNECTION_POOL_PRESSURE, text: "Connection pool utilization reached {utilization}", repeatable: true}
+  - {template_id: payment_conn_refused, component: payment-api, level: error, event_code: CONN_REFUSED, text: "Connection refused by upstream {upstream_host}:{upstream_port}", repeatable: true}
+
+  # ── Payment DB ────────────────────────────────────────────────────────
   - {template_id: database_health, component: payment-db, level: info, event_code: HEALTH_CHECK_OK, text: "Database health check succeeded", repeatable: true}
-  - {template_id: packet_loss_warning, component: api-gateway, level: warning, event_code: PACKET_LOSS_WARNING, text: "Packet loss reached {loss_percent}%", repeatable: true}
-  - {template_id: dns_resolution_error, component: checkout-api, level: error, event_code: DNS_RESOLUTION_FAILED, text: "DNS resolution failed for {hostname}", repeatable: true}
+  - {template_id: db_pool_exhausted, component: payment-db, level: error, event_code: DB_CONNECTION_POOL_EXHAUSTED, text: "Database connection pool exhausted: {active}/{max} connections in use", repeatable: false}
+  - {template_id: resource_saturation_mem, component: payment-db, level: warning, event_code: RESOURCE_SATURATION, text: "Resource saturation: {resource_type} usage at {usage_percent}% (threshold {threshold_percent}%)", repeatable: false}
+
+  # ── Auth API ──────────────────────────────────────────────────────────
   - {template_id: auth_login, component: auth-api, level: info, event_code: AUTH_SUCCESS, text: "Authentication succeeded for session {session_id}", repeatable: true}
   - {template_id: auth_certificate_expiry, component: auth-api, level: warning, event_code: CERTIFICATE_EXPIRY_WARNING, text: "Certificate expires in {days_remaining} days", repeatable: true}
 
+  # ── Distributed system / GAIA-inspired patterns ───────────────────────
+  - {template_id: hdfs_datanode_failure, component: distributed-storage, level: error, event_code: HDFS_DATANODE_FAILURE, text: "DataNode {datanode_id} failed: {failure_reason} — replication pipeline broken", repeatable: false}
+  - {template_id: clearance_marker, component: any, level: info, event_code: CLEARANCE, text: "Anomaly injection cleared for {entity_id}: {anomaly_type}", repeatable: true}

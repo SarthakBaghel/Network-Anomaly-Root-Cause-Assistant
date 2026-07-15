@@ -41,12 +41,13 @@ from typing import Any, Protocol, runtime_checkable
 import yaml
 from sqlalchemy.orm import Session
 
+from app.audit.contracts import AuditWrite
+from app.audit.service import audit_service
 from app.contracts import ExplanationOutput
 from app.db import models
 from app.db.repositories import (
     AnalysisRunRepository,
     AnomalyRepository,
-    AuditRepository,
     EvidenceRepository,
     HypothesisRepository,
     IncidentRepository,
@@ -313,7 +314,6 @@ class AnalysisOrchestrator:
     ) -> list[models.Anomaly]:
         """Call the detector and persist resulting anomaly rows."""
         anomaly_repo = AnomalyRepository(session)
-        audit_repo = AuditRepository(session)
 
         if self._detector is None:
             return []
@@ -321,19 +321,23 @@ class AnalysisOrchestrator:
         anomalies = self._detector.evaluate_event(event, session)
         for anomaly in anomalies:
             anomaly_repo.persist(anomaly)
-            audit_repo.append(
-                audit_id=f"aud_{uuid.uuid4().hex}",
-                actor_type="system",
-                actor_id="detector",
-                action="ANOMALY_DETECTED",
-                object_type="anomaly",
-                object_id=anomaly.id,
-                payload={
-                    "event_id": event.id,
-                    "detector_id": anomaly.detector_id,
-                    "score": anomaly.score,
-                    "context_only": anomaly.context_only,
-                },
+            audit_service.append(
+                AuditWrite(
+                    action="ANOMALY_DETECTED",
+                    actor_type="system",
+                    actor_id="detector",
+                    object_type="anomaly",
+                    object_id=anomaly.id,
+                    request_id=f"pipeline:{event.id}",
+                    reason_codes=[anomaly.detector_id],
+                    metadata={
+                        "event_id": event.id,
+                        "detector_id": anomaly.detector_id,
+                        "score": anomaly.score,
+                        "context_only": anomaly.context_only,
+                    },
+                ),
+                session,
             )
         return anomalies
 
@@ -364,7 +368,6 @@ class AnalysisOrchestrator:
         """
         run_repo = AnalysisRunRepository(session)
         incident_repo = IncidentRepository(session)
-        audit_repo = AuditRepository(session)
 
         # Build fingerprint
         attached = incident_repo.get_attached_events(incident.id)
@@ -423,7 +426,6 @@ class AnalysisOrchestrator:
                     session=session,
                     run_repo=run_repo,
                     incident_repo=incident_repo,
-                    audit_repo=audit_repo,
                 )
         except Exception as exc:
             self._persist_failed_run(
@@ -444,7 +446,6 @@ class AnalysisOrchestrator:
         session: Session,
         run_repo: AnalysisRunRepository,
         incident_repo: IncidentRepository,
-        audit_repo: AuditRepository,
     ) -> None:
         """Insert all children, mark prior superseded, swap current pointer.
 
@@ -494,22 +495,26 @@ class AnalysisOrchestrator:
                 session.add(explanation)
 
             if analysis_result.explanation_fallback_reason is not None:
-                audit_repo.append(
-                    audit_id=f"aud_{uuid.uuid4().hex}",
-                    actor_type="system",
-                    actor_id="explanation_service",
-                    action="EXPLANATION_FALLBACK_USED",
-                    object_type="incident",
-                    object_id=incident.id,
-                    payload={
-                        "request_id": f"analysis:{new_run.id}",
-                        "analysis_run_id": new_run.id,
-                        "incident_id": incident.id,
-                        "reason_code": analysis_result.explanation_fallback_reason,
-                        "attempt_count": (
-                            analysis_result.explanation_fallback_attempt_count
-                        ),
-                    },
+                audit_service.append(
+                    AuditWrite(
+                        action="EXPLANATION_FALLBACK_USED",
+                        actor_type="system",
+                        actor_id="explanation_service",
+                        object_type="incident",
+                        object_id=incident.id,
+                        incident_id=incident.id,
+                        analysis_run_id=new_run.id,
+                        analysis_revision=new_run.revision,
+                        request_id=f"analysis:{new_run.id}",
+                        reason_codes=[analysis_result.explanation_fallback_reason],
+                        metadata={
+                            "reason_code": analysis_result.explanation_fallback_reason,
+                            "attempt_count": (
+                                analysis_result.explanation_fallback_attempt_count
+                            ),
+                        },
+                    ),
+                    session,
                 )
 
             session.flush()
@@ -535,20 +540,25 @@ class AnalysisOrchestrator:
         )
 
         # Audit
-        audit_repo.append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="system",
-            actor_id="orchestrator",
-            action="ANALYSIS_PUBLISHED",
-            object_type="incident",
-            object_id=incident.id,
-            payload={
-                "analysis_run_id": new_run.id,
-                "revision": new_run.revision,
-                "fingerprint": new_run.input_fingerprint,
-                "prior_run_id": prior_run_id,
-                "algorithm_version": ALGORITHM_VERSION,
-            },
+        audit_service.append(
+            AuditWrite(
+                action="ANALYSIS_PUBLISHED",
+                actor_type="system",
+                actor_id="orchestrator",
+                object_type="incident",
+                object_id=incident.id,
+                incident_id=incident.id,
+                analysis_run_id=new_run.id,
+                analysis_revision=new_run.revision,
+                request_id=f"analysis:{new_run.id}",
+                metadata={
+                    "revision": new_run.revision,
+                    "fingerprint": new_run.input_fingerprint,
+                    "prior_run_id": prior_run_id,
+                    "algorithm_version": ALGORITHM_VERSION,
+                },
+            ),
+            session,
         )
 
     @staticmethod
@@ -692,20 +702,27 @@ class AnalysisOrchestrator:
     ) -> None:
         """Mark a building run as failed. Leave prior run current. Write audit."""
         run_repo = AnalysisRunRepository(session)
-        audit_repo = AuditRepository(session)
         try:
             run_repo.mark_failed(run_id, reason)
-            audit_repo.append(
-                audit_id=f"aud_{uuid.uuid4().hex}",
-                actor_type="system",
-                actor_id="orchestrator",
-                action="PIPELINE_STAGE_FAILED",
-                object_type="incident",
-                object_id=incident_id,
-                payload={
-                    "failed_run_id": run_id,
-                    "reason": reason[:500],
-                },
+            failed_run = run_repo.get_by_id(run_id)
+            audit_service.append(
+                AuditWrite(
+                    action="PIPELINE_STAGE_FAILED",
+                    actor_type="system",
+                    actor_id="orchestrator",
+                    object_type="incident",
+                    object_id=incident_id,
+                    incident_id=incident_id,
+                    analysis_run_id=run_id,
+                    analysis_revision=failed_run.revision if failed_run else None,
+                    request_id=f"analysis:{run_id}",
+                    reason_codes=["PIPELINE_STAGE_FAILED"],
+                    metadata={
+                        "failed_run_id": run_id,
+                        "sanitized_reason": reason[:500],
+                    },
+                ),
+                session,
             )
             session.flush()
         except Exception:

@@ -18,15 +18,15 @@ Person 1 owns the cross-domain transaction, lock, DB clearing, and API wiring.
 from __future__ import annotations
 
 import logging
-import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable, Protocol, runtime_checkable
 
 from sqlalchemy import delete, text
 from sqlalchemy.orm import Session
 
+from app.audit.contracts import AuditWrite
+from app.audit.service import audit_service
 from app.db import models
-from app.db.repositories import AuditRepository
 from app.orchestration.orchestrator import AnalysisOrchestrator
 
 logger = logging.getLogger(__name__)
@@ -101,19 +101,23 @@ class ResetService:
         session.flush()
 
         # Step 7 — Write the DEMO_RESET audit entry
-        audit_repo = AuditRepository(session)
-        audit_id = f"aud_{uuid.uuid4().hex}"
-        audit_repo.append(
-            audit_id=audit_id,
-            actor_type="system",
-            actor_id="reset_service",
-            action="DEMO_RESET",
-            object_type="system",
-            object_id="demo",
-            payload={
-                "reset_at": datetime.now(tz=timezone.utc).isoformat(),
-            },
+        reset_at = datetime.now(tz=timezone.utc)
+        request_id = f"reset:{reset_at.isoformat()}"
+        audit_row = audit_service.append(
+            AuditWrite(
+                action="DEMO_RESET",
+                actor_type="system",
+                actor_id="reset_service",
+                object_type="system",
+                object_id="demo",
+                request_id=request_id,
+                reason_codes=["DETERMINISTIC_DEMO_RESET"],
+                metadata={"reset_at": reset_at.isoformat()},
+            ),
+            session,
+            timestamp=reset_at,
         )
+        audit_id = audit_row.id
         session.flush()
 
         # Step 6 — Reset simulator state (after DB is clean)

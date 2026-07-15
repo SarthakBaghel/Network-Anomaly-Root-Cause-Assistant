@@ -266,10 +266,12 @@ def test_llm_fallback_writes_one_sanitized_audit_record(session: Session) -> Non
     )
     assert len(rows) == 1
     assert rows[0].payload == {
-        "request_id": f"analysis:{current.id}",
-        "analysis_run_id": current.id,
-        "incident_id": "inc_001",
-        "reason_code": "LLM_VALIDATION_FAILED",
+            "request_id": f"analysis:{current.id}",
+            "analysis_run_id": current.id,
+            "analysis_revision": current.revision,
+            "incident_id": "inc_001",
+            "reason_code": "LLM_VALIDATION_FAILED",
+            "reason_codes": ["LLM_VALIDATION_FAILED"],
         "attempt_count": 2,
     }
 

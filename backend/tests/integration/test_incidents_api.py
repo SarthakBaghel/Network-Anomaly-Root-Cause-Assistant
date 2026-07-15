@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 from app.api.incidents import get_session
 from app.contracts import InvestigationResponse
 from app.db import models
+from app.db.repositories import AuditRepository
 from app.main import app
 
 
@@ -267,6 +268,28 @@ def _seed(session) -> None:
             },
         )
     )
+    excluded_auth = next(
+        item
+        for item in golden["timeline"]
+        if item["attachment_decision"] == "excluded"
+    )
+    session.add(
+        models.AuditLog(
+            id="aud_auth_excluded",
+            timestamp=_dt(excluded_auth["event"]["timestamp"]),
+            actor_type="system",
+            actor_id="incident_manager",
+            action="EVENT_EXCLUDED",
+            object_type="event",
+            object_id=excluded_auth["event"]["event_id"],
+            payload={
+                "request_id": "req_auth_excluded",
+                "incident_id": incident["incident_id"],
+                "event_id": excluded_auth["event"]["event_id"],
+                "reason_codes": excluded_auth["attachment_reasons"],
+            },
+        )
+    )
     session.commit()
 
 
@@ -387,7 +410,9 @@ def test_review_is_idempotent_audited_and_closes_on_confirmation(
     first = client.post("/api/v1/incidents/inc_001/review", json=request_evidence)
     retry = client.post("/api/v1/incidents/inc_001/review", json=request_evidence)
     assert first.status_code == retry.status_code == 200
-    assert first.json()["review_id"] == retry.json()["review_id"]
+    assert first.json()["review"]["review_id"] == retry.json()["review"]["review_id"]
+    assert first.json()["request_id"] == retry.json()["request_id"]
+    assert first.json()["generated_at"] == retry.json()["generated_at"]
 
     confirm = client.post(
         "/api/v1/incidents/inc_001/review",
@@ -407,10 +432,15 @@ def test_review_is_idempotent_audited_and_closes_on_confirmation(
     audit = client.get("/api/v1/incidents/inc_001/audit")
     assert audit.status_code == 200
     assert {item["action"] for item in audit.json()} >= {
+        "EVENT_EXCLUDED",
         "REVIEW_EVIDENCE_REQUESTED",
         "REVIEW_CONFIRMED",
         "INCIDENT_STATUS_CHANGED",
     }
+    review_actions = [
+        item for item in audit.json() if item["action"] == "REVIEW_EVIDENCE_REQUESTED"
+    ]
+    assert len(review_actions) == 1
 
     closed = client.post(
         "/api/v1/incidents/inc_001/review",
@@ -438,6 +468,9 @@ def test_stale_and_non_missing_evidence_reviews_are_rejected(client: TestClient)
     )
     assert stale.status_code == 409
     assert stale.json()["detail"]["code"] == "STALE_ANALYSIS"
+    assert {
+        item["reason_code"] for item in stale.json()["detail"]["details"]
+    } == {"run_007"}
 
     non_missing = client.post(
         "/api/v1/incidents/inc_001/review",
@@ -453,6 +486,39 @@ def test_stale_and_non_missing_evidence_reviews_are_rejected(client: TestClient)
     )
     assert non_missing.status_code == 422
     assert non_missing.json()["detail"]["code"] == "VALIDATION_ERROR"
+
+
+def test_review_audit_failure_rolls_back_review_and_status(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original_append = AuditRepository.append
+
+    def fail_review_audit(self, **kwargs):
+        if str(kwargs.get("action", "")).startswith("REVIEW_"):
+            raise RuntimeError("forced audit failure")
+        return original_append(self, **kwargs)
+
+    monkeypatch.setattr(AuditRepository, "append", fail_review_audit)
+    with pytest.raises(RuntimeError, match="forced audit failure"):
+        client.post(
+            "/api/v1/incidents/inc_001/review",
+            json={
+                "analysis_run_id": "run_007",
+                "hypothesis_id": "hyp_001",
+                "decision": "confirmed",
+                "client_action_id": "action-must-rollback",
+                "requested_evidence_id": None,
+                "reviewer": "operator-1",
+                "comment": "must roll back",
+            },
+        )
+
+    investigation = client.get("/api/v1/incidents/inc_001/investigation").json()
+    assert investigation["incident"]["status"] == "investigating"
+    assert all(
+        item["client_action_id"] != "action-must-rollback"
+        for item in investigation["reviews"]
+    )
 
 
 def test_recompute_is_safe_when_p4_analysis_engine_is_not_registered(

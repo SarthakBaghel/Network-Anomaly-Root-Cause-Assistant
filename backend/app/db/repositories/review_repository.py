@@ -7,6 +7,7 @@ enforces idempotency at the DB level; the service layer checks before inserting.
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import models
@@ -26,6 +27,33 @@ class ReviewRepository:
         self.session.add(row)
         self.session.flush()
         return row
+
+    def persist_idempotent(
+        self, row: models.Review
+    ) -> tuple[models.Review, bool]:
+        """Insert once, handling a concurrent client-action uniqueness race.
+
+        A racing uniqueness failure rolls back the read-only pre-insert
+        transaction, then reloads the winning row in a fresh transaction.
+        Successful inserts remain in the caller's outer transaction so a later
+        audit or lifecycle failure rolls the review back too.
+        """
+
+        existing = self.get_by_client_action(row.incident_id, row.client_action_id)
+        if existing is not None:
+            return existing, False
+        try:
+            self.session.add(row)
+            self.session.flush()
+        except IntegrityError:
+            self.session.rollback()
+            existing = self.get_by_client_action(
+                row.incident_id, row.client_action_id
+            )
+            if existing is None:
+                raise
+            return existing, False
+        return row, True
 
     # ------------------------------------------------------------------
     # Reads
@@ -63,5 +91,17 @@ class ReviewRepository:
             models.Review.hypothesis_id == hypothesis_id,
             models.Review.analysis_run_id == analysis_run_id,
             models.Review.decision.in_(["confirmed", "rejected"]),
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def get_evidence_request_for_item(
+        self, analysis_run_id: str, evidence_id: str
+    ) -> models.Review | None:
+        """Return the one allowed evidence request for an item in a run."""
+
+        stmt = select(models.Review).where(
+            models.Review.analysis_run_id == analysis_run_id,
+            models.Review.decision == "evidence_requested",
+            models.Review.requested_evidence_id == evidence_id,
         )
         return self.session.execute(stmt).scalar_one_or_none()

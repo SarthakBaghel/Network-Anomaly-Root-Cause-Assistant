@@ -5,7 +5,6 @@ import binascii
 import json
 import uuid
 from collections import defaultdict
-from collections.abc import Iterator
 from datetime import datetime, timezone
 from itertools import pairwise
 from typing import Annotated, Any, Never
@@ -25,7 +24,7 @@ from app.contracts import (
     IncidentStatus,
     InvestigationResponse,
     PlaybookRecommendation,
-    ReviewDecision,
+    ReviewMutationResponse,
     ReviewRecord,
     ReviewRequest,
     TimelineItem,
@@ -35,36 +34,22 @@ from app.contracts import (
 from app.db import models
 from app.db.repositories import (
     AnalysisRunRepository,
-    AuditRepository,
     EvidenceRepository,
     EventRepository,
     HypothesisRepository,
     IncidentRepository,
     ReviewRepository,
 )
-from app.db.session import SessionLocal
 from app.orchestration.orchestrator import orchestrator
 from app.playbooks.engine import get_step
+from app.audit.service import audit_service
+from app.reviews.service import ReviewServiceError, review_service
 from app.topology.graph import TopologyPathNotFoundError, get_topology_graph
+
+from .dependencies import get_session
 
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
-
-
-def get_session() -> Iterator[Session]:
-    """FastAPI session boundary; mutations commit once after successful validation."""
-
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-
 DatabaseSession = Annotated[Session, Depends(get_session)]
 
 
@@ -182,22 +167,6 @@ def _review_contract(row: models.Review) -> ReviewRecord:
         reviewer=row.reviewer,
         comment=row.comment,
         created_at=_utc(row.created_at),
-    )
-
-
-def _audit_contract(row: models.AuditLog) -> AuditRecord:
-    payload = dict(row.payload or {})
-    return AuditRecord(
-        audit_id=row.id,
-        timestamp=_utc(row.timestamp),
-        actor_type=row.actor_type,
-        actor_id=row.actor_id,
-        action=row.action,
-        object_type=row.object_type,
-        object_id=row.object_id,
-        request_id=str(payload.get("request_id", row.id)),
-        analysis_run_id=payload.get("analysis_run_id"),
-        payload=payload,
     )
 
 
@@ -641,154 +610,19 @@ def recompute(incident_id: str, session: DatabaseSession) -> dict[str, Any]:
 def audit(incident_id: str, session: DatabaseSession) -> list[AuditRecord]:
     if IncidentRepository(session).get_by_id(incident_id) is None:
         _api_error(http_status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Incident not found")
-    return [
-        _audit_contract(row)
-        for row in AuditRepository(session).list_for_incident(incident_id)
-    ]
+    return audit_service.list_for_incident(incident_id, session)
 
 
-@router.post("/{incident_id}/review", response_model=ReviewRecord)
+@router.post("/{incident_id}/review", response_model=ReviewMutationResponse)
 def review(
     incident_id: str,
     review_request: ReviewRequest,
     session: DatabaseSession,
-) -> ReviewRecord:
-    review_repo = ReviewRepository(session)
-    existing = review_repo.get_by_client_action(
-        incident_id, review_request.client_action_id
-    )
-    if existing is not None:
-        return _review_contract(existing)
-
-    incident, _, run_id = _current_context(session, incident_id)
-    if incident.status in {"resolved", "rejected"}:
-        _api_error(
-            http_status.HTTP_409_CONFLICT,
-            "INCIDENT_CLOSED",
-            f"Incident {incident_id} is closed",
-        )
-    if review_request.analysis_run_id != run_id:
-        _api_error(
-            http_status.HTTP_409_CONFLICT,
-            "STALE_ANALYSIS",
-            "Review targets a stale analysis run",
-            current_analysis_run_id=run_id,
-        )
-    hypothesis = HypothesisRepository(session).get_by_id(
-        review_request.hypothesis_id
-    )
-    if (
-        hypothesis is None
-        or hypothesis.incident_id != incident_id
-        or hypothesis.analysis_run_id != run_id
-    ):
-        _api_error(
-            http_status.HTTP_409_CONFLICT,
-            "STALE_ANALYSIS",
-            "Review hypothesis is not part of the current analysis run",
-            current_analysis_run_id=run_id,
-        )
-
-    terminal = review_repo.get_terminal_for_hypothesis(hypothesis.id, run_id)
-    if terminal is not None:
-        if terminal.decision == review_request.decision.value:
-            return _review_contract(terminal)
-        _api_error(
-            http_status.HTTP_409_CONFLICT,
-            "REVIEW_CONFLICT",
-            "Hypothesis already has a conflicting terminal review decision",
-        )
-
-    if review_request.decision is ReviewDecision.EVIDENCE_REQUESTED:
-        requested = EvidenceRepository(session).get_missing_by_id_for_run(
-            review_request.requested_evidence_id or "", run_id
-        )
-        if requested is None or requested.hypothesis_id != hypothesis.id:
-            _api_error(
-                http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-                "VALIDATION_ERROR",
-                "requested_evidence_id must reference missing evidence for this hypothesis",
-                requested_evidence_id="NOT_MISSING_CURRENT_HYPOTHESIS_EVIDENCE",
-            )
-        prior_request = session.execute(
-            select(models.Review).where(
-                models.Review.analysis_run_id == run_id,
-                models.Review.requested_evidence_id == requested.id,
-            )
-        ).scalar_one_or_none()
-        if prior_request is not None:
-            return _review_contract(prior_request)
-
-    now = datetime.now(timezone.utc)
-    row = models.Review(
-        id=f"rev_{uuid.uuid4().hex[:20]}",
-        incident_id=incident_id,
-        analysis_run_id=run_id,
-        hypothesis_id=hypothesis.id,
-        decision=review_request.decision.value,
-        client_action_id=review_request.client_action_id,
-        requested_evidence_id=review_request.requested_evidence_id,
-        reviewer=review_request.reviewer,
-        comment=review_request.comment,
-        created_at=now,
-    )
-    review_repo.persist(row)
-
-    action_by_decision = {
-        ReviewDecision.CONFIRMED: "REVIEW_CONFIRMED",
-        ReviewDecision.REJECTED: "REVIEW_REJECTED",
-        ReviewDecision.EVIDENCE_REQUESTED: "REVIEW_EVIDENCE_REQUESTED",
-    }
-    audit_repo = AuditRepository(session)
-    audit_repo.append(
-        audit_id=f"aud_{uuid.uuid4().hex}",
-        actor_type="user",
-        actor_id=review_request.reviewer,
-        action=action_by_decision[review_request.decision],
-        object_type="incident",
-        object_id=incident_id,
-        payload={
-            "request_id": review_request.client_action_id,
-            "analysis_run_id": run_id,
-            "hypothesis_id": hypothesis.id,
-            "review_id": row.id,
-            "decision": review_request.decision.value,
-            "requested_evidence_id": review_request.requested_evidence_id,
-        },
-        timestamp=now,
-    )
-
-    old_status = incident.status
-    if review_request.decision is ReviewDecision.CONFIRMED:
-        IncidentRepository(session).set_confirmed_hypothesis(incident_id, hypothesis.id)
-    elif review_request.decision is ReviewDecision.REJECTED:
-        current_hypotheses = HypothesisRepository(session).list_for_run(run_id)
-        if all(
-            (decision := review_repo.get_terminal_for_hypothesis(item.id, run_id))
-            is not None
-            and decision.decision == ReviewDecision.REJECTED.value
-            for item in current_hypotheses
-        ):
-            IncidentRepository(session).update_status(incident_id, "rejected")
-
-    if incident.status != old_status:
-        audit_repo.append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="user",
-            actor_id=review_request.reviewer,
-            action="INCIDENT_STATUS_CHANGED",
-            object_type="incident",
-            object_id=incident_id,
-            payload={
-                "request_id": review_request.client_action_id,
-                "analysis_run_id": run_id,
-                "previous_status": old_status,
-                "new_status": incident.status,
-                "review_id": row.id,
-            },
-            timestamp=now,
-        )
-    return _review_contract(row)
+) -> ReviewMutationResponse:
+    try:
+        return review_service.submit(incident_id, review_request, session)
+    except ReviewServiceError as exc:
+        _api_error(exc.status_code, exc.code, exc.message, **exc.details)
 
 
 @router.get("/{incident_id}", response_model=IncidentSummary)

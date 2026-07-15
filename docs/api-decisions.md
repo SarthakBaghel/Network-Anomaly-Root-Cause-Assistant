@@ -137,3 +137,29 @@ contracts only when its affected owners have reviewed it.
   two-hop topology factor of `0.5`. Normal DB utilization caps metric support
   at zero and emits `NORMAL_DB_UTILIZATION` conflict evidence.
 - **Affected owners:** Persons 1, 4, and 5
+
+## M0-012 — Run-explicit review mutation envelope
+
+- **Status:** accepted as the Person 5 Phase 3 prerequisite boundary
+- **Decision:** `ReviewRequest` retains required `analysis_run_id` even though
+  the earlier task shorthand omitted it. This makes the stale-analysis intent
+  explicit and keeps the frontend action bound to the rendered snapshot.
+  `POST /incidents/{id}/review` returns a mutation envelope containing
+  `request_id`, `generated_at`, and the immutable `ReviewRecord`.
+- **Idempotency:** the request ID is deterministically derived from incident ID
+  and `client_action_id`, so retries return the same response identity and do
+  not create another audit record.
+- **Affected owners:** Persons 1, 2, and 5
+
+## M0-013 — Validated audit-writer handoff
+
+- **Status:** accepted as the Person 5 Phase 3 prerequisite boundary
+- **Decision:** audit producers hand Person 5 a validated `AuditWrite` value
+  carrying the frozen action, actor and object identity, request ID, applicable
+  incident/run/revision context, reason codes, state transition, and bounded
+  metadata. Raw payloads, secrets, authorization material, and stack traces are
+  rejected at this boundary.
+- **Incident trail query:** event-owned records such as `EVENT_EXCLUDED` remain
+  addressed to their event but are retrieved for an incident through their
+  sanitized `payload.incident_id` reference.
+- **Affected owners:** all backend producers; Persons 1 and 5 own the boundary

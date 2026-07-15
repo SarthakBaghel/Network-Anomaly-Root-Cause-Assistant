@@ -167,6 +167,35 @@
         "title": "AuditRecord",
         "type": "object"
       },
+      "BatchIngestionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionMutationResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "request_id",
+          "generated_at",
+          "results"
+        ],
+        "title": "BatchIngestionResponse",
+        "type": "object"
+      },
       "CanonicalEvent": {
         "additionalProperties": false,
         "properties": {
@@ -678,6 +707,119 @@
         "title": "IncidentSummary",
         "type": "object"
       },
+      "IngestionMutationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_state": {
+            "default": "not_started",
+            "enum": [
+              "not_started",
+              "processed"
+            ],
+            "title": "Analysis State",
+            "type": "string"
+          },
+          "collapsed_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collapsed Group Id"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "quarantine_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantine Id"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "representative_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Representative Event Id"
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "source_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Record Id"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "collapsed",
+              "quarantined"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "request_id",
+          "generated_at"
+        ],
+        "title": "IngestionMutationResponse",
+        "type": "object"
+      },
       "InvestigationResponse": {
         "additionalProperties": false,
         "properties": {
@@ -843,6 +985,39 @@
         "title": "PlaybookRecommendation",
         "type": "object"
       },
+      "RawIngestionRequest": {
+        "additionalProperties": false,
+        "description": "One source-specific record plus its source-adapter identity.",
+        "properties": {
+          "raw": {
+            "title": "Raw",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "source": {
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "raw"
+        ],
+        "title": "RawIngestionRequest",
+        "type": "object"
+      },
       "ReviewDecision": {
         "enum": [
           "confirmed",
@@ -851,6 +1026,32 @@
         ],
         "title": "ReviewDecision",
         "type": "string"
+      },
+      "ReviewMutationResponse": {
+        "additionalProperties": false,
+        "description": "Idempotent mutation envelope required by blueprint \u00a718.4.",
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewRecord"
+          }
+        },
+        "required": [
+          "request_id",
+          "generated_at",
+          "review"
+        ],
+        "title": "ReviewMutationResponse",
+        "type": "object"
       },
       "ReviewRecord": {
         "additionalProperties": false,
@@ -1199,6 +1400,52 @@
     "/api/v1/events": {
       "get": {
         "operationId": "list_events_api_v1_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "modality",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Modality"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1213,6 +1460,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Events",
@@ -1226,7 +1483,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CanonicalEvent"
+                "$ref": "#/components/schemas/RawIngestionRequest"
               }
             }
           },
@@ -1237,8 +1494,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Ingest Event Api V1 Events Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/IngestionMutationResponse"
                 }
               }
             },
@@ -1269,9 +1525,9 @@
             "application/json": {
               "schema": {
                 "items": {
-                  "$ref": "#/components/schemas/CanonicalEvent"
+                  "$ref": "#/components/schemas/RawIngestionRequest"
                 },
-                "title": " Events",
+                "title": "Requests",
                 "type": "array"
               }
             }
@@ -1283,8 +1539,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Ingest Batch Api V1 Events Batch Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BatchIngestionResponse"
                 }
               }
             },
@@ -1875,7 +2130,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewRecord"
+                  "$ref": "#/components/schemas/ReviewMutationResponse"
                 }
               }
             },

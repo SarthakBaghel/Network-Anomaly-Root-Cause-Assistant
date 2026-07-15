@@ -23,7 +23,9 @@ from app.contracts import (  # noqa: E402
     Hypothesis,
     IncidentSummary,
     InvestigationResponse,
+    ReviewMutationResponse,
     ReviewRecord,
+    ReviewRequest,
 )
 from app.readiness import catalogue_status  # noqa: E402
 
@@ -67,6 +69,8 @@ def validate_contracts() -> None:
         "hypothesis.json": Hypothesis,
         "evidence.json": EvidenceItem,
         "review.json": ReviewRecord,
+        "review-request.json": ReviewRequest,
+        "review-mutation-response.json": ReviewMutationResponse,
         "analysis_run.json": AnalysisRun,
         "error.json": ErrorEnvelope,
     }
@@ -165,4 +169,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

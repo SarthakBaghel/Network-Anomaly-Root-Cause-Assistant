@@ -186,3 +186,16 @@ steps:
     risk_level: low
     rollback_note: Read-only diagnostic; no DNS record is changed.
     requires_human_approval: true
+
+  - step_id: inspect-certificate-state
+    title: Inspect certificate and TLS state
+    step_type: diagnostic
+    applicable_hypothesis_types: [certificate_or_tls_failure]
+    applicable_entity_types: [service, gateway]
+    preconditions: [tls_telemetry_available]
+    instructions:
+      - Review certificate validity, trust-chain, hostname, and expiry details.
+      - Correlate TLS handshake failures with the affected request path.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no certificate or TLS policy is changed.
+    requires_human_approval: true

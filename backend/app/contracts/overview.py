@@ -40,7 +40,11 @@ class SimulatorStatusResponse(UtcModel):
     source_health: list[SourceHealth]
 
 
-class SimulatorResetResponse(SimulatorStatusResponse):
+class SimulatorMutationResponse(SimulatorStatusResponse):
+    request_id: str = Field(min_length=1)
+
+
+class SimulatorResetResponse(SimulatorMutationResponse):
     reset_audit_id: str = Field(min_length=1)
 
 

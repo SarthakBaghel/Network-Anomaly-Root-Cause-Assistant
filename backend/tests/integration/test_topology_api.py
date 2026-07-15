@@ -145,10 +145,10 @@ def test_topology_query_validation_and_not_found_errors() -> None:
         params={"mode": "traffic"},
     )
     assert unknown_entity.status_code == 404
-    assert unknown_entity.json()["detail"]["code"] == "TOPOLOGY_NOT_FOUND"
+    assert unknown_entity.json()["error"]["code"] == "TOPOLOGY_NOT_FOUND"
 
     missing_incident = client.get(
         "/api/v1/topology", params={"incident_id": "missing-incident"}
     )
     assert missing_incident.status_code == 404
-    assert missing_incident.json()["detail"]["code"] == "INCIDENT_NOT_FOUND"
+    assert missing_incident.json()["error"]["code"] == "INCIDENT_NOT_FOUND"

@@ -58,6 +58,8 @@ def _production_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker]]
 def _replay(client: TestClient) -> tuple[str, dict]:
     reset = client.post("/api/v1/simulator/reset")
     assert reset.status_code == 200, reset.text
+    start = client.post("/api/v1/simulator/start")
+    assert start.status_code == 200, start.text
     trigger = client.post(f"/api/v1/simulator/scenarios/{SCENARIO_ID}/trigger")
     assert trigger.status_code == 200, trigger.text
     incidents = client.get("/api/v1/incidents")

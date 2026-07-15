@@ -286,11 +286,43 @@ def test_confirm_resolves_incident_and_writes_review_audit(client: TestClient) -
     summary = client.get(f"/api/v1/incidents/{INCIDENT_ID}").json()
     assert summary["status"] == "resolved"
     assert summary["confirmed_hypothesis_id"] == HYPOTHESIS_IDS[0]
-    audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()
+    audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()["items"]
     confirmed = next(row for row in audit if row["action"] == "REVIEW_CONFIRMED")
     assert confirmed["request_id"] == response.json()["request_id"]
     assert confirmed["payload"]["analysis_revision"] == 7
     assert any(row["action"] == "INCIDENT_STATUS_CHANGED" for row in audit)
+
+
+def test_equal_timestamp_audit_rows_have_stable_cursor_order(client: TestClient) -> None:
+    response = _review(
+        client, decision="confirmed", client_action_id="phase3-stable-audit-order"
+    )
+    assert response.status_code == 200
+
+    first_read = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()["items"]
+    second_read = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()["items"]
+    assert [row["audit_id"] for row in first_read] == [
+        row["audit_id"] for row in second_read
+    ]
+
+    review_rows = [
+        row
+        for row in first_read
+        if row["action"] in {"REVIEW_CONFIRMED", "INCIDENT_STATUS_CHANGED"}
+    ]
+    assert len({row["timestamp"] for row in review_rows}) == 1
+    assert [row["audit_id"] for row in review_rows] == sorted(
+        (row["audit_id"] for row in review_rows), reverse=True
+    )
+
+    first_page = client.get(
+        f"/api/v1/incidents/{INCIDENT_ID}/audit", params={"limit": 1}
+    ).json()
+    second_page = client.get(
+        f"/api/v1/incidents/{INCIDENT_ID}/audit",
+        params={"limit": 1, "cursor": first_page["next_cursor"]},
+    ).json()
+    assert first_page["items"][0]["audit_id"] != second_page["items"][0]["audit_id"]
 
 
 def test_rejecting_every_current_hypothesis_rejects_incident(
@@ -309,7 +341,7 @@ def test_rejecting_every_current_hypothesis_rejects_incident(
             assert interim["status"] == "investigating"
     summary = client.get(f"/api/v1/incidents/{INCIDENT_ID}").json()
     assert summary["status"] == "rejected"
-    audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()
+    audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()["items"]
     assert sum(row["action"] == "REVIEW_REJECTED" for row in audit) == 3
     assert any(
         row["action"] == "INCIDENT_STATUS_CHANGED"
@@ -335,7 +367,7 @@ def test_duplicate_client_action_returns_existing_without_duplicate_audit(
     )
     assert first.status_code == retry.status_code == 200
     assert first.json() == retry.json()
-    audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()
+    audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit").json()["items"]
     assert (
         sum(row["action"] == "REVIEW_EVIDENCE_REQUESTED" for row in audit) == 1
     )
@@ -350,8 +382,8 @@ def test_stale_run_returns_current_run_id(client: TestClient) -> None:
         hypothesis_id="hyp_phase3_old",
     )
     assert response.status_code == 409
-    assert response.json()["detail"]["code"] == "STALE_ANALYSIS"
-    assert response.json()["detail"]["details"] == [
+    assert response.json()["error"]["code"] == "STALE_ANALYSIS"
+    assert response.json()["error"]["details"] == [
         {"field": "current_analysis_run_id", "reason_code": RUN_ID}
     ]
 
@@ -364,7 +396,7 @@ def test_evidence_request_rejects_non_missing_evidence(client: TestClient) -> No
         requested_evidence_id=OBSERVED_EVIDENCE_ID,
     )
     assert response.status_code == 422
-    assert response.json()["detail"]["code"] == "VALIDATION_ERROR"
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_conflicting_terminal_review_and_closed_incident_are_rejected(
@@ -378,7 +410,7 @@ def test_conflicting_terminal_review_and_closed_incident_are_rejected(
         client, decision="confirmed", client_action_id="phase3-conflict"
     )
     assert conflict.status_code == 409
-    assert conflict.json()["detail"]["code"] == "REVIEW_CONFLICT"
+    assert conflict.json()["error"]["code"] == "REVIEW_CONFLICT"
 
     confirmed = _review(
         client,
@@ -394,7 +426,7 @@ def test_conflicting_terminal_review_and_closed_incident_are_rejected(
         client_action_id="phase3-after-close",
     )
     assert closed.status_code == 409
-    assert closed.json()["detail"]["code"] == "INCIDENT_CLOSED"
+    assert closed.json()["error"]["code"] == "INCIDENT_CLOSED"
 
 
 def test_auth_warning_exclusion_is_visible_in_incident_audit(
@@ -402,7 +434,9 @@ def test_auth_warning_exclusion_is_visible_in_incident_audit(
 ) -> None:
     audit = client.get(f"/api/v1/incidents/{INCIDENT_ID}/audit")
     assert audit.status_code == 200
-    excluded = next(row for row in audit.json() if row["action"] == "EVENT_EXCLUDED")
+    excluded = next(
+        row for row in audit.json()["items"] if row["action"] == "EVENT_EXCLUDED"
+    )
     assert excluded["object_id"] == AUTH_EVENT_ID
     assert excluded["payload"]["reason_codes"] == [
         "INCOMPATIBLE_MAINTENANCE_SYMPTOM",

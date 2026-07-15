@@ -34,14 +34,24 @@ export function usePolling(
       return;
     }
 
-    const controller = new AbortController();
-    const run = () => void callbackRef.current(controller.signal);
-    run();
-    const id = window.setInterval(run, intervalMs);
+    let active = true;
+    let timeoutId: number | undefined;
+    let controller: AbortController | undefined;
+    const run = async () => {
+      controller?.abort();
+      controller = new AbortController();
+      try {
+        await callbackRef.current(controller.signal);
+      } finally {
+        if (active) timeoutId = window.setTimeout(run, intervalMs);
+      }
+    };
+    void run();
 
     return () => {
-      controller.abort();
-      window.clearInterval(id);
+      active = false;
+      controller?.abort();
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
   }, [intervalMs, enabled]);
 }

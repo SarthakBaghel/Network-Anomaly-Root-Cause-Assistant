@@ -77,6 +77,28 @@ def test_golden_investigation_handoff_has_resolvable_consistent_references() -> 
 
     for hypothesis_id, items in response.recommendations_by_hypothesis.items():
         assert all(item.hypothesis_id == hypothesis_id for item in items)
+    expected_steps = {
+        "configuration_regression": [
+            "inspect-config-diff",
+            "compare-pre-post-metrics",
+            "propose-config-rollback",
+        ],
+        "dos_or_traffic_surge": [
+            "inspect-ingress-distribution",
+            "propose-edge-rate-limit",
+        ],
+        "database_connection_exhaustion": [
+            "inspect-db-pool",
+            "propose-db-pool-tuning",
+        ],
+    }
+    hypothesis_type_by_id = {
+        item.hypothesis_id: item.hypothesis_type for item in response.hypotheses
+    }
+    assert {
+        hypothesis_type_by_id[hypothesis_id]: [item.step_id for item in items]
+        for hypothesis_id, items in response.recommendations_by_hypothesis.items()
+    } == expected_steps
     assert all(
         evidence_id in evidence_ids
         for claim in response.explanation.claims

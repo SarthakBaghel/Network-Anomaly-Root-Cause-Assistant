@@ -67,7 +67,7 @@ export const handlers = [
       detected_at: '2026-07-14T09:30:30Z',
     }] : [],
   })),
-  http.get('*/api/v1/incidents', () => HttpResponse.json({ items: [incident] })),
+  http.get('*/api/v1/incidents', () => HttpResponse.json({ generated_at: new Date().toISOString(), items: [incident], next_cursor: null })),
   http.get('*/api/v1/incidents/:incidentId/investigation', ({ params }) =>
     params.incidentId === incident.incident_id
       ? HttpResponse.json({
@@ -79,7 +79,7 @@ export const handlers = [
         })
       : HttpResponse.json({ error: { code: 'INCIDENT_NOT_FOUND', message: 'Incident not found.', details: [] } }, { status: 404 }),
   ),
-  http.get('*/api/v1/incidents/:incidentId/audit', () => HttpResponse.json(mockAudit)),
+  http.get('*/api/v1/incidents/:incidentId/audit', () => HttpResponse.json({ generated_at: '2026-07-14T09:32:00Z', items: mockAudit, next_cursor: null })),
   http.get('*/api/v1/incidents/:incidentId', ({ params }) =>
     params.incidentId === incident.incident_id
       ? HttpResponse.json(incident)
@@ -118,10 +118,10 @@ export const handlers = [
       review,
     })
   }),
-  http.post('*/api/v1/simulator/start', () => { simulatorState = 'running'; scenarioState = 'baseline'; return HttpResponse.json(simulatorStatus()) }),
-  http.post('*/api/v1/simulator/stop', () => { simulatorState = 'stopped'; return HttpResponse.json(simulatorStatus()) }),
-  http.post('*/api/v1/simulator/reset', () => { simulatorState = 'stopped'; scenarioState = 'idle'; scenarioId = null; mockReviews = []; mockAudit = []; return HttpResponse.json({ ...simulatorStatus(), reset_audit_id: 'aud_mock_reset' }) }),
-  http.post('*/api/v1/simulator/scenarios/:scenarioId/trigger', ({ params }) => { simulatorState = 'completed'; scenarioState = 'completed'; scenarioId = String(params.scenarioId); return HttpResponse.json(simulatorStatus()) }),
+  http.post('*/api/v1/simulator/start', () => { simulatorState = 'running'; scenarioState = 'baseline'; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_start' }) }),
+  http.post('*/api/v1/simulator/stop', () => { simulatorState = 'stopped'; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_stop' }) }),
+  http.post('*/api/v1/simulator/reset', () => { simulatorState = 'stopped'; scenarioState = 'idle'; scenarioId = null; mockReviews = []; mockAudit = []; return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_reset', reset_audit_id: 'aud_mock_reset' }) }),
+  http.post('*/api/v1/simulator/scenarios/:scenarioId/trigger', ({ params }) => { simulatorState = 'completed'; scenarioState = 'completed'; scenarioId = String(params.scenarioId); return HttpResponse.json({ ...simulatorStatus(), request_id: 'req_mock_trigger' }) }),
   http.get('*/api/v1/simulator/status', () => HttpResponse.json(simulatorStatus())),
   http.get('*/api/v1/topology', () => HttpResponse.json(goldenInvestigationResponse.topology)),
   http.get('*/api/v1/topology/path', () =>

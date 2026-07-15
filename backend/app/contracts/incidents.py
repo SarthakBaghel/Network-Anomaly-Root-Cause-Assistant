@@ -23,5 +23,6 @@ class IncidentSummary(UtcModel):
 
 
 class IncidentListResponse(UtcModel):
+    generated_at: datetime
     items: list[IncidentSummary]
     next_cursor: str | None = None

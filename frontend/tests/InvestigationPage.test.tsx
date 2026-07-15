@@ -36,9 +36,32 @@ describe("InvestigationPage", () => {
     pollCallback = null;
     vi.restoreAllMocks();
   });
+  it("renders an initial not-found error instead of an endless loading skeleton", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockRejectedValue(new ApiClientError(404, {
+      code: "INCIDENT_NOT_FOUND",
+      message: "Incident not found.",
+      details: [],
+    }));
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
+
+    render(<InvestigationPage incidentId="missing" />);
+
+    expect(await screen.findByText("INCIDENT_NOT_FOUND: Incident not found.")).toBeInTheDocument();
+    expect(screen.queryByText("Loading incident investigation...")).not.toBeInTheDocument();
+  });
+
+  it("renders an initial network error instead of an endless loading skeleton", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockRejectedValue(new Error("Network unavailable"));
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
+
+    render(<InvestigationPage incidentId="inc_001" />);
+
+    expect(await screen.findByText("UNEXPECTED_ERROR: Unable to load investigation snapshot")).toBeInTheDocument();
+    expect(screen.queryByText("Loading incident investigation...")).not.toBeInTheDocument();
+  });
   it("renders all evidence categories in the explorer", async () => {
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -61,7 +84,7 @@ describe("InvestigationPage", () => {
   it("disables confirm button and posts with client_action_id", async () => {
     const postSpy = vi.spyOn(incidentsApi, "submitReview").mockResolvedValue({} as any);
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -98,7 +121,7 @@ describe("InvestigationPage", () => {
         analysis_run_id: "run_006",
       } as any;
     });
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -128,7 +151,7 @@ describe("InvestigationPage", () => {
         incident: { ...investigationFixture.incident, title: "Replacement snapshot title" },
       } as any;
     });
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -148,7 +171,7 @@ describe("InvestigationPage", () => {
 
   it("renders timeline attached and excluded events separately", async () => {
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -177,7 +200,7 @@ describe("InvestigationPage", () => {
         incident: { ...investigationFixture.incident, title: "Stale title must not render" },
       } as any;
     });
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
     render(<InvestigationPage incidentId="inc_001" />);
     await screen.findByText(investigationFixture.incident.title);
     await act(async () => { await pollCallback?.(); });
@@ -186,7 +209,7 @@ describe("InvestigationPage", () => {
 
   it("opens missing evidence as a concrete collection request", async () => {
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
     render(<InvestigationPage incidentId="inc_001" />);
     const missing = Object.values(investigationFixture.evidence_by_hypothesis).flat().find((item) => item.kind === "missing")!;
     fireEvent.click(await screen.findByTestId(evidenceItemTestId(missing.evidence_id)));
@@ -196,7 +219,7 @@ describe("InvestigationPage", () => {
 
   it("shows attachment details for accepted evidence without fabricating a record", async () => {
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
     render(<InvestigationPage incidentId="inc_001" />);
     const accepted = Object.values(investigationFixture.evidence_by_hypothesis)
       .flat()
@@ -212,7 +235,7 @@ describe("InvestigationPage", () => {
 
   it("renders the explanation-fallback state from the append-only audit", async () => {
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([{
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [{
       audit_id: "aud_fallback_001",
       timestamp: "2026-07-14T09:31:42Z",
       actor_type: "system",
@@ -223,7 +246,7 @@ describe("InvestigationPage", () => {
       request_id: "req_fallback_001",
       analysis_run_id: "run_007",
       payload: {},
-    }] as any);
+    }] as any, next_cursor: null });
 
     render(<InvestigationPage incidentId="inc_001" />);
 
@@ -232,7 +255,7 @@ describe("InvestigationPage", () => {
 
   it("surfaces a frozen review-conflict message", async () => {
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
-    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue([]);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
     vi.spyOn(incidentsApi, "submitReview").mockRejectedValue(new ApiClientError(409, {
       code: "REVIEW_CONFLICT",
       message: "A terminal decision already exists.",

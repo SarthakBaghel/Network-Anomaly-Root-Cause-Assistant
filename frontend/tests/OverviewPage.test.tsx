@@ -16,7 +16,7 @@ describe('OverviewPage live contracts', () => {
 
     expect(await screen.findByTestId(sourceHealthTestId('fixture.cmdb_topology'))).toHaveTextContent('ready')
     expect(await screen.findByTestId(incidentRowTestId('inc_001'))).toBeInTheDocument()
-    expect(screen.getByText('Scenario not triggered')).toBeInTheDocument()
+    expect(screen.getByText('Run the baseline before triggering a scenario.')).toBeInTheDocument()
   })
 
   it('shows detector anomalies returned by the polling contract', async () => {
@@ -36,15 +36,36 @@ describe('OverviewPage live contracts', () => {
   })
 
   it('disables simulator controls while a trigger transition is in flight', async () => {
-    let resolveTrigger: ((value: any) => void) | undefined
+    let resolveTrigger: ((value: Awaited<ReturnType<typeof simulatorApi.trigger>>) => void) | undefined
+    const status = await simulatorApi.status()
+    vi.spyOn(simulatorApi, 'status').mockResolvedValue({
+      ...status,
+      state: 'running',
+      scenario_state: 'baseline',
+      scenario_id: null,
+    })
     vi.spyOn(simulatorApi, 'trigger').mockImplementation(() => new Promise((resolve) => { resolveTrigger = resolve }))
-    vi.spyOn(incidentsApi, 'list').mockResolvedValue({ items: [goldenInvestigationResponse.incident], next_cursor: null } as any)
+    vi.spyOn(incidentsApi, 'list').mockResolvedValue({
+      generated_at: '2026-07-14T09:31:00Z',
+      items: [goldenInvestigationResponse.incident],
+      next_cursor: null,
+    })
     render(<OverviewPage />)
     const trigger = await screen.findByTestId(TEST_IDS.scenarioTrigger)
+    const reset = await screen.findByTestId(TEST_IDS.simulatorReset)
+    await waitFor(() => expect(trigger).not.toBeDisabled())
     fireEvent.click(trigger)
     await waitFor(() => expect(trigger).toBeDisabled())
-    resolveTrigger?.(await simulatorApi.status())
-    await waitFor(() => expect(trigger).not.toBeDisabled())
+    expect(reset).toBeDisabled()
+    resolveTrigger?.({
+      ...status,
+      request_id: 'req_trigger_test',
+      state: 'completed',
+      scenario_state: 'completed',
+      scenario_id: 'gateway-rate-limit-disabled',
+    })
+    await waitFor(() => expect(reset).not.toBeDisabled())
+    expect(trigger).not.toBeDisabled()
   })
 
   it('renders the baseline-without-incident state from live contracts', async () => {
@@ -56,11 +77,11 @@ describe('OverviewPage live contracts', () => {
       scenario_id: null,
     })
     vi.spyOn(anomaliesApi, 'list').mockResolvedValue({ generated_at: status.generated_at, items: [] })
-    vi.spyOn(incidentsApi, 'list').mockResolvedValue({ items: [], next_cursor: null } as any)
+    vi.spyOn(incidentsApi, 'list').mockResolvedValue({ generated_at: status.generated_at, items: [], next_cursor: null })
 
     render(<OverviewPage />)
 
-    expect(await screen.findByText('Baseline running; no incident has been triggered yet.')).toBeInTheDocument()
+    expect(await screen.findByText(`Baseline replaying (${status.baseline_ticks_emitted}/${status.baseline_ticks_required}).`)).toBeInTheDocument()
     expect(screen.getByText('Baseline running; no incident yet.')).toBeInTheDocument()
   })
 

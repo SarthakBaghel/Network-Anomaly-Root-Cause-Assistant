@@ -23,4 +23,3 @@ class AnalysisRun(UtcModel):
         if self.status is not AnalysisRunStatus.BUILDING and self.completed_at is None:
             raise ValueError("completed_at is required for non-building analysis runs")
         return self
-

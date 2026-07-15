@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, JsonValue
 
 from .base import UtcModel
 from .events import CanonicalEvent
@@ -13,7 +13,7 @@ class RawIngestionRequest(UtcModel):
     """One source-specific record plus its source-adapter identity."""
 
     source: str = Field(min_length=1)
-    raw: dict[str, Any]
+    raw: dict[str, JsonValue]
     request_id: str | None = Field(default=None, min_length=1)
 
 
@@ -41,3 +41,15 @@ class EventListResponse(UtcModel):
     generated_at: datetime
     items: list[CanonicalEvent]
     next_cursor: str | None = None
+
+
+class QuarantineItem(UtcModel):
+    quarantine_id: str
+    received_at: datetime
+    validation_errors: list[dict[str, JsonValue]]
+    raw_payload: dict[str, JsonValue]
+
+
+class QuarantineListResponse(UtcModel):
+    generated_at: datetime
+    items: list[QuarantineItem]

@@ -22,6 +22,8 @@ test("real UI completes reset, replay, investigation, review, and audit", async 
   await expect(page.getByTestId(TEST_IDS.simulatorState)).toContainText("stopped");
   await expect(page.getByTestId(/^incident-row-/)).toHaveCount(0);
 
+  await page.getByTestId(TEST_IDS.simulatorStart).click();
+  await expect(page.getByTestId(TEST_IDS.simulatorState)).not.toContainText("stopped");
   await page.getByTestId(TEST_IDS.scenarioTrigger).click();
   await expect(page.getByTestId(TEST_IDS.simulatorState)).toContainText(
     "completed",

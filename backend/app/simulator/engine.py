@@ -43,6 +43,10 @@ class SimulatorEngine:
         with self._lock:
             if self.state == "running":
                 return self.status()
+            if self.active_scenario is not None:
+                raise SimulatorStateError(
+                    "reset the simulator before starting a completed scenario again"
+                )
             if self._cursor >= len(self._baseline):
                 self._cursor = 0
                 self.virtual_clock = TRIGGER_TIME - timedelta(minutes=5)
@@ -119,6 +123,13 @@ class SimulatorEngine:
             TRACE_ID,
         }:
             raise KeyError(scenario_id)
+        with self._lock:
+            if self.state == "stopped":
+                raise SimulatorStateError(
+                    "start the simulator before triggering a scenario"
+                )
+            if self.active_scenario is not None:
+                raise SimulatorStateError("another simulator scenario is already active")
         self._stop_worker()
         with self._lock:
             self.active_scenario = SCENARIO_KEY

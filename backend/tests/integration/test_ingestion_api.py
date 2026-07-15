@@ -96,7 +96,7 @@ def test_ingestion_status_codes_batch_partial_success_and_cursor(monkeypatch) ->
     assert second_page.status_code == 200 and len(second_page.json()["items"]) == 1
     assert first_page.json()["items"][0]["event_id"] != second_page.json()["items"][0]["event_id"]
     assert mismatched_cursor.status_code == 400
-    assert mismatched_cursor.json()["detail"]["code"] == "INVALID_CURSOR"
+    assert mismatched_cursor.json()["error"]["code"] == "INVALID_CURSOR"
     assert malformed_cursor.status_code == 400
     event_id = created.json().get("event_id")
     if detail and event_id:

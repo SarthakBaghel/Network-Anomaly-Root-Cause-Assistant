@@ -17,6 +17,15 @@ LIVE_DATABASE_URL = os.environ.get(
     "LIVE_E2E_DATABASE_URL",
     "sqlite:////tmp/network-anomaly-rca-playwright-live.db",
 )
+AUDITED_PYTHON_SURFACE = [
+    "backend/app/contracts",
+    "backend/app/evidence/collector.py",
+    "backend/app/playbooks/engine.py",
+    "backend/app/readiness.py",
+    "backend/app/db/repositories/audit_repository.py",
+    "backend/app/db/repositories/review_repository.py",
+    "backend/app/api/error_responses.py",
+]
 
 
 def _run(label: str, command: list[str], *, cwd: Path = ROOT, env: dict[str, str] | None = None) -> None:
@@ -84,6 +93,43 @@ def _pass(index: int, snapshot_path: Path) -> dict[str, Any]:
     return json.loads(snapshot_path.read_text(encoding="utf-8"))
 
 
+def _static_quality_gate() -> None:
+    python = sys.executable
+    _run(
+        "Python lint for the audited production surface",
+        [python, "-m", "ruff", "check", *AUDITED_PYTHON_SURFACE],
+    )
+    _run(
+        "Python format check for the audited production surface",
+        [python, "-m", "ruff", "format", "--check", *AUDITED_PYTHON_SURFACE],
+    )
+    _run(
+        "incremental Python static type check",
+        [
+            python,
+            "-m",
+            "mypy",
+            "--follow-imports=skip",
+            "--ignore-missing-imports",
+            "--disable-error-code=import-untyped",
+            *AUDITED_PYTHON_SURFACE,
+        ],
+    )
+    _run("frontend generated-contract type check", ["npm", "run", "typecheck"], cwd=FRONTEND)
+    _run("secret and production type-escape scan", [python, "scripts/check_source_quality.py"])
+
+
+def _fresh_migration_gate() -> None:
+    with tempfile.TemporaryDirectory(prefix="network-rca-migration-") as directory:
+        database_path = Path(directory) / "fresh.db"
+        env = os.environ.copy()
+        env["DATABASE_URL"] = f"sqlite:///{database_path}"
+        command = [sys.executable, "-m", "alembic", "-c", "backend/alembic.ini"]
+        _run("fresh database migration to head", [*command, "upgrade", "head"], env=env)
+        _run("fresh database migration drift check", [*command, "check"], env=env)
+        _run("fresh database migration head verification", [*command, "current"], env=env)
+
+
 def _reset_between_passes() -> None:
     env = os.environ.copy()
     env["DATABASE_URL"] = LIVE_DATABASE_URL
@@ -100,6 +146,8 @@ def _digest(snapshot: dict[str, Any]) -> str:
 
 
 def main() -> None:
+    _static_quality_gate()
+    _fresh_migration_gate()
     with tempfile.TemporaryDirectory(prefix="network-rca-release-") as directory:
         first_path = Path(directory) / "pass-1.json"
         second_path = Path(directory) / "pass-2.json"

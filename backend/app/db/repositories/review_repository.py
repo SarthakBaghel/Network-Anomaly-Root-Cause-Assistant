@@ -4,6 +4,7 @@ Review repository (Person 1 — blueprint §8.3).
 Reviews are append-only. The unique constraint on (incident_id, client_action_id)
 enforces idempotency at the DB level; the service layer checks before inserting.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -28,9 +29,7 @@ class ReviewRepository:
         self.session.flush()
         return row
 
-    def persist_idempotent(
-        self, row: models.Review
-    ) -> tuple[models.Review, bool]:
+    def persist_idempotent(self, row: models.Review) -> tuple[models.Review, bool]:
         """Insert once, handling a concurrent client-action uniqueness race.
 
         A racing uniqueness failure rolls back the read-only pre-insert
@@ -47,9 +46,7 @@ class ReviewRepository:
             self.session.flush()
         except IntegrityError:
             self.session.rollback()
-            existing = self.get_by_client_action(
-                row.incident_id, row.client_action_id
-            )
+            existing = self.get_by_client_action(row.incident_id, row.client_action_id)
             if existing is None:
                 raise
             return existing, False
@@ -62,9 +59,7 @@ class ReviewRepository:
     def get_by_id(self, review_id: str) -> models.Review | None:
         return self.session.get(models.Review, review_id)
 
-    def get_by_client_action(
-        self, incident_id: str, client_action_id: str
-    ) -> models.Review | None:
+    def get_by_client_action(self, incident_id: str, client_action_id: str) -> models.Review | None:
         """Idempotency check: return existing review for the same client_action_id."""
         stmt = select(models.Review).where(
             models.Review.incident_id == incident_id,
@@ -76,7 +71,7 @@ class ReviewRepository:
         stmt = (
             select(models.Review)
             .where(models.Review.incident_id == incident_id)
-            .order_by(models.Review.created_at.asc())
+            .order_by(models.Review.created_at.asc(), models.Review.id.asc())
         )
         return list(self.session.execute(stmt).scalars())
 

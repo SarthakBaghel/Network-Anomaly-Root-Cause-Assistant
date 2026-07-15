@@ -50,9 +50,7 @@ REQUIREMENT_MATCHERS: dict[str, EventMatcher] = {
     # used by the ranker to establish unchanged source distribution.
     "source_distribution": lambda event: _contains(event.signal_name, "raw_ingress")
     or _payload_contains(event, "source_distribution", "client_ip", "source_ip"),
-    "connection_pressure": lambda event: _contains(
-        event.signal_name, "connection_utilization", "active_connections"
-    ),
+    "connection_pressure": lambda event: _contains(event.signal_name, "connection_utilization"),
     "gateway_connection_and_tcp_metrics": lambda event: _contains(
         event.signal_name,
         "connection_utilization",
@@ -62,12 +60,8 @@ REQUIREMENT_MATCHERS: dict[str, EventMatcher] = {
     ),
     "gateway_saturation_alert": lambda event: event.modality is Modality.ALERT
     and _contains(event.event_type, "gateway", "forwarded_request", "connection_rate"),
-    "downstream_latency": lambda event: _contains(
-        event.signal_name, "latency", "duration"
-    ),
-    "downstream_latency_metrics": lambda event: _contains(
-        event.signal_name, "latency", "duration"
-    ),
+    "downstream_latency": lambda event: _contains(event.signal_name, "latency", "duration"),
+    "downstream_latency_metrics": lambda event: _contains(event.signal_name, "latency", "duration"),
     "timeout_log": lambda event: event.modality is Modality.LOG
     and _contains(event.event_type, "timeout"),
     "downstream_timeout_logs": lambda event: event.modality is Modality.LOG
@@ -76,12 +70,8 @@ REQUIREMENT_MATCHERS: dict[str, EventMatcher] = {
     or _contains(event.event_type, "waf_decision"),
     "waf_decisions": lambda event: _contains(event.source, "waf")
     or _contains(event.event_type, "waf_decision"),
-    "db_utilization": lambda event: _contains(
-        event.signal_name, "db_connection_utilization"
-    ),
-    "pool_waits": lambda event: _contains(
-        event.signal_name, "pool_wait", "rejected_lease"
-    ),
+    "db_utilization": lambda event: _contains(event.signal_name, "db_connection_utilization"),
+    "pool_waits": lambda event: _contains(event.signal_name, "pool_wait", "rejected_lease"),
     "dependency_timeout": lambda event: event.modality is Modality.LOG
     and _contains(event.event_type, "timeout")
     and _payload_contains(event, "dependency_id"),
@@ -203,15 +193,12 @@ def _observed_statement(requirement: str, event: CanonicalEvent) -> str:
     return f"{entity} recorded {event.event_type}."
 
 
-def _change_correlation_statement(
-    change: CanonicalEvent, events: list[CanonicalEvent]
-) -> str:
+def _change_correlation_statement(change: CanonicalEvent, events: list[CanonicalEvent]) -> str:
     first_symptom = next(
         (
             event
             for event in events
-            if event.modality is not Modality.CONFIG_CHANGE
-            and event.timestamp >= change.timestamp
+            if event.modality is not Modality.CONFIG_CHANGE and event.timestamp >= change.timestamp
         ),
         None,
     )
@@ -274,11 +261,63 @@ def _item(
     )
 
 
-def _latest_match(requirement: str, events: list[CanonicalEvent]) -> CanonicalEvent | None:
+_CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
+    {
+        "config_diff",
+        "forwarded_rate",
+        "raw_vs_forwarded_request_metrics",
+        "stable_raw_ingress",
+        "raw_ingress",
+        "source_distribution",
+        "connection_pressure",
+        "gateway_connection_and_tcp_metrics",
+        "gateway_saturation_alert",
+        "db_utilization",
+        "pool_waits",
+        "path_telemetry",
+        "upstream_health",
+        "dns_queries",
+        "certificate_state",
+    }
+)
+
+
+def _in_hypothesis_scope(
+    requirement: str,
+    event: CanonicalEvent,
+    hypothesis: Hypothesis | None,
+) -> bool:
+    """Keep requirement evidence within the candidate/entity it describes."""
+
+    if hypothesis is None:
+        return True
+    candidate_id = hypothesis.candidate_entity_id
+    if requirement in _CANDIDATE_SCOPED_REQUIREMENTS:
+        if event.entity_id != candidate_id:
+            return False
+    if requirement == "dependency_timeout":
+        dependency_id = event.raw_payload.get("dependency_id")
+        return event.entity_id == candidate_id or dependency_id == candidate_id
+    if requirement == "connection_pressure" and _contains(
+        event.signal_name, "connection_utilization"
+    ):
+        return event.signal_value is not None and event.signal_value >= 0.8
+    return True
+
+
+def _latest_match(
+    requirement: str,
+    events: list[CanonicalEvent],
+    hypothesis: Hypothesis | None = None,
+) -> CanonicalEvent | None:
     matcher = REQUIREMENT_MATCHERS.get(requirement)
     if matcher is None:
         return None
-    matches = [event for event in events if matcher(event)]
+    matches = [
+        event
+        for event in events
+        if matcher(event) and _in_hypothesis_scope(requirement, event, hypothesis)
+    ]
     return max(matches, key=lambda event: (event.timestamp, event.event_id), default=None)
 
 
@@ -299,7 +338,11 @@ def _conflict_source(pattern_id: str, events: list[CanonicalEvent]) -> Canonical
             and event.signal_value is not None
             and event.signal_value < 0.75
         ]
-        return max(candidates, key=lambda event: (event.timestamp, event.event_id), default=None)
+        return max(
+            candidates,
+            key=lambda event: (event.timestamp, event.event_id),
+            default=None,
+        )
     return None
 
 
@@ -315,8 +358,7 @@ def _conflict_statement(pattern_id: str, event: CanonicalEvent) -> str:
             f"{_format_value(event.signal_value)}."
         )
     return (
-        f"{_friendly_entity(event.entity_id)} recorded evidence conflicting "
-        "with this hypothesis."
+        f"{_friendly_entity(event.entity_id)} recorded evidence conflicting with this hypothesis."
     )
 
 
@@ -366,23 +408,17 @@ def collect_evidence(
 
     # A duplicated accepted event must never duplicate evidence.
     accepted_by_id = {event.event_id: event for event in incident_events}
-    accepted = sorted(
-        accepted_by_id.values(), key=lambda event: (event.timestamp, event.event_id)
-    )
+    accepted = sorted(accepted_by_id.values(), key=lambda event: (event.timestamp, event.event_id))
     created_at = _created_at(accepted)
     collected: list[EvidenceItem] = []
     missing_requirements: list[tuple[str, str]] = []
 
     for requirement, collection_request in _expected_evidence(catalogue_entry):
-        event = _latest_match(requirement, accepted)
+        event = _latest_match(requirement, accepted, hypothesis)
         if event is None:
             missing_requirements.append((requirement, collection_request))
             continue
-        kind = (
-            EvidenceKind.CORRELATED
-            if requirement == "config_diff"
-            else EvidenceKind.OBSERVED
-        )
+        kind = EvidenceKind.CORRELATED if requirement == "config_diff" else EvidenceKind.OBSERVED
         collected.append(
             _item(
                 hypothesis,
@@ -430,8 +466,8 @@ def collect_evidence(
             )
 
     applied = catalogue_entry.get("applied_conflict_effects")
-    conflict_effects = applied if isinstance(applied, list) else catalogue_entry.get(
-        "conflict_patterns", []
+    conflict_effects = (
+        applied if isinstance(applied, list) else catalogue_entry.get("conflict_patterns", [])
     )
     for effect in conflict_effects or []:
         if not isinstance(effect, Mapping):
@@ -484,9 +520,7 @@ def collect_evidence(
 
     for requirement, collection_request in missing_requirements:
         prefix = (
-            "QUARANTINED"
-            if _quarantine_mentions(requirement, quarantined_events)
-            else "MISSING"
+            "QUARANTINED" if _quarantine_mentions(requirement, quarantined_events) else "MISSING"
         )
         collected.append(
             _item(

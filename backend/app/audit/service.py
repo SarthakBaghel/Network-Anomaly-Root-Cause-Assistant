@@ -41,12 +41,21 @@ class AuditService:
         )
 
     def list_for_incident(
-        self, incident_id: str, session: Session, *, limit: int = 200
+        self,
+        incident_id: str,
+        session: Session,
+        *,
+        limit: int = 200,
+        before_timestamp: datetime | None = None,
+        before_audit_id: str | None = None,
     ) -> list[AuditRecord]:
         return [
             self.to_contract(row)
             for row in AuditRepository(session).list_for_incident(
-                incident_id, limit=limit
+                incident_id,
+                limit=limit,
+                before_timestamp=before_timestamp,
+                before_audit_id=before_audit_id,
             )
         ]
 

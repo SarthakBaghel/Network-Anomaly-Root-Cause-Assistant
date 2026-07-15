@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.contracts import TopologyRelation, TopologySnapshot
+from app.contracts import BlastRadiusResponse, TopologyPathResponse, TopologyRelation, TopologySnapshot
 from app.db.models import AnalysisRun, Hypothesis, Incident
 from app.db.session import SessionLocal, get_session
 from app.topology.graph import (
@@ -21,12 +21,13 @@ from app.topology.graph import (
     UnknownEntityError,
     get_topology_graph,
 )
+from .error_responses import ERROR_RESPONSES
 
 
 Direction = Literal["forward", "reverse"]
 BlastRadiusMode = Literal["dependency", "traffic"]
 
-router = APIRouter(prefix="/topology", tags=["topology"])
+router = APIRouter(prefix="/topology", tags=["topology"], responses=ERROR_RESPONSES)
 
 
 def _raise_api_error(exc: TopologyError) -> Never:
@@ -167,35 +168,35 @@ def topology(
         _raise_api_error(exc)
 
 
-@router.get("/path", response_model=dict[str, Any])
+@router.get("/path", response_model=TopologyPathResponse)
 def path(
     source: Annotated[str, Query(min_length=1)],
     target: Annotated[str, Query(min_length=1)],
     relation_type: TopologyRelation,
     direction: Direction,
-) -> dict[str, Any]:
+) -> TopologyPathResponse:
     try:
         entity_ids = get_topology_graph().get_path(
             source, target, relation_type, direction
         )
     except TopologyError as exc:
         _raise_api_error(exc)
-    return {
+    return TopologyPathResponse(**{
         "source": source,
         "target": target,
         "relation_type": relation_type.value,
         "direction": direction,
         "distance": len(entity_ids) - 1,
         "entity_ids": entity_ids,
-    }
+    })
 
 
-@router.get("/blast-radius/{entity_id}", response_model=dict[str, Any])
+@router.get("/blast-radius/{entity_id}", response_model=BlastRadiusResponse)
 def blast_radius(
     entity_id: str,
     mode: BlastRadiusMode,
     max_hops: Annotated[int, Query(ge=1, le=20)] = settings.incident_max_topology_hops,
-) -> dict[str, Any]:
+) -> BlastRadiusResponse:
     graph = get_topology_graph()
     try:
         if mode == "dependency":
@@ -208,11 +209,11 @@ def blast_radius(
             entity_ids = graph.get_traffic_blast_radius(entity_id, max_hops)
     except TopologyError as exc:
         _raise_api_error(exc)
-    return {
+    return BlastRadiusResponse(**{
         "root_entity_id": entity_id,
         "mode": mode,
         "relation_type": relation_type.value,
         "direction": direction,
         "max_hops": max_hops,
         "entity_ids": entity_ids,
-    }
+    })

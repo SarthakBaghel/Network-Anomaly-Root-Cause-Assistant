@@ -5,11 +5,14 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import events_router, incidents_router, simulator_router, topology_router
-from app.readiness import readiness_report
+from app.contracts import ErrorBody, ErrorDetail, ErrorEnvelope, HealthResponse, ReadinessResponse
+from app.readiness import catalogue_status, readiness_report
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,7 @@ def _startup() -> None:
     orchestrator.register_analysis_engine(RcaAnalysisAdapter(AnalysisEngine()))
 
     try:
+        catalogue_status()
         with session_scope() as session:
             # Only reload if entities table is empty (idempotent)
             count = session.execute(
@@ -89,21 +93,62 @@ app.add_middleware(
 )
 
 
-@app.get("/api/v1/health", tags=["system"])
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+@app.exception_handler(HTTPException)
+async def http_error_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    detail = exc.detail if isinstance(exc.detail, dict) else {}
+    code = str(detail.get("code", "HTTP_ERROR"))
+    message = str(detail.get("message", exc.detail if isinstance(exc.detail, str) else "Request failed"))
+    raw_details = detail.get("details", [])
+    details = []
+    if isinstance(raw_details, list):
+        for item in raw_details:
+            if isinstance(item, dict) and item.get("reason_code"):
+                details.append(ErrorDetail.model_validate(item))
+    body = ErrorEnvelope(error=ErrorBody(code=code, message=message, details=details))
+    return JSONResponse(status_code=exc.status_code, content=body.model_dump(mode="json"))
 
 
-@app.get("/api/v1/ready", tags=["system"])
-def ready(response: Response) -> dict[str, Any]:
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    details = [
+        ErrorDetail(
+            field=".".join(str(part) for part in error.get("loc", ())),
+            reason_code=str(error.get("type", "VALIDATION_ERROR")).upper(),
+        )
+        for error in exc.errors()
+    ]
+    body = ErrorEnvelope(
+        error=ErrorBody(
+            code="VALIDATION_ERROR",
+            message="Request validation failed",
+            details=details,
+        )
+    )
+    return JSONResponse(status_code=422, content=body.model_dump(mode="json"))
+
+
+@app.get("/api/v1/health", tags=["system"], response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="ok")
+
+
+@app.get(
+    "/api/v1/ready",
+    tags=["system"],
+    response_model=ReadinessResponse,
+    responses={503: {"model": ReadinessResponse}},
+)
+def ready(response: Response) -> ReadinessResponse:
     is_ready, components = readiness_report()
     if not is_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    return {
-        "status": "ready" if is_ready else "not_ready",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "components": components,
-    }
+    return ReadinessResponse(
+        status="ready" if is_ready else "not_ready",
+        generated_at=datetime.now(timezone.utc),
+        components=components,
+    )
 
 
 for router in (events_router, simulator_router, incidents_router, topology_router):

@@ -11,12 +11,13 @@ Frozen action codes (blueprint §20.3):
   EXPLANATION_FALLBACK_USED, REVIEW_CONFIRMED, REVIEW_REJECTED,
   REVIEW_EVIDENCE_REQUESTED, INCIDENT_STATUS_CHANGED, DEMO_RESET
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import models
@@ -48,8 +49,7 @@ class AuditRepository:
         """Append one audit entry. Raises ValueError for unknown action codes."""
         if action not in AUDIT_ACTION_CODES:
             raise ValueError(
-                f"Unknown audit action code '{action}'. "
-                f"Valid codes: {sorted(AUDIT_ACTION_CODES)}"
+                f"Unknown audit action code '{action}'. Valid codes: {sorted(AUDIT_ACTION_CODES)}"
             )
         ts = timestamp or datetime.now(tz=timezone.utc)
         row = models.AuditLog(
@@ -106,24 +106,40 @@ class AuditRepository:
                 models.AuditLog.object_type == object_type,
                 models.AuditLog.object_id == object_id,
             )
-            .order_by(models.AuditLog.timestamp.asc())
+            .order_by(models.AuditLog.timestamp.desc(), models.AuditLog.id.desc())
             .limit(limit)
         )
         return list(self.session.execute(stmt).scalars())
 
     def list_for_incident(
-        self, incident_id: str, *, limit: int = 200
+        self,
+        incident_id: str,
+        *,
+        limit: int = 200,
+        before_timestamp: datetime | None = None,
+        before_audit_id: str | None = None,
     ) -> list[models.AuditLog]:
         """Return incident-owned and event-owned entries for one incident."""
-        stmt = (
-            select(models.AuditLog)
-            .where(
+        conditions = [
+            or_(
+                models.AuditLog.object_id == incident_id,
+                models.AuditLog.payload["incident_id"].as_string() == incident_id,
+            )
+        ]
+        if before_timestamp is not None and before_audit_id is not None:
+            conditions.append(
                 or_(
-                    models.AuditLog.object_id == incident_id,
-                    models.AuditLog.payload["incident_id"].as_string() == incident_id,
+                    models.AuditLog.timestamp < before_timestamp,
+                    and_(
+                        models.AuditLog.timestamp == before_timestamp,
+                        models.AuditLog.id < before_audit_id,
+                    ),
                 )
             )
-            .order_by(models.AuditLog.timestamp.asc())
+        stmt = (
+            select(models.AuditLog)
+            .where(*conditions)
+            .order_by(models.AuditLog.timestamp.desc(), models.AuditLog.id.desc())
             .limit(limit)
         )
         return list(self.session.execute(stmt).scalars())
@@ -131,7 +147,7 @@ class AuditRepository:
     def list_recent(self, *, limit: int = 100) -> list[models.AuditLog]:
         stmt = (
             select(models.AuditLog)
-            .order_by(models.AuditLog.timestamp.desc())
+            .order_by(models.AuditLog.timestamp.desc(), models.AuditLog.id.desc())
             .limit(limit)
         )
         return list(self.session.execute(stmt).scalars())

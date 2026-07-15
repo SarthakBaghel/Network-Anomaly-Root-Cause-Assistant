@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, JsonValue
 
 from .analysis import AnalysisRun
 from .base import AuditActorType, TopologyRelation, UtcModel
@@ -29,6 +29,21 @@ class ErrorEnvelope(UtcModel):
     error: ErrorBody
 
 
+class HealthResponse(UtcModel):
+    status: Literal["ok"]
+
+
+class ReadinessComponentError(UtcModel):
+    status: Literal["error"]
+    reason: str
+
+
+class ReadinessResponse(UtcModel):
+    status: Literal["ready", "not_ready"]
+    generated_at: datetime
+    components: dict[str, str | dict[str, str | bool] | ReadinessComponentError]
+
+
 class AuditRecord(UtcModel):
     audit_id: str
     timestamp: datetime
@@ -39,7 +54,13 @@ class AuditRecord(UtcModel):
     object_id: str
     request_id: str
     analysis_run_id: str | None
-    payload: dict[str, Any]
+    payload: dict[str, JsonValue]
+
+
+class AuditListResponse(UtcModel):
+    generated_at: datetime
+    items: list[AuditRecord]
+    next_cursor: str | None = None
 
 
 class TopologyNode(UtcModel):
@@ -48,7 +69,9 @@ class TopologyNode(UtcModel):
     type: str
     service: str
     criticality: str
-    state: Literal["suspected_root", "primary_affected", "impact_path", "blast_radius"] | None = None
+    state: Literal["suspected_root", "primary_affected", "impact_path", "blast_radius"] | None = (
+        None
+    )
 
 
 class TopologyEdge(UtcModel):
@@ -71,6 +94,35 @@ class TimelineItem(UtcModel):
     attachment_score: float
     attachment_reasons: list[str]
     hypothesis_relevance: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class TimelineResponse(UtcModel):
+    generated_at: datetime
+    items: list[TimelineItem]
+
+
+class RecomputeResponse(UtcModel):
+    request_id: str
+    generated_at: datetime
+    analysis_run_id: str
+
+
+class TopologyPathResponse(UtcModel):
+    source: str
+    target: str
+    relation_type: TopologyRelation
+    direction: Literal["forward", "reverse"]
+    distance: int = Field(ge=0)
+    entity_ids: list[str]
+
+
+class BlastRadiusResponse(UtcModel):
+    root_entity_id: str
+    mode: Literal["dependency", "traffic"]
+    relation_type: TopologyRelation
+    direction: Literal["forward", "reverse"]
+    max_hops: int = Field(ge=1)
+    entity_ids: list[str]
 
 
 class PlaybookRecommendation(UtcModel):

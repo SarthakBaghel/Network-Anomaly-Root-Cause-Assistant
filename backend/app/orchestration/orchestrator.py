@@ -156,6 +156,7 @@ class AnalysisResult:
         typed_paths: dict[str, tuple[str, ...]] | None = None,
         conflict_reason_codes: tuple[str, ...] = (),
         evidence_requirements: dict[str, tuple[str, ...]] | None = None,
+        topology_snapshot: dict[str, Any] | None = None,
     ) -> None:
         if explanation_payload is not None and explanation_rows is not None:
             raise ValueError(
@@ -191,6 +192,7 @@ class AnalysisResult:
                 for key, requirements in (evidence_requirements or {}).items()
             }
         )
+        self.topology_snapshot = MappingProxyType(dict(topology_snapshot or {}))
         self._validate_fallback_metadata()
 
     def _validate_fallback_metadata(self) -> None:
@@ -528,6 +530,7 @@ class AnalysisOrchestrator:
                 key: list(requirements)
                 for key, requirements in analysis_result.evidence_requirements.items()
             }
+            new_run.topology_snapshot = dict(analysis_result.topology_snapshot)
 
             # Insert hypotheses
             for hyp in analysis_result.hypotheses:

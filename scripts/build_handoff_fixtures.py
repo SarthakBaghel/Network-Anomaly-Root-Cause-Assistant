@@ -100,6 +100,7 @@ def _production_snapshot() -> dict[str, Any]:
 
     with _production_client() as (client, session_factory):
         _expect(client.post("/api/v1/simulator/reset"))
+        _expect(client.post("/api/v1/simulator/start"))
         _expect(client.post(f"/api/v1/simulator/scenarios/{SCENARIO_ID}/trigger"))
 
         incident_list = _expect(client.get("/api/v1/incidents"))
@@ -158,7 +159,12 @@ def _production_snapshot() -> dict[str, Any]:
             )
         )
         audit = client.get(f"/api/v1/incidents/{incident_id}/audit")
-        if audit.status_code != 200 or not isinstance(audit.json(), list):
+        audit_envelope = audit.json()
+        if (
+            audit.status_code != 200
+            or not isinstance(audit_envelope, dict)
+            or not isinstance(audit_envelope.get("items"), list)
+        ):
             raise RuntimeError(f"production audit request failed: {audit.text}")
 
         return {
@@ -167,7 +173,7 @@ def _production_snapshot() -> dict[str, Any]:
             "events": events,
             "run_metadata": run_metadata,
             "review": review_envelope["review"],
-            "audit": audit.json(),
+            "audit": audit_envelope["items"],
         }
 
 

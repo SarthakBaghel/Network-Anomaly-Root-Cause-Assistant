@@ -24,4 +24,3 @@ class EvidenceItem(UtcModel):
         if (self.kind is EvidenceKind.MISSING) != (self.source_event_id is None):
             raise ValueError("source_event_id is null if and only if kind is missing")
         return self
-

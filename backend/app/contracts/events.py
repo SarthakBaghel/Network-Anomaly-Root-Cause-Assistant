@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
-from pydantic import Field, model_validator
+from pydantic import Field, JsonValue, model_validator
 
 from .base import Modality, UtcModel
 
@@ -24,7 +23,7 @@ class CanonicalEvent(UtcModel):
     source_record_id: str | None = None
     schema_version: str = Field(min_length=1)
     quality_flags: list[str] = Field(default_factory=list)
-    raw_payload: dict[str, Any] = Field(default_factory=dict)
+    raw_payload: dict[str, JsonValue] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_metric_fields(self) -> "CanonicalEvent":
@@ -32,4 +31,3 @@ class CanonicalEvent(UtcModel):
         if self.modality is Modality.METRIC and any(value is None for value in values):
             raise ValueError("metric events require signal_name, signal_value, and unit")
         return self
-

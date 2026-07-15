@@ -47,4 +47,3 @@ class Hypothesis(FrozenModel):
         if any(value < 0.0 or value > 1.0 for value in self.factor_scores.values()):
             raise ValueError("factor scores must be between 0.0 and 1.0")
         return self
-

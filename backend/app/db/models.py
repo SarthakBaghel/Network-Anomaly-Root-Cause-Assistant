@@ -222,6 +222,9 @@ class AnalysisRun(Base):
     evidence_requirements: Mapped[dict[str, list[str]]] = mapped_column(
         JSON, nullable=False, default=dict, server_default=text("'{}'")
     )
+    topology_snapshot: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
+    )
 
     __table_args__ = (
         UniqueConstraint("incident_id", "revision", name="uq_analysis_incident_revision"),
@@ -291,6 +294,9 @@ class PlaybookRecommendation(Base):
     step_id: Mapped[str] = mapped_column(String, nullable=False)
     state: Mapped[str] = mapped_column(String, nullable=False)
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    presentation: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
+    )
 
 
 class Explanation(Base):

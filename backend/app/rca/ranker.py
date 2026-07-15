@@ -420,7 +420,29 @@ def _historical_factor(
     )
 
 
-def _available_requirement(key: str, bundle: IncidentAnalysisBundle) -> bool:
+_CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
+    {
+        "config_diff",
+        "forwarded_rate",
+        "stable_raw_ingress",
+        "raw_ingress",
+        "source_distribution",
+        "connection_pressure",
+        "db_utilization",
+        "pool_waits",
+        "path_telemetry",
+        "upstream_health",
+        "dns_queries",
+        "certificate_state",
+    }
+)
+
+
+def _available_requirement(
+    key: str,
+    bundle: IncidentAnalysisBundle,
+    candidate: HypothesisCandidate,
+) -> bool:
     events = bundle.attached_events
     contains = lambda event, *values: any(
         value in (event.signal_name or "").lower()
@@ -436,9 +458,7 @@ def _available_requirement(key: str, bundle: IncidentAnalysisBundle) -> bool:
         "source_distribution": lambda event: contains(
             event, "raw_ingress", "source_distribution", "source_ip", "client_ip"
         ),
-        "connection_pressure": lambda event: contains(
-            event, "connection_utilization", "active_connections"
-        ),
+        "connection_pressure": lambda event: contains(event, "connection_utilization"),
         "downstream_latency": lambda event: contains(event, "latency"),
         "timeout_log": lambda event: event.modality is Modality.LOG
         and contains(event, "timeout"),
@@ -457,14 +477,38 @@ def _available_requirement(key: str, bundle: IncidentAnalysisBundle) -> bool:
         "certificate_state": lambda event: contains(event, "certificate", "tls"),
     }
     matcher = rules.get(key)
-    return bool(matcher and any(matcher(event) for event in events))
+    if matcher is None:
+        return False
+
+    def in_scope(event: CanonicalEvent) -> bool:
+        if (
+            key in _CANDIDATE_SCOPED_REQUIREMENTS
+            and event.entity_id != candidate.candidate_entity_id
+        ):
+            return False
+        if key == "dependency_timeout":
+            dependency_id = event.raw_payload.get("dependency_id")
+            if (
+                event.entity_id != candidate.candidate_entity_id
+                and dependency_id != candidate.candidate_entity_id
+            ):
+                return False
+        if key == "connection_pressure":
+            return event.signal_value is not None and event.signal_value >= 0.8
+        return True
+
+    return any(matcher(event) and in_scope(event) for event in events)
 
 
 def _coverage(
-    entry: HypothesisDefinition, bundle: IncidentAnalysisBundle
+    entry: HypothesisDefinition,
+    bundle: IncidentAnalysisBundle,
+    candidate: HypothesisCandidate,
 ) -> EvidenceCoverage:
     expected_keys = tuple(dict.fromkeys(entry.expected_evidence))
-    available = sum(_available_requirement(key, bundle) for key in expected_keys)
+    available = sum(
+        _available_requirement(key, bundle, candidate) for key in expected_keys
+    )
     return EvidenceCoverage(available=available, expected=len(expected_keys))
 
 
@@ -534,7 +578,7 @@ class RootCauseRanker:
             candidate=candidate,
             factor_scores=factors,
             evidence_score=score_factors(factors),
-            evidence_coverage=_coverage(entry, bundle),
+            evidence_coverage=_coverage(entry, bundle, candidate),
             conflicts=tuple(conflicts),
             topology_origin=origin,
             topology_path=topology_path,

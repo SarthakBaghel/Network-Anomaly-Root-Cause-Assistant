@@ -126,7 +126,8 @@ def test_phase3_review_seed_resolves_against_golden_snapshot() -> None:
 
 
 def test_openapi_contains_every_frozen_endpoint() -> None:
-    paths = set(app.openapi()["paths"])
+    document = app.openapi()
+    paths = set(document["paths"])
     required = {
         "/api/v1/health",
         "/api/v1/ready",
@@ -156,3 +157,26 @@ def test_openapi_contains_every_frozen_endpoint() -> None:
         "/api/v1/topology/blast-radius/{entity_id}",
     }
     assert required <= paths
+
+    event_responses = document["paths"]["/api/v1/events"]["post"]["responses"]
+    assert {"200", "201", "202", "422"} <= set(event_responses)
+    assert "503" in document["paths"]["/api/v1/ready"]["get"]["responses"]
+
+    typed_operations = (
+        ("/api/v1/ready", "get", "200"),
+        ("/api/v1/quarantine", "get", "200"),
+        ("/api/v1/incidents/{incident_id}/timeline", "get", "200"),
+        ("/api/v1/incidents/{incident_id}/recompute", "post", "200"),
+        ("/api/v1/topology/path", "get", "200"),
+        ("/api/v1/topology/blast-radius/{entity_id}", "get", "200"),
+    )
+    for path, method, response_status in typed_operations:
+        schema = document["paths"][path][method]["responses"][response_status]["content"][
+            "application/json"
+        ]["schema"]
+        assert schema and ("$ref" in schema or schema.get("type") != "object" or schema.get("properties"))
+
+    error_schema = document["paths"]["/api/v1/incidents/{incident_id}"]["get"][
+        "responses"
+    ]["404"]["content"]["application/json"]["schema"]
+    assert error_schema["$ref"].endswith("/ErrorEnvelope")

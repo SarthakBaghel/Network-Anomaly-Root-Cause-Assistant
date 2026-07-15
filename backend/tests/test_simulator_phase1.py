@@ -57,6 +57,7 @@ def test_engine_lifecycle_virtual_ticks_and_reset_hook():
 def test_trigger_emits_complete_golden_stream_only_through_ingestion():
     sink = AdapterValidationSink()
     engine = SimulatorEngine(sink, background=False)
+    engine.start()
     status = engine.trigger("gateway_rate_limit")
     assert status["state"] == "completed"
     assert status["scenario_state"] == "completed"
@@ -87,10 +88,20 @@ def test_required_simulator_api_handlers(monkeypatch):
     isolated = SimulatorEngine(background=False)
     monkeypatch.setattr(simulator_api, "simulator_engine", isolated)
     with TestClient(app) as client:
-        assert client.post("/api/v1/simulator/start").status_code == 200
+        stopped_trigger = client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger")
+        assert stopped_trigger.status_code == 409
+        start = client.post("/api/v1/simulator/start")
+        assert start.status_code == 200
+        assert start.json()["request_id"].startswith("req_")
         assert client.get("/api/v1/simulator/status").json()["state"] == "running"
-        assert client.post("/api/v1/simulator/stop").json()["state"] == "stopped"
         result = client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger")
         assert result.status_code == 200 and result.json()["scenario_state"] == "completed"
-        assert client.post("/api/v1/simulator/reset").json()["scenario_state"] == "idle"
+        assert result.json()["request_id"].startswith("req_")
+        assert client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger").status_code == 409
+        assert client.post("/api/v1/simulator/start").status_code == 409
+        reset = client.post("/api/v1/simulator/reset").json()
+        assert reset["scenario_state"] == "idle"
+        assert reset["request_id"].startswith("req_")
+        assert client.post("/api/v1/simulator/start").status_code == 200
+        assert client.post("/api/v1/simulator/stop").json()["state"] == "stopped"
         assert client.post("/api/v1/simulator/scenarios/unknown/trigger").status_code == 404

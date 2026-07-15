@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Annotated, Any, Never
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.contracts import (
     AnalysisRun,
+    AuditListResponse,
     AuditRecord,
     CanonicalEvent,
     EvidenceItem,
@@ -24,10 +26,12 @@ from app.contracts import (
     IncidentListResponse,
     InvestigationResponse,
     PlaybookRecommendation,
+    RecomputeResponse,
     ReviewMutationResponse,
     ReviewRecord,
     ReviewRequest,
     TimelineItem,
+    TimelineResponse,
     TopologySnapshot,
     EvidenceCoverage,
 )
@@ -38,16 +42,14 @@ from app.db.repositories import (
 )
 from app.ingestion.pipeline import event_to_contract
 from app.orchestration.orchestrator import orchestrator
-from app.playbooks.engine import get_step
 from app.audit.service import audit_service
 from app.reviews.service import ReviewServiceError, review_service
-from app.topology.graph import get_topology_graph
 
 from .dependencies import get_session
-from .topology import _incident_annotation
+from .error_responses import ERROR_RESPONSES
 
 
-router = APIRouter(prefix="/incidents", tags=["incidents"])
+router = APIRouter(prefix="/incidents", tags=["incidents"], responses=ERROR_RESPONSES)
 DatabaseSession = Annotated[Session, Depends(get_session)]
 
 
@@ -88,10 +90,29 @@ def _incident_contract(row: models.Incident) -> IncidentSummary:
     )
 
 
-def load_playbook_steps() -> dict:
-    """Load playbook step metadata keyed by step_id from the playbooks engine."""
-    from app.playbooks.engine import load_recommendations
-    return {rec.step_id: rec.model_dump() for rec in load_recommendations()}
+def recommendation_to_contract(row: models.PlaybookRecommendation) -> PlaybookRecommendation:
+    presentation = dict(row.presentation or {})
+    if not presentation:
+        raise RuntimeError("published recommendation is missing its immutable presentation")
+    return PlaybookRecommendation(
+        recommendation_id=row.id,
+        analysis_run_id=row.analysis_run_id,
+        incident_id=row.incident_id,
+        hypothesis_id=row.hypothesis_id,
+        step_id=row.step_id,
+        title=presentation["title"],
+        step_type=presentation["step_type"],
+        risk_level=presentation["risk_level"],
+        requires_human_approval=presentation["requires_human_approval"],
+        instructions=presentation["instructions"],
+        rationale=row.rationale,
+    )
+
+
+def _recommendation_order(row: models.PlaybookRecommendation) -> tuple[int, str]:
+    presentation = dict(row.presentation or {})
+    position = presentation.get("catalogue_order")
+    return (position if isinstance(position, int) else 1_000_000, row.step_id)
 
 
 def hyp_to_contract(row: models.Hypothesis) -> Hypothesis:
@@ -311,6 +332,41 @@ def _decode_cursor(
             }
         )
 
+
+def _encode_audit_cursor(record: AuditRecord) -> str:
+    payload = json.dumps(
+        {"timestamp": record.timestamp.isoformat(), "audit_id": record.audit_id},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_audit_cursor(cursor: str | None) -> tuple[datetime | None, str | None]:
+    if cursor is None:
+        return None, None
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+        audit_id = str(payload["audit_id"])
+        timestamp = _utc(datetime.fromisoformat(str(payload["timestamp"])))
+        if not audit_id:
+            raise ValueError("empty audit ID")
+        return timestamp, audit_id
+    except (
+        binascii.Error,
+        KeyError,
+        TypeError,
+        UnicodeDecodeError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
+        _api_error(
+            status.HTTP_400_BAD_REQUEST,
+            "INVALID_CURSOR",
+            "Audit cursor is malformed",
+        )
+
 @router.get("", response_model=IncidentListResponse)
 def list_incidents(
     status_filter: Annotated[IncidentStatus | None, Query(alias="status")] = None,
@@ -337,6 +393,7 @@ def list_incidents(
     )
     page = rows[:limit]
     return IncidentListResponse(
+        generated_at=datetime.now(tz=timezone.utc),
         items=[_incident_contract(row) for row in page],
         next_cursor=_encode_cursor(page[-1], filters) if len(rows) > limit else None,
     )
@@ -352,10 +409,13 @@ def incident_summary(incident_id: str, session: Session = Depends(get_session)) 
         )
     return _incident_contract(row)
 
-@router.get("/{incident_id}/timeline", response_model=dict[str, Any])
-def timeline(incident_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
+@router.get("/{incident_id}/timeline", response_model=TimelineResponse)
+def timeline(incident_id: str, session: Session = Depends(get_session)) -> TimelineResponse:
     _, _, run_id = _current_context(session, incident_id)
-    return {"items": _timeline_items_for_run(session, incident_id, run_id)}
+    return TimelineResponse(
+        generated_at=datetime.now(tz=timezone.utc),
+        items=_timeline_items_for_run(session, incident_id, run_id),
+    )
 
 @router.get("/{incident_id}/hypotheses", response_model=list[Hypothesis])
 def hypotheses(incident_id: str, session: Session = Depends(get_session)) -> list[Hypothesis]:
@@ -404,25 +464,11 @@ def recommendations(incident_id: str, session: Session = Depends(get_session)) -
         return {}
         
     stmt = select(models.PlaybookRecommendation).where(models.PlaybookRecommendation.analysis_run_id == row.current_analysis_run_id)
-    rows = session.execute(stmt).scalars().all()
+    rows = sorted(session.execute(stmt).scalars().all(), key=_recommendation_order)
     
-    steps = load_playbook_steps()
     result = {}
     for r in rows:
-        step_meta = steps.get(r.step_id, {})
-        result.setdefault(r.hypothesis_id, []).append(PlaybookRecommendation(
-            recommendation_id=r.id,
-            analysis_run_id=r.analysis_run_id,
-            incident_id=r.incident_id,
-            hypothesis_id=r.hypothesis_id,
-            step_id=r.step_id,
-            title=step_meta.get("title", r.step_id),
-            step_type=step_meta.get("step_type", "diagnostic"),
-            risk_level=step_meta.get("risk_level", "low"),
-            requires_human_approval=step_meta.get("requires_human_approval", True),
-            instructions="\n".join(insts) if isinstance(insts := step_meta.get("instructions", ""), list) else insts,
-            rationale=r.rationale
-        ))
+        result.setdefault(r.hypothesis_id, []).append(recommendation_to_contract(r))
     return result
 
 @router.get("/{incident_id}/explanation", response_model=ExplanationOutput)
@@ -442,14 +488,32 @@ def explanation(incident_id: str, session: Session = Depends(get_session)) -> Ex
     hypothesis_id = incident_row.top_hypothesis_id or top_hyp.id
     return _explanation_for_run(session, incident_id, run_id, hypothesis_id)
 
-@router.get("/{incident_id}/audit", response_model=list[AuditRecord])
-def audit(incident_id: str, session: DatabaseSession) -> list[AuditRecord]:
+@router.get("/{incident_id}/audit", response_model=AuditListResponse)
+def audit(
+    incident_id: str,
+    session: DatabaseSession,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    cursor: str | None = None,
+) -> AuditListResponse:
     if IncidentRepository(session).get_by_id(incident_id) is None:
         _api_error(status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Incident not found")
-    return audit_service.list_for_incident(incident_id, session)
+    before_timestamp, before_audit_id = _decode_audit_cursor(cursor)
+    rows = audit_service.list_for_incident(
+        incident_id,
+        session,
+        limit=limit + 1,
+        before_timestamp=before_timestamp,
+        before_audit_id=before_audit_id,
+    )
+    page = rows[:limit]
+    return AuditListResponse(
+        generated_at=datetime.now(tz=timezone.utc),
+        items=page,
+        next_cursor=_encode_audit_cursor(page[-1]) if len(rows) > limit else None,
+    )
 
-@router.post("/{incident_id}/recompute", response_model=dict[str, Any])
-def recompute(incident_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
+@router.post("/{incident_id}/recompute", response_model=RecomputeResponse)
+def recompute(incident_id: str, session: Session = Depends(get_session)) -> RecomputeResponse:
     repo = IncidentRepository(session)
     row = repo.get_by_id(incident_id)
     if row is None:
@@ -467,7 +531,11 @@ def recompute(incident_id: str, session: Session = Depends(get_session)) -> dict
             },
         )
     run_id = orchestrator.recompute(incident_id, session)
-    return {"analysis_run_id": run_id}
+    return RecomputeResponse(
+        request_id=f"req_{uuid.uuid4().hex}",
+        generated_at=datetime.now(tz=timezone.utc),
+        analysis_run_id=run_id,
+    )
 
 @router.post("/{incident_id}/review", response_model=ReviewMutationResponse)
 def review(
@@ -509,17 +577,9 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
 
     timeline_items = _timeline_items_for_run(session, incident_id, run_id)
     
-    # Topology annotated snapshot
-    graph = get_topology_graph()
-    node_states, edge_states = _incident_annotation(
-        graph,
-        incident_id,
-        session=session,
-        analysis_run_id=run_id,
-    )
-    topology_snap = TopologySnapshot.model_validate(
-        graph.snapshot(node_states=node_states, edge_states=edge_states)
-    )
+    if not run_row.topology_snapshot:
+        raise RuntimeError("published analysis run is missing its immutable topology snapshot")
+    topology_snap = TopologySnapshot.model_validate(run_row.topology_snapshot)
     
     # Hypotheses
     stmt_hyps = select(models.Hypothesis).where(models.Hypothesis.analysis_run_id == run_id).order_by(models.Hypothesis.rank.asc())
@@ -537,23 +597,19 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
         )
     )
     rec_rows = session.execute(stmt_rec).scalars().all()
+    rank_by_hypothesis = {row.id: row.rank for row in hyp_rows}
+    rec_rows = sorted(
+        rec_rows,
+        key=lambda row: (
+            rank_by_hypothesis.get(row.hypothesis_id, 1_000_000),
+            *_recommendation_order(row),
+        ),
+    )
     recs_by_hyp = {}
-    steps = load_playbook_steps()
     for r in rec_rows:
-        step_meta = steps.get(r.step_id, {})
-        recs_by_hyp.setdefault(r.hypothesis_id, []).append(PlaybookRecommendation(
-            recommendation_id=r.id,
-            analysis_run_id=r.analysis_run_id,
-            incident_id=r.incident_id,
-            hypothesis_id=r.hypothesis_id,
-            step_id=r.step_id,
-            title=step_meta.get("title", r.step_id),
-            step_type=step_meta.get("step_type", "diagnostic"),
-            risk_level=step_meta.get("risk_level", "low"),
-            requires_human_approval=step_meta.get("requires_human_approval", True),
-            instructions="\n".join(insts) if isinstance(insts := step_meta.get("instructions", ""), list) else insts,
-            rationale=r.rationale
-        ))
+        recs_by_hyp.setdefault(r.hypothesis_id, []).append(
+            recommendation_to_contract(r)
+        )
         
     top_hypothesis_id = incident_contract.top_hypothesis_id
     if top_hypothesis_id is None and hyp_rows:
@@ -572,7 +628,7 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
     )
     
     # Reviews
-    stmt_rev = select(models.Review).where(models.Review.analysis_run_id == run_id).order_by(models.Review.created_at.asc())
+    stmt_rev = select(models.Review).where(models.Review.analysis_run_id == run_id).order_by(models.Review.created_at.asc(), models.Review.id.asc())
     rev_rows = session.execute(stmt_rev).scalars().all()
     reviews_contract = [
         ReviewRecord(

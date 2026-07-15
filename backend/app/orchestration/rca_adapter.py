@@ -185,8 +185,14 @@ class RcaAnalysisAdapter:
                 entry,
                 [],
             )
-            if calculate_evidence_coverage(entry, evidence) != ranked.evidence_coverage:
-                raise RcaAdapterError("computed evidence coverage does not match collected evidence")
+            collected_coverage = calculate_evidence_coverage(entry, evidence)
+            if collected_coverage != ranked.evidence_coverage:
+                raise RcaAdapterError(
+                    "computed evidence coverage does not match collected evidence "
+                    f"for {ranked.hypothesis_type}: computed="
+                    f"{ranked.evidence_coverage.available}/{ranked.evidence_coverage.expected}, "
+                    f"collected={collected_coverage.available}/{collected_coverage.expected}"
+                )
             contract_evidence[ranked.hypothesis_id] = evidence
 
             hypotheses.append(
@@ -222,7 +228,22 @@ class RcaAnalysisAdapter:
             entity_type = entity_types.get(ranked.candidate_entity_id)
             if entity_type is None:
                 raise RcaAdapterError("computed candidate entity does not resolve in topology")
-            playbooks = get_recommendations(ranked.hypothesis_type, entity_type)
+            applicable = {
+                step.step_id: step
+                for step in get_recommendations(ranked.hypothesis_type, entity_type)
+            }
+            declared_step_ids = [
+                *entry.get("diagnostic_step_ids", []),
+                *entry.get("remediation_step_ids", []),
+            ]
+            missing_step_ids = [
+                step_id for step_id in declared_step_ids if step_id not in applicable
+            ]
+            if missing_step_ids:
+                raise RcaAdapterError(
+                    "hypothesis references a missing or incompatible playbook step"
+                )
+            playbooks = [applicable[step_id] for step_id in declared_step_ids]
             playbooks_by_hypothesis[ranked.hypothesis_id] = playbooks
             recommendation_rows.extend(
                 models.PlaybookRecommendation(
@@ -237,8 +258,16 @@ class RcaAnalysisAdapter:
                     step_id=step.step_id,
                     state="proposed",
                     rationale=f"Catalogue-backed step for {ranked.hypothesis_type}.",
+                    presentation={
+                        "title": step.title,
+                        "step_type": step.step_type,
+                        "risk_level": step.risk_level,
+                        "requires_human_approval": step.requires_human_approval,
+                        "instructions": "\n".join(step.instructions),
+                        "catalogue_order": catalogue_order,
+                    },
                 )
-                for step in playbooks
+                for catalogue_order, step in enumerate(playbooks)
             )
 
         top = min(computed.ranked_hypotheses, key=lambda item: item.rank)
@@ -260,6 +289,39 @@ class RcaAnalysisAdapter:
             playbooks_by_hypothesis[top.hypothesis_id],
             candidate_entity_type=entity_types[top.candidate_entity_id],
         )
+        node_states = {
+            item.entity_id: item.state for item in computed.topology_states.nodes
+        }
+        edge_states = {
+            (item.source, item.target, item.relation_type.value): item.state
+            for item in computed.topology_states.edges
+        }
+        topology_snapshot = {
+            "fixture_version": bundle.topology.fixture_version,
+            "nodes": [
+                {
+                    "id": node.entity_id,
+                    "name": node.name,
+                    "type": node.entity_type,
+                    "service": node.service,
+                    "criticality": node.criticality,
+                    "state": node_states.get(node.entity_id),
+                }
+                for node in bundle.topology.nodes
+            ],
+            "edges": [
+                {
+                    "source": edge.source,
+                    "target": edge.target,
+                    "relation_type": edge.relation_type.value,
+                    "relationship": edge.relationship,
+                    "state": edge_states.get(
+                        (edge.source, edge.target, edge.relation_type.value)
+                    ),
+                }
+                for edge in bundle.topology.edges
+            ],
+        }
         return AnalysisResult(
             hypotheses=hypotheses,
             evidence_rows=evidence_rows,
@@ -268,6 +330,7 @@ class RcaAnalysisAdapter:
             typed_paths=computed.typed_paths,
             conflict_reason_codes=computed.conflict_reason_codes,
             evidence_requirements=computed.evidence_requirements,
+            topology_snapshot=topology_snapshot,
             **explanation_result.as_analysis_result_kwargs(),
         )
 

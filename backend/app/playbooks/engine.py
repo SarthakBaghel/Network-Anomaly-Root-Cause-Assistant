@@ -42,9 +42,7 @@ def _load_raw() -> dict:
     with open(PLAYBOOKS_FILE, encoding="utf-8") as f:
         raw = yaml.safe_load(f)
     if not isinstance(raw, dict):
-        raise PlaybookValidationError(
-            ["playbooks fixture must contain a YAML mapping"]
-        )
+        raise PlaybookValidationError(["playbooks fixture must contain a YAML mapping"])
     return raw
 
 
@@ -52,10 +50,7 @@ def _load_raw() -> dict:
 # Compatibility helpers for catalogue consumers that need a raw dictionary.
 # ---------------------------------------------------------------------------
 def load_playbooks() -> list[dict]:
-    return [
-        recommendation.model_dump(mode="json")
-        for recommendation in load_recommendations()
-    ]
+    return [recommendation.model_dump(mode="json") for recommendation in load_recommendations()]
 
 
 def find_playbook_for_entity(candidate_entity: str) -> dict | None:
@@ -83,16 +78,14 @@ def _validate_recommendations(recommendations: list[PlaybookRecommendation]) -> 
     - every catalogue step MUST require human approval.
     """
     errors: list[str] = []
+    step_ids = [rec.step_id for rec in recommendations]
+    if len(step_ids) != len(set(step_ids)):
+        errors.append("playbook step IDs must be unique")
     for rec in recommendations:
         if rec.step_type not in VALID_STEP_TYPES:
-            errors.append(
-                f"step '{rec.step_id}' has unknown step_type '{rec.step_type}'"
-            )
+            errors.append(f"step '{rec.step_id}' has unknown step_type '{rec.step_type}'")
         if not rec.requires_human_approval:
-            errors.append(
-                f"playbook step '{rec.step_id}' must set "
-                f"requires_human_approval=true"
-            )
+            errors.append(f"playbook step '{rec.step_id}' must set requires_human_approval=true")
     if errors:
         raise PlaybookValidationError(errors)
 
@@ -106,9 +99,7 @@ def load_recommendations() -> tuple[PlaybookRecommendation, ...]:
     """
     raw = _load_raw().get("steps")
     if not isinstance(raw, list) or not raw:
-        raise PlaybookValidationError(
-            ["playbooks fixture must contain a non-empty 'steps' list"]
-        )
+        raise PlaybookValidationError(["playbooks fixture must contain a non-empty 'steps' list"])
 
     try:
         recommendations = [PlaybookRecommendation(**entry) for entry in raw]

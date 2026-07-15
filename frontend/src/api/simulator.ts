@@ -9,5 +9,5 @@ export const simulatorApi = {
       method: 'POST',
       url: `/simulator/scenarios/${encodeURIComponent(scenarioId)}/trigger`,
     }),
-  status: () => request<JsonResponse<'status_api_v1_simulator_status_get'>>({ method: 'GET', url: '/simulator/status' }),
+  status: (signal?: AbortSignal) => request<JsonResponse<'status_api_v1_simulator_status_get'>>({ method: 'GET', url: '/simulator/status', signal }),
 }

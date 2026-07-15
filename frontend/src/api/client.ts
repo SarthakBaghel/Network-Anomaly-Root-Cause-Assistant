@@ -1,6 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 
-import type { operations } from '../contracts/openapi'
+import type { components, operations } from '../contracts/openapi'
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
 
@@ -22,18 +22,8 @@ export type JsonRequest<OperationId extends keyof operations> = operations[Opera
   ? Body
   : never
 
-export type ApiErrorDetail = {
-  field?: string | null
-  reason_code?: string
-  message?: string
-  [key: string]: unknown
-}
-
-export type ApiErrorPayload = {
-  code: string
-  message: string
-  details: ApiErrorDetail[]
-}
+export type ApiErrorPayload = components['schemas']['ErrorBody']
+type ApiErrorDetail = components['schemas']['ErrorDetail']
 
 export class ApiClientError extends Error {
   readonly status: number | undefined
@@ -51,19 +41,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+function isErrorDetail(value: unknown): value is ApiErrorDetail {
+  return isRecord(value)
+    && typeof value.reason_code === 'string'
+    && (value.field === undefined || value.field === null || typeof value.field === 'string')
+}
+
 function toErrorPayload(value: unknown): ApiErrorPayload | null {
-  const envelope = isRecord(value) && isRecord(value.error)
-    ? value.error
-    : isRecord(value) && isRecord(value.detail)
-      ? value.detail
-      : value
+  const envelope = isRecord(value) && isRecord(value.error) ? value.error : null
   if (!isRecord(envelope) || typeof envelope.code !== 'string' || typeof envelope.message !== 'string') {
     return null
   }
   return {
     code: envelope.code,
     message: envelope.message,
-    details: Array.isArray(envelope.details) ? envelope.details.filter(isRecord) : [],
+    details: Array.isArray(envelope.details) ? envelope.details.filter(isErrorDetail) : [],
   }
 }
 

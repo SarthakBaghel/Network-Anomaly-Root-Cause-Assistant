@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from pathlib import Path
 
 import yaml
@@ -112,3 +113,37 @@ def test_quarantined_record_does_not_satisfy_expected_evidence() -> None:
     assert len(waf) == 1
     assert waf[0].kind is EvidenceKind.MISSING
     assert waf[0].source_event_id is None
+
+
+def test_connection_pressure_is_candidate_scoped_and_rejects_newer_normal_entity() -> None:
+    hypotheses, catalogue, events = _golden_inputs()
+    hypothesis = hypotheses["configuration_regression"]
+    gateway_pressure = next(
+        event
+        for event in events
+        if event.entity_id == hypothesis.candidate_entity_id
+        and event.signal_name == "connection_utilization"
+        and event.signal_value is not None
+        and event.signal_value >= 0.8
+    )
+    unrelated = gateway_pressure.model_copy(
+        update={
+            "event_id": "evt_adversarial_newer_normal_db_utilization",
+            "entity_id": "payment-db-01",
+            "timestamp": gateway_pressure.timestamp + timedelta(hours=1),
+            "signal_value": 0.44,
+        }
+    )
+
+    evidence = collect_evidence(
+        hypothesis,
+        [*events, unrelated],
+        catalogue[hypothesis.hypothesis_type],
+        [],
+    )
+    connection = next(
+        item for item in evidence if item.reason_code == "CONNECTION_UTILIZATION_HIGH"
+    )
+
+    assert connection.source_event_id == gateway_pressure.event_id
+    assert "Gateway connection utilization reached 0.92" in connection.statement

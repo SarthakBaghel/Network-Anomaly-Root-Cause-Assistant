@@ -18,6 +18,13 @@ CATALOGUES = (
     "hypotheses.yaml",
     "playbooks.yaml",
 )
+SUPPORTED_CATALOGUE_VERSIONS = {
+    "topology.json": ("1.0", "topology-1.1"),
+    "detector_rules.yaml": ("1.0", "detector-rules-1.1"),
+    "symptom_families.yaml": ("1.0", "symptom-families-1.1"),
+    "hypotheses.yaml": ("1.0", "hypotheses-1.2"),
+    "playbooks.yaml": ("1.0", "playbooks-1.1"),
+}
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -27,6 +34,11 @@ def _load(path: Path) -> dict[str, Any]:
         raise ValueError(f"{path.name} must contain an object")
     if not data.get("schema_version") or not data.get("version"):
         raise ValueError(f"{path.name} is missing schema_version/version")
+    supported = SUPPORTED_CATALOGUE_VERSIONS.get(path.name)
+    if supported is not None and (data["schema_version"], data["version"]) != supported:
+        raise ValueError(
+            f"{path.name} has unsupported schema/version {data['schema_version']}/{data['version']}"
+        )
     return data
 
 
@@ -47,6 +59,40 @@ def catalogue_status() -> dict[str, str]:
             raise ValueError("topology contains a dangling edge")
         if edge["source"] == edge["target"]:
             raise ValueError("topology contains a self-edge")
+    hypotheses = loaded["hypotheses.yaml"].get("hypotheses", [])
+    playbook_steps = loaded["playbooks.yaml"].get("steps", [])
+    hypothesis_types = [row.get("hypothesis_type") for row in hypotheses]
+    if len(hypothesis_types) != len(set(hypothesis_types)):
+        raise ValueError("hypothesis types must be unique")
+    step_by_id = {row.get("step_id"): row for row in playbook_steps}
+    if len(step_by_id) != len(playbook_steps) or None in step_by_id:
+        raise ValueError("playbook step IDs must be present and unique")
+    for hypothesis in hypotheses:
+        hypothesis_type = hypothesis.get("hypothesis_type")
+        entity_types = set(hypothesis.get("entity_types", []))
+        diagnostic_ids = hypothesis.get("diagnostic_step_ids") or []
+        remediation_ids = hypothesis.get("remediation_step_ids") or []
+        declared = [*diagnostic_ids, *remediation_ids]
+        if len(declared) != len(set(declared)):
+            raise ValueError(f"hypothesis {hypothesis_type!r} repeats a playbook step ID")
+        for step_id in declared:
+            step = step_by_id.get(step_id)
+            if step is None:
+                raise ValueError(
+                    f"hypothesis {hypothesis_type!r} references unknown step {step_id!r}"
+                )
+            if hypothesis_type not in step.get("applicable_hypothesis_types", []):
+                raise ValueError(
+                    f"step {step_id!r} is incompatible with hypothesis {hypothesis_type!r}"
+                )
+            if not entity_types.intersection(step.get("applicable_entity_types", [])):
+                raise ValueError(f"step {step_id!r} has no compatible hypothesis entity type")
+            expected_type = "diagnostic" if step_id in diagnostic_ids else "remediation"
+            if step.get("step_type") != expected_type:
+                raise ValueError(
+                    f"step {step_id!r} is declared as {expected_type} but catalogue type is "
+                    f"{step.get('step_type')!r}"
+                )
     return {name: "ready" for name in CATALOGUES}
 
 
@@ -56,7 +102,9 @@ def database_status() -> str:
     if "alembic_version" not in inspect(engine).get_table_names():
         raise RuntimeError("database migration has not been applied")
     with engine.connect() as connection:
-        revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one_or_none()
+        revision = connection.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalar_one_or_none()
     if not revision:
         raise RuntimeError("database migration revision is empty")
     return "ready"

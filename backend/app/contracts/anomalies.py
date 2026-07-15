@@ -22,4 +22,3 @@ class AnomalyRecord(UtcModel):
     window_end: datetime
     features: dict[str, Any] = Field(default_factory=dict)
     explanation: str = Field(min_length=1)
-

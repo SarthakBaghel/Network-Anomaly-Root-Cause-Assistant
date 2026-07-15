@@ -140,6 +140,7 @@ def _seed(session) -> None:
             created_at=_dt(run["created_at"]),
             completed_at=_dt(run["completed_at"]),
             failure_reason=None,
+            topology_snapshot=golden["topology"],
         )
     )
     session.add(
@@ -220,7 +221,7 @@ def _seed(session) -> None:
                 )
             )
     for items in golden["recommendations_by_hypothesis"].values():
-        for recommendation in items:
+        for catalogue_order, recommendation in enumerate(items):
             session.add(
                 models.PlaybookRecommendation(
                     id=recommendation["recommendation_id"],
@@ -230,6 +231,16 @@ def _seed(session) -> None:
                     step_id=recommendation["step_id"],
                     state="proposed",
                     rationale=recommendation["rationale"],
+                    presentation={
+                        "title": recommendation["title"],
+                        "step_type": recommendation["step_type"],
+                        "risk_level": recommendation["risk_level"],
+                        "requires_human_approval": recommendation[
+                            "requires_human_approval"
+                        ],
+                        "instructions": recommendation["instructions"],
+                        "catalogue_order": catalogue_order,
+                    },
                 )
             )
     session.add(
@@ -359,6 +370,31 @@ def test_investigation_is_one_current_run_snapshot(client: TestClient) -> None:
     assert any(item["hypothesis_relevance"] for item in payload["timeline"] if item is not auth)
 
 
+def test_published_topology_and_recommendations_do_not_reload_live_catalogues(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = client.get("/api/v1/incidents/inc_001/investigation")
+    assert first.status_code == 200
+
+    def fail_live_catalogue_read(*_args, **_kwargs):
+        raise AssertionError("a published investigation must not reload live fixtures")
+
+    import app.playbooks.engine as playbook_engine
+    import app.topology.graph as topology_graph
+
+    monkeypatch.setattr(playbook_engine, "get_step", fail_live_catalogue_read)
+    monkeypatch.setattr(topology_graph, "get_topology_graph", fail_live_catalogue_read)
+
+    second = client.get("/api/v1/incidents/inc_001/investigation")
+    assert second.status_code == 200
+    assert second.json()["topology"] == first.json()["topology"]
+    assert (
+        second.json()["recommendations_by_hypothesis"]
+        == first.json()["recommendations_by_hypothesis"]
+    )
+
+
 def test_investigation_keeps_captured_run_when_pointer_changes_mid_assembly(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -439,7 +475,7 @@ def test_incident_reads_and_cursor_pagination(client: TestClient) -> None:
         params={"limit": 1, "cursor": cursor, "status": "investigating"},
     )
     assert changed_filter.status_code == 400
-    assert changed_filter.json()["detail"]["code"] == "INVALID_CURSOR"
+    assert changed_filter.json()["error"]["code"] == "INVALID_CURSOR"
 
 
 def test_current_run_read_endpoints_never_return_superseded_rows(client: TestClient) -> None:
@@ -516,14 +552,14 @@ def test_review_is_idempotent_audited_and_closes_on_confirmation(
 
     audit = client.get("/api/v1/incidents/inc_001/audit")
     assert audit.status_code == 200
-    assert {item["action"] for item in audit.json()} >= {
+    assert {item["action"] for item in audit.json()["items"]} >= {
         "EVENT_EXCLUDED",
         "REVIEW_EVIDENCE_REQUESTED",
         "REVIEW_CONFIRMED",
         "INCIDENT_STATUS_CHANGED",
     }
     review_actions = [
-        item for item in audit.json() if item["action"] == "REVIEW_EVIDENCE_REQUESTED"
+        item for item in audit.json()["items"] if item["action"] == "REVIEW_EVIDENCE_REQUESTED"
     ]
     assert len(review_actions) == 1
 
@@ -535,7 +571,7 @@ def test_review_is_idempotent_audited_and_closes_on_confirmation(
         },
     )
     assert closed.status_code == 409
-    assert closed.json()["detail"]["code"] == "INCIDENT_CLOSED"
+    assert closed.json()["error"]["code"] == "INCIDENT_CLOSED"
 
 
 def test_stale_and_non_missing_evidence_reviews_are_rejected(client: TestClient) -> None:
@@ -552,9 +588,9 @@ def test_stale_and_non_missing_evidence_reviews_are_rejected(client: TestClient)
         },
     )
     assert stale.status_code == 409
-    assert stale.json()["detail"]["code"] == "STALE_ANALYSIS"
+    assert stale.json()["error"]["code"] == "STALE_ANALYSIS"
     assert {
-        item["reason_code"] for item in stale.json()["detail"]["details"]
+        item["reason_code"] for item in stale.json()["error"]["details"]
     } == {"run_007"}
 
     non_missing = client.post(
@@ -570,7 +606,7 @@ def test_stale_and_non_missing_evidence_reviews_are_rejected(client: TestClient)
         },
     )
     assert non_missing.status_code == 422
-    assert non_missing.json()["detail"]["code"] == "VALIDATION_ERROR"
+    assert non_missing.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_review_audit_failure_rolls_back_review_and_status(
@@ -608,7 +644,9 @@ def test_review_audit_failure_rolls_back_review_and_status(
 
 def test_recompute_is_safe_when_p4_analysis_engine_is_not_registered(
     client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(incidents_api.orchestrator, "_analysis_engine", None)
     response = client.post("/api/v1/incidents/inc_001/recompute")
     assert response.status_code == 503
-    assert response.json()["detail"]["code"] == "ANALYSIS_NOT_READY"
+    assert response.json()["error"]["code"] == "ANALYSIS_NOT_READY"

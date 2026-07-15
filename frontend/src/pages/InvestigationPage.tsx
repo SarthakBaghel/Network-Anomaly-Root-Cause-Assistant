@@ -11,6 +11,7 @@ import {
   ComposedChart,
   ResponsiveContainer,
   Scatter,
+  type ScatterShapeProps,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
@@ -70,6 +71,10 @@ type TimelinePoint = {
   attachment_reasons: string[];
   modality: components["schemas"]["Modality"];
   attached: boolean;
+};
+
+type TimelineScatterShapeProps = Omit<ScatterShapeProps, "payload"> & {
+  payload?: TimelinePoint;
 };
 
 type SelectedDetail =
@@ -237,7 +242,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   const loadInvestigation = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsRefreshing(true);
-      const response = await incidentsApi.getInvestigation(incidentId);
+      const response = await incidentsApi.getInvestigation(incidentId, signal);
       if (signal?.aborted) return;
       const revision = response.analysis_run.revision;
       const generatedAt = Date.parse(response.generated_at);
@@ -272,9 +277,10 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
 
   usePolling(loadInvestigation);
 
-  const loadAudit = useCallback(async () => {
+  const loadAudit = useCallback(async (signal?: AbortSignal) => {
     try {
-      setAuditTrail(await incidentsApi.getAudit(incidentId));
+      const response = await incidentsApi.getAudit(incidentId, signal);
+      if (!signal?.aborted) setAuditTrail(response.items);
     } catch {
       // Keep the last append-only view if an audit refresh fails.
     }
@@ -421,8 +427,9 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
     setBanner(null);
     setBusyHypothesis((current) => ({ ...current, [hypothesisId]: true }));
 
-    const body: Record<string, unknown> = {
-      analysis_run_id: investigation?.analysis_run_id,
+    if (!investigation) return;
+    const body: components["schemas"]["ReviewRequest"] = {
+      analysis_run_id: investigation.analysis_run_id,
       client_action_id: createUuid(),
       comment:
         decision === "confirmed"
@@ -440,10 +447,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
     }
 
     try {
-      await incidentsApi.submitReview(
-        incidentId,
-        body as Parameters<typeof incidentsApi.submitReview>[1],
-      );
+      await incidentsApi.submitReview(incidentId, body);
       setReviewStatus((current) => ({ ...current, [hypothesisId]: decision }));
       if (decision === "confirmed") {
         setBanner("Confirmed root cause");
@@ -470,6 +474,9 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   }
 
   if (!investigation) {
+    if (apiError) {
+      return <EmptyState message={apiError} />;
+    }
     return <PageSkeleton label="Loading incident investigation..." />;
   }
 
@@ -618,12 +625,12 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     data={timelinePoints}
                     dataKey="x"
                     fill="#22d3ee"
-                    shape={(props) => {
-                      const { cx, cy, payload } = props as any;
-                      if (cx == null || cy == null) {
+                    shape={(props: TimelineScatterShapeProps) => {
+                      const { cx, cy, payload } = props;
+                      if (cx == null || cy == null || !payload) {
                         return null;
                       }
-                      const point = payload as TimelinePoint;
+                      const point = payload;
                       return (
                         <circle
                           cx={cx}

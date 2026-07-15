@@ -58,8 +58,8 @@
         "kind": "observed",
         "reason_code": "CONNECTION_UTILIZATION_HIGH",
         "relevance": 0.95,
-        "source_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
-        "statement": "Payment database connection utilization reached 0.44."
+        "source_event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
+        "statement": "Gateway connection utilization reached 0.92."
       },
       {
         "analysis_run_id": "run_007",
@@ -239,7 +239,7 @@
     "analysis_run_id": "run_007",
     "claims": [
       {
-        "claim": "Observed evidence: Payment database connection utilization reached 0.44.",
+        "claim": "Observed evidence: Gateway connection utilization reached 0.92.",
         "evidence_ids": [
           "ev_004"
         ]
@@ -398,27 +398,27 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_001",
         "incident_id": "inc_001",
-        "instructions": "Chart forwarded RPS and connection utilization before and after the change.\nCheck whether raw ingress stayed stable while forwarded traffic increased.",
-        "rationale": "Catalogue-backed step for configuration_regression.",
-        "recommendation_id": "rec_001",
-        "requires_human_approval": true,
-        "risk_level": "low",
-        "step_id": "compare-pre-post-metrics",
-        "step_type": "diagnostic",
-        "title": "Compare pre/post-change metrics"
-      },
-      {
-        "analysis_run_id": "run_007",
-        "hypothesis_id": "hyp_001",
-        "incident_id": "inc_001",
         "instructions": "Compare the current rate-limit configuration with the last known-good version.\nIdentify changes made immediately before the incident window.",
         "rationale": "Catalogue-backed step for configuration_regression.",
-        "recommendation_id": "rec_002",
+        "recommendation_id": "rec_001",
         "requires_human_approval": true,
         "risk_level": "low",
         "step_id": "inspect-config-diff",
         "step_type": "diagnostic",
         "title": "Inspect configuration diff"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "instructions": "Chart forwarded RPS and connection utilization before and after the change.\nCheck whether raw ingress stayed stable while forwarded traffic increased.",
+        "rationale": "Catalogue-backed step for configuration_regression.",
+        "recommendation_id": "rec_002",
+        "requires_human_approval": true,
+        "risk_level": "low",
+        "step_id": "compare-pre-post-metrics",
+        "step_type": "diagnostic",
+        "title": "Compare pre/post-change metrics"
       },
       {
         "analysis_run_id": "run_007",
@@ -452,40 +452,14 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_002",
         "incident_id": "inc_001",
-        "instructions": "Examine request volume, connection rate, and bandwidth during the incident window.\nIdentify abnormal spikes and the endpoints receiving the surge.",
-        "rationale": "Catalogue-backed step for dos_or_traffic_surge.",
-        "recommendation_id": "rec_005",
-        "requires_human_approval": true,
-        "risk_level": "low",
-        "step_id": "inspect-ingress-patterns",
-        "step_type": "diagnostic",
-        "title": "Inspect ingress traffic patterns"
-      },
-      {
-        "analysis_run_id": "run_007",
-        "hypothesis_id": "hyp_002",
-        "incident_id": "inc_001",
         "instructions": "Prepare a bounded edge rate-limit proposal for the offending traffic pattern.\nSubmit the proposal for human approval without applying it automatically.",
         "rationale": "Catalogue-backed step for dos_or_traffic_surge.",
-        "recommendation_id": "rec_006",
+        "recommendation_id": "rec_005",
         "requires_human_approval": true,
         "risk_level": "medium",
         "step_id": "propose-edge-rate-limit",
         "step_type": "remediation",
         "title": "Propose edge rate limiting"
-      },
-      {
-        "analysis_run_id": "run_007",
-        "hypothesis_id": "hyp_002",
-        "incident_id": "inc_001",
-        "instructions": "Aggregate traffic by source and compare it with the healthy baseline.\nDistinguish an external attack from a legitimate or internal traffic surge.",
-        "rationale": "Catalogue-backed step for dos_or_traffic_surge.",
-        "recommendation_id": "rec_007",
-        "requires_human_approval": true,
-        "risk_level": "low",
-        "step_id": "validate-source-distribution",
-        "step_type": "diagnostic",
-        "title": "Validate source distribution"
       }
     ],
     "hyp_003": [
@@ -493,22 +467,9 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_003",
         "incident_id": "inc_001",
-        "instructions": "Review active versus maximum connections and connection wait time.\nConfirm whether the connection pool was exhausted in the incident window.",
-        "rationale": "Catalogue-backed step for database_connection_exhaustion.",
-        "recommendation_id": "rec_008",
-        "requires_human_approval": true,
-        "risk_level": "low",
-        "step_id": "inspect-db-connections",
-        "step_type": "diagnostic",
-        "title": "Inspect database connections"
-      },
-      {
-        "analysis_run_id": "run_007",
-        "hypothesis_id": "hyp_003",
-        "incident_id": "inc_001",
         "instructions": "Inspect active connections, pool waits, and rejected leases.\nCompare connection utilization with the configured pool limit.",
         "rationale": "Catalogue-backed step for database_connection_exhaustion.",
-        "recommendation_id": "rec_009",
+        "recommendation_id": "rec_006",
         "requires_human_approval": true,
         "risk_level": "low",
         "step_id": "inspect-db-pool",
@@ -521,25 +482,12 @@
         "incident_id": "inc_001",
         "instructions": "Prepare a bounded pool-size adjustment for human review.\nInclude capacity impact and a validation plan; do not apply the setting automatically.",
         "rationale": "Catalogue-backed step for database_connection_exhaustion.",
-        "recommendation_id": "rec_010",
+        "recommendation_id": "rec_007",
         "requires_human_approval": true,
         "risk_level": "medium",
         "step_id": "propose-db-pool-tuning",
         "step_type": "remediation",
         "title": "Propose database pool tuning"
-      },
-      {
-        "analysis_run_id": "run_007",
-        "hypothesis_id": "hyp_003",
-        "incident_id": "inc_001",
-        "instructions": "Identify slow or high-frequency queries holding connections.\nCorrelate query latency with connection-pool saturation.",
-        "rationale": "Catalogue-backed step for database_connection_exhaustion.",
-        "recommendation_id": "rec_011",
-        "requires_human_approval": true,
-        "risk_level": "low",
-        "step_id": "review-query-latency",
-        "step_type": "diagnostic",
-        "title": "Review query latency"
       }
     ]
   },
@@ -649,7 +597,11 @@
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "ratio"
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_001": [
+          "CONNECTION_UTILIZATION_HIGH"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -1197,9 +1149,6 @@
         "unit": "ratio"
       },
       "hypothesis_relevance": {
-        "hyp_001": [
-          "CONNECTION_UTILIZATION_HIGH"
-        ],
         "hyp_003": [
           "DB_UTILIZATION_OBSERVED",
           "NORMAL_DB_UTILIZATION"

@@ -95,13 +95,14 @@ export function OverviewPage() {
   const [apiError, setApiError] = useState<string | null>(null);
   const latestStatusAt = useRef(0);
   const latestAnomaliesAt = useRef(0);
+  const latestIncidentsAt = useRef(0);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       const [nextStatus, anomalyEnvelope, incidentEnvelope] = await Promise.all([
-        simulatorApi.status(),
-        anomaliesApi.list(20),
-        incidentsApi.list(),
+        simulatorApi.status(signal),
+        anomaliesApi.list(20, signal),
+        incidentsApi.list(signal),
       ]);
       if (signal?.aborted) return;
 
@@ -115,7 +116,11 @@ export function OverviewPage() {
         latestAnomaliesAt.current = Number.isNaN(anomaliesAt) ? latestAnomaliesAt.current : anomaliesAt;
         setAnomalies(anomalyEnvelope.items.slice(0, 20));
       }
-      setIncidents(incidentEnvelope.items);
+      const incidentsAt = Date.parse(incidentEnvelope.generated_at);
+      if (Number.isNaN(incidentsAt) || incidentsAt >= latestIncidentsAt.current) {
+        latestIncidentsAt.current = Number.isNaN(incidentsAt) ? latestIncidentsAt.current : incidentsAt;
+        setIncidents(incidentEnvelope.items);
+      }
       setApiError(null);
     } catch (error) {
       if (!signal?.aborted) setApiError(displayError(error));
@@ -161,6 +166,13 @@ export function OverviewPage() {
   const totalQuarantined = useMemo(() => health.reduce((sum, source) => sum + source.quarantined, 0), [health]);
   const sourcesOnline = useMemo(() => health.filter((source) => source.status === "ready").length, [health]);
   const scenarioTriggered = status?.scenario_state === "triggering" || status?.scenario_state === "completed";
+  const actionableAnomalies = useMemo(
+    () => anomalies.filter((anomaly) => anomaly.score > 0),
+    [anomalies],
+  );
+  const canStart = status?.state !== "running" && status?.scenario_id == null;
+  const canStop = status?.state === "running" || status?.state === "paused" || status?.state === "ready";
+  const canTrigger = status?.scenario_id == null && ["running", "paused", "ready"].includes(status?.state ?? "");
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6 lg:p-8">
@@ -175,8 +187,8 @@ export function OverviewPage() {
 
       <section aria-label="Operations totals" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Events Accepted" value={totalAccepted} icon={<GaugeIcon className="h-5 w-5" />} accent="cyan" />
-        <StatCard label="Anomalies Detected" value={anomalies.length} icon={<ActivityIcon className="h-5 w-5" />} accent="purple" />
-        <StatCard label="Sources Online (of 5)" value={sourcesOnline} icon={<RadioIcon className="h-5 w-5" />} accent="emerald" />
+        <StatCard label="Actionable Anomalies" value={actionableAnomalies.length} icon={<ActivityIcon className="h-5 w-5" />} accent="purple" />
+        <StatCard label={`Sources Online (of ${health.length})`} value={sourcesOnline} icon={<RadioIcon className="h-5 w-5" />} accent="emerald" />
         <StatCard label="Quarantined Records" value={totalQuarantined} icon={<AlertTriangleIcon className="h-5 w-5" />} accent="amber" />
       </section>
 
@@ -197,14 +209,14 @@ export function OverviewPage() {
         <Card as="section" className="space-y-4 p-5">
           <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-text-primary">Simulator Controls</h2><p className="text-sm text-text-secondary">Actions are idempotent and disabled during transitions.</p></div><div className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1 text-sm text-text-secondary"><ClockIcon className="h-3.5 w-3.5" aria-hidden="true" />{formatDate(status?.virtual_clock)}</div></div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Button variant="primary" data-testid={TEST_IDS.simulatorStart} disabled={transitioning} aria-label="Start simulator" onClick={() => void runAction("start")}>Start</Button>
-            <Button variant="secondary" data-testid={TEST_IDS.simulatorStop} disabled={transitioning} aria-label="Stop simulator" onClick={() => void runAction("stop")}>Stop</Button>
+            <Button variant="primary" data-testid={TEST_IDS.simulatorStart} disabled={transitioning || !canStart} aria-label="Run baseline" onClick={() => void runAction("start")}>Run baseline</Button>
+            <Button variant="secondary" data-testid={TEST_IDS.simulatorStop} disabled={transitioning || !canStop} aria-label="Stop simulator" onClick={() => void runAction("stop")}>Stop</Button>
             <Button variant="secondary" data-testid={TEST_IDS.simulatorReset} disabled={transitioning} aria-label="Reset simulator" onClick={() => void runAction("reset")}>Reset</Button>
-            <Button variant="warning" data-testid={TEST_IDS.scenarioTrigger} disabled={transitioning} aria-label="Trigger selected scenario" onClick={() => void triggerScenario()}>Trigger scenario</Button>
+            <Button variant="warning" data-testid={TEST_IDS.scenarioTrigger} disabled={transitioning || !canTrigger} aria-label="Trigger selected scenario" onClick={() => void triggerScenario()}>Trigger scenario</Button>
           </div>
           <label className="block text-sm font-medium text-text-secondary">Scenario<select data-testid={TEST_IDS.scenarioSelect} value={preferredScenario} onChange={(event) => setPreferredScenario(event.target.value)} disabled={transitioning} aria-label="Choose scenario" className="mt-2 block w-full rounded-xl border border-border-strong bg-surface px-3 py-2 text-sm text-text-primary">{scenarios.map((scenario) => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}</select></label>
           <p data-testid={TEST_IDS.simulatorState} aria-live="polite" className="glass-inset flex items-center gap-2 px-4 py-3 text-sm text-text-secondary"><RadioIcon className="h-4 w-4 text-accent-cyan" aria-hidden="true" />State: <strong className="text-text-primary">{transitioning ? "transitioning" : status?.state ?? "loading"}</strong></p>
-          <p className="text-sm text-text-muted">{scenarioTriggered ? `Scenario active: ${status?.scenario_id}` : status?.scenario_state === "baseline" || status?.scenario_state === "baseline_complete" ? "Baseline running; no incident has been triggered yet." : "Scenario not triggered"}</p>
+          <p className="text-sm text-text-muted">{scenarioTriggered ? `Scenario completed: ${status?.scenario_id}` : status?.scenario_state === "baseline_complete" ? "Baseline complete; ready to trigger a scenario." : status?.scenario_state === "baseline" ? `Baseline replaying (${status.baseline_ticks_emitted}/${status.baseline_ticks_required}).` : "Run the baseline before triggering a scenario."}</p>
         </Card>
       </section>
 

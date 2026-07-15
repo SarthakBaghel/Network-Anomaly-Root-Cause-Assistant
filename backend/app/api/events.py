@@ -17,6 +17,7 @@ from app.contracts import (
     EventListResponse,
     IngestionMutationResponse,
     OverviewAnomaly,
+    QuarantineListResponse,
     RawIngestionRequest,
 )
 from app.config import settings
@@ -26,9 +27,10 @@ from app.ingestion.pipeline import event_to_contract
 from app.orchestration.publisher import OrchestrationPublisher
 
 from .dependencies import get_session
+from .error_responses import ERROR_RESPONSES
 
 
-router = APIRouter(tags=["events"])
+router = APIRouter(tags=["events"], responses=ERROR_RESPONSES)
 DatabaseSession = Annotated[Session, Depends(get_session)]
 
 
@@ -89,7 +91,16 @@ def _decode_event_cursor(
         ) from exc
 
 
-@router.post("/events", response_model=IngestionMutationResponse)
+@router.post(
+    "/events",
+    response_model=IngestionMutationResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        **ERROR_RESPONSES,
+        status.HTTP_200_OK: {"model": IngestionMutationResponse},
+        status.HTTP_202_ACCEPTED: {"model": IngestionMutationResponse},
+    },
+)
 def ingest_event(
     request: RawIngestionRequest,
     response: Response,
@@ -211,12 +222,12 @@ def list_anomalies(
     )
 
 
-@router.get("/quarantine", response_model=dict[str, Any])
-def list_quarantine(session: DatabaseSession) -> dict[str, Any]:
+@router.get("/quarantine", response_model=QuarantineListResponse)
+def list_quarantine(session: DatabaseSession) -> QuarantineListResponse:
     rows = EventRepository(session).list_quarantined()
-    return {
-        "generated_at": datetime.now(timezone.utc),
-        "items": [
+    return QuarantineListResponse(
+        generated_at=datetime.now(timezone.utc),
+        items=[
             {
                 "quarantine_id": row.id,
                 "received_at": row.received_at.replace(
@@ -227,4 +238,4 @@ def list_quarantine(session: DatabaseSession) -> dict[str, Any]:
             }
             for row in rows
         ],
-    }
+    )

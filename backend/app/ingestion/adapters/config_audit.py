@@ -12,4 +12,4 @@ class ConfigAuditAdapter:
             record_id, timestamp, entity = payload["change_id"], payload["changed_at"], payload["target_entity_id"]
         except KeyError as exc:
             raise AdapterError("CONFIG_AUDIT_MAPPING_ERROR", f"missing field: {exc}") from exc
-        return CanonicalEvent(event_id=event_id(self.source_name, record_id), timestamp=timestamp, ingested_at=ingested_at(raw, timestamp), entity_id=entity, modality="config_change", event_type="CONFIG_VALUE_CHANGED", severity=0, trace_or_session_id=trace_id(raw, payload), source=self.source_name, source_record_id=record_id, schema_version="1.0", quality_flags=simulated_flags(raw), raw_payload={**payload, **metadata})
+        return CanonicalEvent(event_id=event_id(self.source_name, record_id), timestamp=timestamp, ingested_at=ingested_at(raw, timestamp), entity_id=entity, modality="config_change", event_type="CONFIG_VALUE_CHANGED", severity=0, trace_or_session_id=trace_id(raw, payload), source=self.source_name, source_record_id=record_id, schema_version="1.0", quality_flags=simulated_flags(raw), raw_payload={**payload, **metadata, "context_only": True})

@@ -40,7 +40,9 @@ class IncidentRepository:
 
     def update_last_event_at(self, incident_id: str, ts: datetime) -> None:
         row = self._get_or_raise(incident_id)
-        if ts > row.last_event_at:
+        ts_naive = ts.replace(tzinfo=None) if ts.tzinfo is not None else ts
+        last_naive = row.last_event_at.replace(tzinfo=None) if row.last_event_at.tzinfo is not None else row.last_event_at
+        if ts_naive > last_naive:
             row.last_event_at = ts
             self.session.flush()
 
@@ -326,4 +328,29 @@ class AnalysisRunRepository:
             .where(models.AnalysisRun.incident_id == incident_id)
             .order_by(models.AnalysisRun.revision.asc())
         )
+        return list(self.session.execute(stmt).scalars())
+
+
+class HistoricalIncidentRepository:
+    """HistoricalIncident repository for similarity matching (blueprint §20.2)."""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def create(self, row: models.HistoricalIncident) -> models.HistoricalIncident:
+        self.session.add(row)
+        self.session.flush()
+        return row
+
+    def get_by_id(self, historical_id: str) -> models.HistoricalIncident | None:
+        return self.session.get(models.HistoricalIncident, historical_id)
+
+    def get_by_fingerprint(self, fingerprint: str) -> models.HistoricalIncident | None:
+        stmt = select(models.HistoricalIncident).where(
+            models.HistoricalIncident.fingerprint == fingerprint
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def list_all(self) -> list[models.HistoricalIncident]:
+        stmt = select(models.HistoricalIncident)
         return list(self.session.execute(stmt).scalars())

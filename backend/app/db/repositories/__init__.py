@@ -8,7 +8,11 @@ from .anomaly_repository import AnomalyRepository
 from .audit_repository import AUDIT_ACTION_CODES, AuditRepository
 from .event_repository import EventRepository
 from .hypothesis_repository import EvidenceRepository, HypothesisRepository
-from .incident_repository import AnalysisRunRepository, IncidentRepository
+from .incident_repository import (
+    AnalysisRunRepository,
+    HistoricalIncidentRepository,
+    IncidentRepository,
+)
 from .review_repository import ReviewRepository
 
 __all__ = [
@@ -18,6 +22,7 @@ __all__ = [
     "AuditRepository",
     "EvidenceRepository",
     "EventRepository",
+    "HistoricalIncidentRepository",
     "HypothesisRepository",
     "IncidentRepository",
     "ReviewRepository",

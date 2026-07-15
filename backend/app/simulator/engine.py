@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import timedelta
 
 from app.config import settings
-from app.simulator.ingestion import AdapterValidationSink, IngestionSink
+from app.simulator.ingestion import IngestionSink, PersistentIngestionSink
 from app.simulator.timeline import SCENARIO_ID, TRACE_ID, TRIGGER_TIME, baseline_groups, scenario_groups
 
 SIMULATOR_REAL_TICK_SECONDS = 0.05
@@ -15,7 +15,7 @@ class SimulatorStateError(RuntimeError):
 
 class SimulatorEngine:
     def __init__(self, ingestion: IngestionSink | None = None, *, background: bool = True) -> None:
-        self.ingestion = ingestion or AdapterValidationSink()
+        self.ingestion = ingestion or PersistentIngestionSink()
         self.background = background
         self._baseline = baseline_groups()
         self._lock = threading.RLock()
@@ -74,6 +74,10 @@ class SimulatorEngine:
             self.virtual_clock = TRIGGER_TIME - timedelta(minutes=5)
             self.counters.clear()
             return self.status()
+
+    def reset_state(self) -> None:
+        """Satisfy SimulatorResetHook protocol."""
+        self.reset()
 
     def tick(self) -> dict:
         with self._lock:
@@ -161,3 +165,7 @@ class SimulatorEngine:
 
 
 simulator_engine = SimulatorEngine()
+
+# Register the simulator engine with the reset service
+from app.orchestration.reset_service import reset_service
+reset_service.register_simulator(simulator_engine)

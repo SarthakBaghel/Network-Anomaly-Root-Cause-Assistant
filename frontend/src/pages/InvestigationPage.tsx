@@ -345,7 +345,11 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
           <div
             role="status"
             className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-900"
-            data-testid={TEST_IDS.staleAnalysisBanner}
+            data-testid={
+              banner.includes("Analysis updated")
+                ? TEST_IDS.staleAnalysisBanner
+                : TEST_IDS.genericBanner
+            }
           >
             <span aria-hidden="true">ℹ️</span> {banner}
           </div>
@@ -877,6 +881,8 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 </p>
               </div>
               <button
+                data-testid={TEST_IDS.evidenceCloseModal}
+                aria-label="Close event details modal"
                 onClick={closeEventModal}
                 className="rounded-full bg-slate-100 px-3 py-2 text-slate-700"
               >

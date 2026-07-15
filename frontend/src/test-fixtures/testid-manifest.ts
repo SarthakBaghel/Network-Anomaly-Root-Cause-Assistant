@@ -10,10 +10,12 @@ export const TEST_IDS = {
   timelinePanel: "timeline-panel",
   auditTrailPanel: "audit-trail-panel",
   staleAnalysisBanner: "stale-analysis-banner",
+  genericBanner: "generic-banner",
   hypothesisConfirm: "hypothesis-confirm-btn",
   hypothesisReject: "hypothesis-reject-btn",
   evidenceRequest: "evidence-request-btn",
   evidenceItem: "evidence-item",
+  evidenceCloseModal: "evidence-close-modal-btn",
 } as const;
 
 export const incidentRowTestId = (incidentId: string) =>

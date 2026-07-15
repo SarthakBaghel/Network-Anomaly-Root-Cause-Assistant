@@ -142,6 +142,8 @@ def _clear_demo_rows(session: Session) -> None:
     Preserved tables: entities, topology_edges, historical_incidents.
     This is the ONLY allowed bulk-purge path (blueprint §8.2).
     """
+    from sqlalchemy.exc import OperationalError
+
     # Disable FK checks temporarily for cascade safety
     session.execute(text("PRAGMA foreign_keys=OFF"))
     try:
@@ -157,12 +159,20 @@ def _clear_demo_rows(session: Session) -> None:
         session.execute(delete(models.IncidentEvent))
         session.execute(delete(models.Incident))
         session.execute(delete(models.Anomaly))
+        try:
+            with session.begin_nested():
+                session.execute(delete(models.EwmaBaseline))  # Adaptive baselines reset with demo state
+        except OperationalError:
+            # Table absent in pre-migration DB — safe to skip during test/dev
+            pass
         session.execute(delete(models.CollapsedEventGroup))
         session.execute(delete(models.Event))
         session.execute(delete(models.QuarantinedEvent))
         session.flush()
     finally:
         session.execute(text("PRAGMA foreign_keys=ON"))
+
+
 
 
 def _reload_topology(session: Session) -> None:

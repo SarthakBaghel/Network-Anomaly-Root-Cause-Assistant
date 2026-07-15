@@ -1,20 +1,97 @@
 schema_version: "1.0"
-version: detector-rules-1.0
+version: detector-rules-1.1
 log_rules:
+  # ── Golden scenario rules (frozen, must remain stable) ──────────────────
   - template_id: payment_upstream_timeout
     event_code: UPSTREAM_CONNECTION_TIMEOUT
     anomaly_type: UPSTREAM_TIMEOUT
     normalized_severity: 0.88
     anomaly_score: 0.86
     repeatable: true
+
   - template_id: auth_certificate_expiry
     event_code: CERTIFICATE_EXPIRY_WARNING
     anomaly_type: CERTIFICATE_MAINTENANCE_WARNING
     normalized_severity: 0.35
     anomaly_score: 0.30
     repeatable: true
+
+  # ── Connection and network failure patterns ──────────────────────────────
+  - template_id: connection_refused
+    event_code: CONN_REFUSED
+    anomaly_type: CONNECTION_REFUSED
+    normalized_severity: 0.87
+    anomaly_score: 0.85
+    repeatable: true
+
+  - template_id: packet_loss_anomaly
+    event_code: PACKET_LOSS_WARNING
+    anomaly_type: NETWORK_PACKET_LOSS
+    normalized_severity: 0.65
+    anomaly_score: 0.76
+    repeatable: true
+
+  - template_id: dns_resolution_failure
+    event_code: DNS_RESOLUTION_FAILED
+    anomaly_type: DNS_ANOMALY
+    normalized_severity: 0.85
+    anomaly_score: 0.87
+    repeatable: true
+
+  # ── Resource saturation patterns (GAIA MicroSS + HDFS vocabulary) ───────
+  - template_id: resource_saturation_event
+    event_code: RESOURCE_SATURATION
+    anomaly_type: RESOURCE_SATURATION_ANOMALY
+    normalized_severity: 0.82
+    anomaly_score: 0.82
+    repeatable: false
+
+  - template_id: network_latency_spike_event
+    event_code: NETWORK_LATENCY_SPIKE
+    anomaly_type: LATENCY_ANOMALY
+    normalized_severity: 0.80
+    anomaly_score: 0.84
+    repeatable: true
+
+  - template_id: db_pool_exhausted
+    event_code: DB_CONNECTION_POOL_EXHAUSTED
+    anomaly_type: DATABASE_CONNECTION_EXHAUSTED
+    normalized_severity: 0.90
+    anomaly_score: 0.88
+    repeatable: false
+
+  - template_id: connection_pool_pressure
+    event_code: CONNECTION_POOL_PRESSURE
+    anomaly_type: CONNECTION_POOL_ANOMALY
+    normalized_severity: 0.72
+    anomaly_score: 0.78
+    repeatable: true
+
+  # ── Distributed system failures (Loghub HDFS vocabulary) ────────────────
+  - template_id: hdfs_datanode_failure
+    event_code: HDFS_DATANODE_FAILURE
+    anomaly_type: DISTRIBUTED_SYSTEM_FAILURE
+    normalized_severity: 0.92
+    anomaly_score: 0.90
+    repeatable: false
+
+  # ── Rate limiting and configuration ─────────────────────────────────────
+  - template_id: rate_limit_breached
+    event_code: RATE_LIMIT_THRESHOLD_BREACHED
+    anomaly_type: RATE_LIMIT_ANOMALY
+    normalized_severity: 0.78
+    anomaly_score: 0.80
+    repeatable: true
+
+  # ── Recovery / clearance marker (GAIA) ──────────────────────────────────
+  - template_id: clearance_marker
+    event_code: CLEARANCE
+    anomaly_type: RECOVERY_MARKER
+    normalized_severity: 0.20
+    anomaly_score: 0.20
+    repeatable: true
+
 alert_severity:
   info: 0.25
   warning: 0.60
   critical: 0.95
-

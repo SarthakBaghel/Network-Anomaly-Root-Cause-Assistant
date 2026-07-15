@@ -356,7 +356,7 @@
 
 ### Phase 0 — Handoff Fixtures First (Hours 0–2)
 
-- [ ] **P3-00**: Build blueprint v1.4's provenance-safe bundle under `backend/app/fixtures/`:
+- [x] **P3-00**: Build blueprint v1.4's provenance-safe bundle under `backend/app/fixtures/`:
   - `reference_profiles/network_profile.json` and `reference_profiles/log_templates.yaml`
   - `scenarios/gateway_rate_limit/inputs/{metrics,logs,alerts,config_changes}.jsonl`; every referenced entity must exist in P4's topology
   - `scenarios/gateway_rate_limit/provenance.json` with source file/hash, derivation script version, seed, generated-at value, and output hashes
@@ -364,7 +364,7 @@
   - `scripts/build_network_profile.py` reproduces byte-identical outputs from the checked-in source profile and seed
   - Add a provenance/ID/hash manifest test; coordinate with P1's runtime-import guard
 
-- [ ] **P3-01**: Create `backend/tests/fixtures/source_adapters/` — freeze the four raw source-schema shapes from blueprint §9.1.1 exactly:
+- [x] **P3-01**: Create `backend/tests/fixtures/source_adapters/` — freeze the four raw source-schema shapes from blueprint §9.1.1 exactly:
   - `valid_prometheus_sample.json` — Prometheus metric sample
   - `invalid_prometheus_sample.json` — missing `entity_id` in `labels`
   - `valid_syslog_record.json` — syslog with `trace_id`
@@ -374,7 +374,7 @@
   - `valid_config_audit.json` — with `change_ticket`
   - `invalid_config_audit.json` — missing required `target_entity_id` (do not invent an `old_value != new_value` validation rule unless it is approved as a contract change)
 
-- [ ] **P3-02**: Create `backend/tests/fixtures/golden_events.jsonl` from the raw reference bundle — the complete baseline stream (at least 20 samples for every scored metric signal) plus all events in the nine post-trigger timestamp groups from §10.3, with exact:
+- [x] **P3-02**: Create `backend/tests/fixtures/golden_events.jsonl` from the raw reference bundle — the complete baseline stream (at least 20 samples for every scored metric signal) plus all events in the nine post-trigger timestamp groups from §10.3, with exact:
   - `event_id` (deterministic from `SIMULATOR_SEED`)
   - `source_record_id`
   - `entity_id`
@@ -387,14 +387,14 @@
 
 ### Phase 1 — Simulator (Hours 1–5)
 
-- [ ] **P3-03**: Create `backend/app/simulator/engine.py` — deterministic seed-based emitter:
+- [x] **P3-03**: Create `backend/app/simulator/engine.py` — deterministic seed-based emitter:
   - `SIMULATOR_SEED = 20260714`
   - Emits baseline events (at least 20 metric samples per signal over 5 minutes)
   - Supports `start`, `stop`, `reset`, `pause`, `resume`
   - Virtual clock advancing `SIMULATOR_METRIC_INTERVAL_SECONDS` per tick
   - Never writes directly to analysis tables — always calls ingestion
 
-- [ ] **P3-04**: Create four distinct emitter classes in `backend/app/simulator/emitters/`:
+- [x] **P3-04**: Create four distinct emitter classes in `backend/app/simulator/emitters/`:
   - `PrometheusEmitter` — emits metric samples with `sample_id`, `observed_at`, `metric`, `value`, `unit`, `labels`
   - `SyslogEmitter` — emits log records with `record_id`, `host`, `facility`, `level`, `code`, `message`, `trace_id`
   - `AlertmanagerEmitter` — emits alerts with `fingerprint`, `startsAt`, `status`, `labels`, `annotations`
@@ -402,7 +402,7 @@
   - Each emitter has a distinct source name (e.g. `simulator.prometheus`) and different payload shape
   - Every raw record carries a common transport envelope containing `scenario_id`, `emitted_at`, and provenance metadata; the payload shape inside that envelope remains source-specific
 
-- [ ] **P3-05**: Implement the golden scenario timeline exactly (blueprint §10.3):
+- [x] **P3-05**: Implement the golden scenario timeline exactly (blueprint §10.3):
   ```
   T+0s:   api-gateway-01  config_change  rate_limit.enabled: true→false  (change_ticket: CHG-DEMO-001)
   T+30s:  api-gateway-01  metric         forwarded_requests_per_second=7800 (was 2400)
@@ -419,7 +419,7 @@
   ```
   Also emit: raw ingress metric for `api-gateway-01` staying **stable** at all times (conflicting DoS evidence).
 
-- [ ] **P3-06**: Implement the simulator engine service and handlers for the API routes below (blueprint §10.2). P3 owns emitter lifecycle/state and the deterministic reset hook; P1 owns the cross-domain `ResetService`, lock, DB clearing, and final reset route wiring:
+- [x] **P3-06**: Implement the simulator engine service and handlers for the API routes below (blueprint §10.2). P3 owns emitter lifecycle/state and the deterministic reset hook; P1 owns the cross-domain `ResetService`, lock, DB clearing, and final reset route wiring:
   - `POST /api/v1/simulator/start`
   - `POST /api/v1/simulator/stop`
   - `POST /api/v1/simulator/reset`
@@ -428,7 +428,7 @@
 
 ### Phase 2 — Ingestion & Normalization (Hours 3–8)
 
-- [ ] **P3-07**: Create `backend/app/ingestion/adapters/` — one adapter module per source, each implementing:
+- [x] **P3-07**: Create `backend/app/ingestion/adapters/` — one adapter module per source, each implementing:
   ```python
   class SourceAdapter(Protocol):
       source_name: str
@@ -442,7 +442,7 @@
   - Canonical source severity mapping is frozen: metric=`0.0`, config=`0.0`, alerts use the alert-severity catalogue, logs use the log-level/template catalogue
   - Simulator inputs add `SIMULATED` and provenance; non-simulator inputs do not
 
-- [ ] **P3-08**: Create `backend/app/ingestion/pipeline.py` — shared validation pipeline (blueprint §9.2):
+- [x] **P3-08**: Create `backend/app/ingestion/pipeline.py` — shared validation pipeline (blueprint §9.2):
   1. Receive raw event from adapter
   2. Validate modality-specific fields (metric requires `signal_name/value/unit`)
   3. Normalize timestamp → UTC
@@ -454,14 +454,14 @@
   9. Persist accepted representative event
   10. Emit accepted event to detection
 
-- [ ] **P3-09**: Implement ingestion endpoints:
+- [x] **P3-09**: Implement ingestion endpoints:
   - `POST /api/v1/events` → `201` new, `200` idempotent/collapsed, `202` quarantined
   - `POST /api/v1/events/batch` → max 100 items, ordered results, partial success allowed; at most one analysis recompute after whole batch
   - `GET /api/v1/events?limit=&cursor=&modality=&entity_id=` — cursor: `(timestamp DESC, id DESC)` base64url-encoded
   - `GET /api/v1/events/{event_id}` — raw-record drill-down
   - `GET /api/v1/quarantine` — view quarantined records
 
-- [ ] **P3-10**: Write `backend/tests/contract/test_adapters.py` — per adapter (blueprint §25.1):
+- [x] **P3-10**: Write `backend/tests/contract/test_adapters.py` — per adapter (blueprint §25.1):
   - Asserts resulting canonical field values (not just "validation succeeded")
   - Tests quarantine reason codes for every invalid fixture
   - Tests alarm-storm collapse increments count and preserves first/last timestamps
@@ -472,14 +472,14 @@
 
 ### Phase 3 — Anomaly Detection (Hours 6–10)
 
-- [ ] **P3-11**: Create `backend/app/detection/detector.py` — `Detector` protocol from blueprint §11.1:
+- [x] **P3-11**: Create `backend/app/detection/detector.py` — `Detector` protocol from blueprint §11.1:
   ```python
   class Detector(Protocol):
       detector_id: str
       def evaluate(self, event: CanonicalEvent, context: DetectionContext) -> list[AnomalyRecord]: ...
   ```
 
-- [ ] **P3-12**: Implement `RollingZscoreDetector` (blueprint §11.2, §11.3):
+- [x] **P3-12**: Implement `RollingZscoreDetector` (blueprint §11.2, §11.3):
   - Rolling window: `DETECTOR_WINDOW_SECONDS` (300s)
   - Requires `DETECTOR_MIN_BASELINE_POINTS` (20) before firing
   - Z-score threshold: `METRIC_ZSCORE_THRESHOLD` (3.0)
@@ -489,15 +489,15 @@
   - Zero-variance baselines use static threshold only
   - Use `pandas` DataFrame with `rolling().mean()` + `rolling().std()` for efficiency
 
-- [ ] **P3-13**: Implement `LogRuleDetector` — maps `event_type` + log level → anomaly type and score via `detector_rules.yaml`. Known patterns: `UPSTREAM_CONNECTION_TIMEOUT`, `UPSTREAM_TIMEOUT`, `CONN_REFUSED`, fatal/error patterns.
+- [x] **P3-13**: Implement `LogRuleDetector` — maps `event_type` + log level → anomaly type and score via `detector_rules.yaml`. Known patterns: `UPSTREAM_CONNECTION_TIMEOUT`, `UPSTREAM_TIMEOUT`, `CONN_REFUSED`, fatal/error patterns.
 
-- [ ] **P3-14**: Implement `AlertSeverityDetector` — normalized alert severity → anomaly score (pass-through). Collapsed duplicate alerts do not create duplicate anomalies.
+- [x] **P3-14**: Implement `AlertSeverityDetector` — normalized alert severity → anomaly score (pass-through). Collapsed duplicate alerts do not create duplicate anomalies.
 
-- [ ] **P3-15**: Implement `ConfigChangeMarker` — always sets `context_only=True`, `can_open_incident=False`. Records a config event occurred; never opens incidents or becomes a root cause on its own.
+- [x] **P3-15**: Implement `ConfigChangeMarker` — always sets `context_only=True`, `can_open_incident=False`. Records a config event occurred; never opens incidents or becomes a root cause on its own.
 
-- [ ] **P3-16**: Create `backend/tests/fixtures/golden_anomalies.json` — freeze the exact source-event→detector-output manifest, including detector ID, window, score, `context_only`, and `can_open_incident`. The golden scenario has nine actionable anomaly records before the normal DB metric and auth warning; document the config-change marker separately as a non-opening context signal so nobody adds a second gateway alert merely to reach a count. This is the handoff artifact for Person 4.
+- [x] **P3-16**: Create `backend/tests/fixtures/golden_anomalies.json` — freeze the exact source-event→detector-output manifest, including detector ID, window, score, `context_only`, and `can_open_incident`. The golden scenario has nine actionable anomaly records before the normal DB metric and auth warning; document the config-change marker separately as a non-opening context signal so nobody adds a second gateway alert merely to reach a count. This is the handoff artifact for Person 4.
 
-- [ ] **P3-17**: Write `backend/tests/unit/test_detection.py`:
+- [x] **P3-17**: Write `backend/tests/unit/test_detection.py`:
   - Z-score threshold firing and minimum baseline requirement
   - Score formula producing `0.91` for the golden example: `z=4.25`, `baseline=2400`, `observed=7800`, `threshold=5000`
   - Context-only config marker cannot open incident (`can_open_incident=False`)
@@ -672,7 +672,7 @@
 
 ### Phase 0 — Playbook Catalogue (Hours 0–2, fully independent)
 
-- [ ] **P5-01**: Create `backend/app/playbooks/engine.py` — lookup service against `fixtures/playbooks.yaml`:
+- [x] **P5-01**: Create `backend/app/playbooks/engine.py` — lookup service against `fixtures/playbooks.yaml`:
   ```python
   def get_recommendations(hypothesis_type: str, entity_type: str) -> list[PlaybookRecommendation]:
       # Returns only whitelisted catalogue-backed steps
@@ -680,20 +680,20 @@
   ```
   Each step from the YAML must have: `step_id`, `title`, `step_type (diagnostic|remediation)`, `applicable_hypothesis_types`, `applicable_entity_types`, `preconditions`, `instructions`, `risk_level`, `rollback_note`, `requires_human_approval: true`
 
-- [ ] **P5-02**: Populate `fixtures/playbooks.yaml` with steps covering the golden scenario:
+- [x] **P5-02**: Populate `fixtures/playbooks.yaml` with steps covering the golden scenario:
   - `inspect-config-diff` — diagnostic: compare current vs prior rate-limit config
   - `compare-pre-post-metrics` — diagnostic: chart forwarded RPS before/after change
   - `propose-config-rollback` — remediation: re-enable rate limiter (risk_level: low, requires_human_approval: true)
   - Add steps for `dos_or_traffic_surge` and `database_connection_exhaustion` candidates too
 
-- [ ] **P5-03**: Write `backend/tests/unit/test_playbook.py`:
+- [x] **P5-03**: Write `backend/tests/unit/test_playbook.py`:
   - Every hypothesis type in `hypotheses.yaml` has at least one matching playbook step
   - No playbook step sets `requires_human_approval: false`
   - Unknown hypothesis type returns empty list, not an error
 
 ### Phase 1 — Evidence Collector (Hours 1–6, uses `golden_expected_analysis.json`)
 
-- [ ] **P5-04**: Create `backend/app/evidence/collector.py` (blueprint §15); `backend/app/rca/` remains P4-owned:
+- [x] **P5-04**: Create `backend/app/evidence/collector.py` (blueprint §15); `backend/app/rca/` remains P4-owned:
   ```python
   def collect_evidence(
       hypothesis: Hypothesis,
@@ -712,7 +712,7 @@
 
   **Evidence coverage:** `available / expected` — extra records do not increase coverage above expected.
 
-- [ ] **P5-05**: Fill the feature implementation in P1's `backend/app/api/incidents.py` router skeleton (blueprint §18.2). P1 owns the router/OpenAPI shell; P5 owns investigation aggregation, evidence/recommendation/explanation reads, review, and audit behavior. Coordinate list/summary queries with P4's incident repository rather than duplicating incident logic:
+- [x] **P5-05**: Fill the feature implementation in P1's `backend/app/api/incidents.py` router skeleton (blueprint §18.2). P1 owns the router/OpenAPI shell; P5 owns investigation aggregation, evidence/recommendation/explanation reads, review, and audit behavior. Coordinate list/summary queries with P4's incident repository rather than duplicating incident logic:
   - `GET /api/v1/incidents` — list with filters + cursor pagination
   - `GET /api/v1/incidents/{id}` — summary
   - **`GET /api/v1/incidents/{id}/investigation`** — the frontend's canonical page contract (§18.2 envelope)
@@ -726,9 +726,9 @@
   - `POST /api/v1/incidents/{id}/recompute`
   - `GET /api/v1/incidents/{id}/audit`
 
-- [ ] **P5-06**: Create `backend/tests/fixtures/golden_investigation_response.json` immediately from P1's contract examples plus P3/P4 static fixtures. Validate that every run-scoped nested object has the envelope's `analysis_run_id`, every referenced ID resolves, topology is complete, and excluded auth data is labelled excluded rather than evidence. **This is the handoff artifact for Person 2.** Later runtime serialization must reproduce its shape without contract drift.
+- [x] **P5-06**: Create `backend/tests/fixtures/golden_investigation_response.json` immediately from P1's contract examples plus P3/P4 static fixtures. Validate that every run-scoped nested object has the envelope's `analysis_run_id`, every referenced ID resolves, topology is complete, and excluded auth data is labelled excluded rather than evidence. **This is the handoff artifact for Person 2.** Later runtime serialization must reproduce its shape without contract drift.
 
-- [ ] **P5-07**: Write `backend/tests/unit/test_evidence_collector.py`:
+- [x] **P5-07**: Write `backend/tests/unit/test_evidence_collector.py`:
   - Golden scenario: `configuration_regression` hypothesis has ≥2 `observed` items, ≥1 `correlated`, ≥1 `conflicting`, ≥1 `missing`
   - `waf_decision_logs` expected evidence key is unsatisfied → produces exactly one missing EvidenceItem with catalogue collection-request template
   - `conflicting` items produced by ranker conflict patterns agree with the evidence score reduction (same `reason_code`)
@@ -736,7 +736,7 @@
 
 ### Phase 2 — Deterministic Explanation (Hours 5–9)
 
-- [ ] **P5-08**: Create `backend/app/explanation/template_engine.py` — Jinja2-based deterministic explanation (blueprint §17.1, ALWAYS available):
+- [x] **P5-08**: Create `backend/app/explanation/template_engine.py` — Jinja2-based deterministic explanation (blueprint §17.1, ALWAYS available):
   - Takes `Hypothesis` + `EvidenceItem` list + playbook recommendations
   - Produces valid `ExplanationOutput` matching blueprint §17.3 contract
   - Wording rule: always "probable root cause" in summary — never "confirmed" (reserved for human review only)
@@ -748,7 +748,7 @@
   - Instructs LLM to return JSON matching §17.3 contract exactly
   - LLM may NOT change scores, ranks, or create evidence
 
-- [ ] **P5-10**: Create `backend/app/explanation/validator.py` — backend validation (blueprint §17.4):
+- [x] **P5-10**: Create `backend/app/explanation/validator.py` — backend validation (blueprint §17.4):
   ```python
   def validate_explanation(output: dict, run: AnalysisRun, ...) -> ExplanationOutput | None:
       # 1. JSON matches §17.3 schema
@@ -760,14 +760,14 @@
       # Return None if unrecoverable → caller writes template fallback
   ```
 
-- [ ] **P5-11**: Create `backend/app/explanation/service.py` — orchestrator (blueprint §17.1):
+- [x] **P5-11**: Create `backend/app/explanation/service.py` — orchestrator (blueprint §17.1):
   1. Always generate the template explanation first and return its rows to P1's atomic publisher; this service does not commit its own analysis transaction
   2. If `EXPLANATION_MODE=llm`: attempt LLM generation → validate → retry once → else keep template
   3. If stale `analysis_run_id` when optional LLM result arrives, discard it
   4. In normal `template` mode, using the template is not a fallback. Write `EXPLANATION_FALLBACK_USED` only when LLM mode was attempted and the result failed, was invalid, or became stale
   5. Explanation rows are appended, not replaced
 
-- [ ] **P5-12**: Write `backend/tests/unit/test_explanation.py`:
+- [x] **P5-12**: Write `backend/tests/unit/test_explanation.py`:
   - Template explanation always produces valid output even if all optional fields are absent
   - LLM output with fabricated evidence_id → claim flagged; entire output falls back to template
   - LLM output with wrong `analysis_run_id` → discarded
@@ -814,9 +814,9 @@
 
 - [x] Person 1: API stubs return example payloads ✅ **DONE** — 25/25 tests pass, milestone validator green
 - [ ] Person 2: Route/test-ID manifest committed; investigation shell renders P5's mock response
-- [ ] Person 3: Raw scenario/provenance bundle and source fixtures frozen; initial golden events/anomalies validate
-- [ ] Person 4: Full topology + static expected analysis committed; invalid edges fail fast; typed traversal smoke test passes
-- [ ] Person 5: Playbook catalogue and mock investigation response validate; template explanation produces valid output
+- [x] Person 3: Raw scenario/provenance bundle and source fixtures frozen; initial golden events/anomalies validate ✅ **DONE** — `golden_events.jsonl`, `golden_anomalies.json`, all scenario input JSONLs, `provenance.json` committed and validated
+- [x] Person 4: Full topology + static expected analysis committed; invalid edges fail fast; typed traversal smoke test passes ✅ **DONE** — `topology.json`, `hypotheses.yaml`, `symptom_families.yaml`, `golden_expected_analysis.json` committed and validated
+- [x] Person 5: Playbook catalogue and mock investigation response validate; template explanation produces valid output ✅ **DONE** — `playbooks.yaml`, `golden_investigation_response.json` committed; template engine verified
 
 ### Milestone 1 — Event Pipeline (~Hour 6)
 **Exit gate:** Per-source health and counters visible; baseline running; quarantine and collapse demonstrated; `golden_anomalies.json` produced and consumer tests pass.
@@ -851,16 +851,16 @@ If a producer is late, consumers continue with the last schema-valid static fixt
 
 Every PR to `main` must pass ALL of these from a clean checkout:
 
-- [ ] `bootstrap.sh` succeeds from locked deps; no undeclared local packages
-- [ ] Fresh DB upgrades through all migrations; `/api/v1/ready` passes after fixture loading
-- [ ] Backend unit + contract + integration + catalogue-validation + golden-score tests pass
-- [ ] OpenAPI + generated frontend types regenerated; no uncommitted diff
-- [ ] Frontend type-check + component tests + production build pass
-- [ ] Golden fixtures validate: stable IDs, timestamps, analysis-run consistency, ranking, topology direction
-- [ ] Scenario bundle validates: source/profile hashes, licences/provenance, deterministic rebuild, and raw-to-canonical replay
-- [ ] Static guard proves runtime packages cannot reference `expected`, `ground_truth`, or test golden-output files
-- [ ] Offline/template explanation path + simulator reset smoke test pass
-- [ ] Secret scanning: no API tokens, datasets, databases, build output, or oversized payloads
+- [x] `bootstrap.sh` succeeds from locked deps; no undeclared local packages
+- [x] Fresh DB upgrades through all migrations; `/api/v1/ready` passes after fixture loading
+- [x] Backend unit + contract + integration + catalogue-validation + golden-score tests pass
+- [ ] OpenAPI + generated frontend types regenerated; no uncommitted diff ← **P2 scope**
+- [ ] Frontend type-check + component tests + production build pass ← **P2 scope**
+- [x] Golden fixtures validate: stable IDs, timestamps, analysis-run consistency, ranking, topology direction
+- [x] Scenario bundle validates: source/profile hashes, licences/provenance, deterministic rebuild, and raw-to-canonical replay
+- [x] Static guard proves runtime packages cannot reference `expected`, `ground_truth`, or test golden-output files
+- [x] Offline/template explanation path + simulator reset smoke test pass
+- [x] Secret scanning: no API tokens, datasets, databases, build output, or oversized payloads
 
 ---
 

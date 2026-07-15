@@ -46,14 +46,21 @@ class RollingZscoreDetector:
     def evaluate(self, event: CanonicalEvent, context: DetectionContext) -> list[AnomalyRecord]:
         if event.modality.value != "metric" or event.signal_name is None or event.signal_value is None:
             return []
-        safety_threshold = context.safety_thresholds.get(event.signal_name)
+        # Resolve proxy/alias signal name to canonical monitored name (BLUEPRINT §3.3.4)
+        effective_signal = context.signal_aliases.get(event.signal_name, event.signal_name)
+        is_proxy = effective_signal != event.signal_name
+        safety_threshold = context.safety_thresholds.get(effective_signal)
         if safety_threshold is None or safety_threshold <= 0:
             return []
         samples = [
             item for item in context.history
             if item.modality.value == "metric"
             and item.entity_id == event.entity_id
-            and item.signal_name == event.signal_name
+            and (
+                # Match on original signal name OR its resolved canonical name
+                item.signal_name == event.signal_name
+                or (is_proxy and item.signal_name == effective_signal)
+            )
             and event.timestamp.timestamp() - settings.detector_window_seconds <= item.timestamp.timestamp() < event.timestamp.timestamp()
             and item.signal_value is not None
         ]
@@ -68,7 +75,7 @@ class RollingZscoreDetector:
         static_fired = observed >= safety_threshold
         z_score = None if pd.isna(baseline_std) or baseline_std == 0 else (observed - baseline_mean) / baseline_std
         z_fired = (
-            event.signal_name not in STATIC_ONLY_SIGNALS
+            effective_signal not in STATIC_ONLY_SIGNALS
             and z_score is not None
             and abs(z_score) >= settings.metric_zscore_threshold
         )
@@ -77,7 +84,7 @@ class RollingZscoreDetector:
         score = metric_score(z_score, observed, safety_threshold, static_fired=static_fired)
         if score < settings.anomaly_threshold:
             return []
-        anomaly_type = ANOMALY_TYPES.get(event.signal_name, f"{event.event_type}_ANOMALY")
+        anomaly_type = ANOMALY_TYPES.get(effective_signal, f"{event.event_type}_ANOMALY")
         features = {
             "source_record_id": event.source_record_id,
             "z_score": None if z_score is None else round(z_score, 4),
@@ -86,9 +93,19 @@ class RollingZscoreDetector:
             "observed": observed,
             "safety_threshold": safety_threshold,
             "baseline_points": len(samples),
+            "fired_reason": "z_score" if z_fired else "static_threshold",
+            "original_signal": event.signal_name,
+            "effective_signal": effective_signal,
+            "is_proxy_mapping": is_proxy,
         }
+        proxy_note = f" [proxy: {event.signal_name} → {effective_signal}]" if is_proxy else ""
         return [record(
             event, context, detector_id=self.detector_id, anomaly_type=anomaly_type,
             score=score, features=features,
-            explanation=f"{event.signal_name} observed {observed:g} against rolling mean {baseline_mean:g} (z={z_score if z_score is not None else 'zero-variance'}).",
+            explanation=(
+                f"{effective_signal}{proxy_note} observed {observed:g} against "
+                f"rolling mean {baseline_mean:g} ± {baseline_std:g} "
+                f"(z={z_score if z_score is not None else 'zero-variance'}, "
+                f"threshold={safety_threshold:g}, fired={features['fired_reason']})."
+            ),
         )]

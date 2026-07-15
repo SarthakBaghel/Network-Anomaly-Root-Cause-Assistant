@@ -86,7 +86,44 @@ def _seed_entities(session: Session) -> None:
     session.flush()
 
 
-def test_golden_replay_persists_nine_actionable_anomalies_and_one_marker() -> None:
+def _seed_topology(session: Session) -> None:
+    import json
+    from pathlib import Path
+    from app.db.models import TopologyEdge
+    topo_path = Path(__file__).resolve().parents[2] / "app" / "fixtures" / "topology.json"
+    topo = json.loads(topo_path.read_text(encoding="utf-8"))
+    for i, edge in enumerate(topo.get("edges", [])):
+        session.add(
+            TopologyEdge(
+                id=f"edge_{i:04d}",
+                source_entity_id=edge["source"],
+                target_entity_id=edge["target"],
+                relation_type=edge["relation_type"],
+                relationship=edge.get("relationship", edge["relation_type"]),
+                active_from=None,
+                active_to=None,
+            )
+        )
+    session.flush()
+
+
+def test_golden_replay_persists_fifteen_actionable_and_three_context_anomalies() -> None:
+    """Golden scenario replay — production-wired counts.
+
+    After EWMA + topology context injection:
+      - EWMA detector fires on 6 of the 9 metric spike events (needs >5 warmup samples)
+        producing 6 additional actionable anomalies alongside the z-score anomalies
+      - TopologyCascadeDetector now fires context_only signals on downstream events
+        consistent with upstream gateway anomalies (2 cascade signals + 1 config marker)
+
+    Previous counts (pre-wiring):
+      - 9 actionable (rolling_zscore + log_rule + alert_severity)
+      - 1 context_only (config_change marker)
+
+    Current counts (production-wired):
+      - 15 actionable (rolling_zscore×9 + ewma×6)
+      - 3 context_only (config_change marker + 2 topology_cascade)
+    """
     from app.detection.service import DetectionPublisher
     from app.db.models import Event as EventModel
     from app.ingestion.pipeline import event_to_contract
@@ -95,7 +132,9 @@ def test_golden_replay_persists_nine_actionable_anomalies_and_one_marker() -> No
     Base.metadata.create_all(engine)
     with Session(engine) as session:
         _seed_entities(session)
+        _seed_topology(session)
         pipeline = IngestionPipeline()
+
         publisher = DetectionPublisher(session)
         records = [record for group in [*baseline_groups(), *scenario_groups()] for record in group.records]
         for source, raw in records:
@@ -107,8 +146,8 @@ def test_golden_replay_persists_nine_actionable_anomalies_and_one_marker() -> No
                     publisher.publish(event_to_contract(event_row))
         session.flush()
         anomalies = list(session.scalars(select(Anomaly).order_by(Anomaly.window_end, Anomaly.id)))
-        assert len([item for item in anomalies if item.can_open_incident]) == 9
-        assert len([item for item in anomalies if item.context_only]) == 1
+        assert len([item for item in anomalies if item.can_open_incident]) == 15
+        assert len([item for item in anomalies if item.context_only]) == 3
         assert not any(item.event_id.endswith("1d99bedd627abe8ef1dca5d6") for item in anomalies)
 
 

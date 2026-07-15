@@ -96,6 +96,31 @@ class Anomaly(Base):
     )
 
 
+class EwmaBaseline(Base):
+    """Persisted EWMA state per (entity_id, signal_name) pair.
+
+    Survives application restarts so the adaptive baseline continues
+    from where it left off rather than cold-starting on every boot.
+    Cleared on POST /simulator/reset to restore deterministic demo state.
+
+    BLUEPRINT §3.2: alpha is a config constant, NOT stored here.
+    The n_samples counter is the only "state" that matters for warmup.
+    """
+
+    __tablename__ = "ewma_baselines"
+
+    entity_id: Mapped[str] = mapped_column(String, primary_key=True)
+    signal_name: Mapped[str] = mapped_column(String, primary_key=True)
+    ewma_mean: Mapped[float] = mapped_column(Float, nullable=False)
+    ewma_variance: Mapped[float] = mapped_column(Float, nullable=False)
+    n_samples: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("ix_ewma_entity_signal", "entity_id", "signal_name"),
+    )
+
+
 class Entity(Base):
     __tablename__ = "entities"
 

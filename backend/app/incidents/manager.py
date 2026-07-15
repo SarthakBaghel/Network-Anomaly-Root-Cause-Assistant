@@ -16,11 +16,12 @@ from typing import Any, Callable, Mapping
 import yaml
 from sqlalchemy.orm import Session
 
+from app.audit.contracts import AuditWrite
+from app.audit.service import audit_service
 from app.config import settings
 from app.db import models
 from app.db.repositories import (
     AnomalyRepository,
-    AuditRepository,
     EventRepository,
     IncidentRepository,
 )
@@ -364,19 +365,22 @@ class IncidentManager:
         )
         incident_repo = IncidentRepository(session)
         incident_repo.create(incident)
-        AuditRepository(session).append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="system",
-            actor_id="incident_manager",
-            action="INCIDENT_OPENED",
-            object_type="incident",
-            object_id=incident.id,
-            payload={
-                "request_id": f"pipeline:{event.id}",
-                "incident_id": incident.id,
-                "opening_event_id": event.id,
-                "opening_anomaly_ids": [item.id for item in opening_anomalies],
-            },
+        audit_service.append(
+            AuditWrite(
+                action="INCIDENT_OPENED",
+                actor_type="system",
+                actor_id="incident_manager",
+                object_type="incident",
+                object_id=incident.id,
+                incident_id=incident.id,
+                request_id=f"pipeline:{event.id}",
+                reason_codes=["OPEN_THRESHOLD_EXCEEDED"],
+                metadata={
+                    "opening_event_id": event.id,
+                    "opening_anomaly_ids": [item.id for item in opening_anomalies],
+                },
+            ),
+            session,
             timestamp=_utc(event.timestamp),
         )
         context = IncidentAttachmentContext(
@@ -490,21 +494,23 @@ class IncidentManager:
                 )
             action = "EVENT_ATTACHED"
 
-        AuditRepository(session).append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="system",
-            actor_id="incident_manager",
-            action=action,
-            object_type="event",
-            object_id=event.id,
-            payload={
-                "request_id": f"pipeline:{event.id}",
-                "incident_id": incident.id,
-                "event_id": event.id,
-                "decision": evaluation.decision,
-                "attachment_score": evaluation.score,
-                "reason_codes": list(evaluation.reasons),
-            },
+        audit_service.append(
+            AuditWrite(
+                action=action,
+                actor_type="system",
+                actor_id="incident_manager",
+                object_type="event",
+                object_id=event.id,
+                incident_id=incident.id,
+                request_id=f"pipeline:{event.id}",
+                reason_codes=list(evaluation.reasons),
+                metadata={
+                    "event_id": event.id,
+                    "decision": evaluation.decision,
+                    "attachment_score": evaluation.score,
+                },
+            ),
+            session,
             timestamp=_utc(event.timestamp),
         )
 

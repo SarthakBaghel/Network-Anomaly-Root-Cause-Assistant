@@ -1,2 +1,67 @@
 """Person 4 deterministic RCA boundary."""
 
+from .analysis_engine import AnalysisEngine, AnalysisEngineError, analysis_engine
+from .candidate_generator import (
+    CandidateGenerationError,
+    CandidateGenerator,
+    CatalogueValidationError,
+    RcaDomainError,
+    candidate_generator,
+    load_hypothesis_catalogue,
+)
+from .contracts import (
+    ConflictEvidenceDraft,
+    EventEvaluation,
+    HistoricalMatch,
+    HypothesisCandidate,
+    IncidentAnalysisBundle,
+    IncidentSnapshot,
+    RankedHypothesis,
+    RcaComputationResult,
+    RcaTopologyEdge,
+    RcaTopologyNode,
+    RcaTopologySnapshot,
+    TopologyEdgeState,
+    TopologyNodeState,
+    TopologyStates,
+)
+from .ranker import (
+    RankingError,
+    RootCauseRanker,
+    WEIGHT_VALUES,
+    root_cause_ranker,
+    round_half_up,
+    score_factors,
+)
+
+__all__ = [
+    "AnalysisEngine",
+    "AnalysisEngineError",
+    "CandidateGenerationError",
+    "CandidateGenerator",
+    "CatalogueValidationError",
+    "ConflictEvidenceDraft",
+    "EventEvaluation",
+    "HistoricalMatch",
+    "HypothesisCandidate",
+    "IncidentAnalysisBundle",
+    "IncidentSnapshot",
+    "RankedHypothesis",
+    "RankingError",
+    "RcaComputationResult",
+    "RcaDomainError",
+    "RcaTopologyEdge",
+    "RcaTopologyNode",
+    "RcaTopologySnapshot",
+    "RootCauseRanker",
+    "TopologyEdgeState",
+    "TopologyNodeState",
+    "TopologyStates",
+    "WEIGHT_VALUES",
+    "analysis_engine",
+    "candidate_generator",
+    "load_hypothesis_catalogue",
+    "root_cause_ranker",
+    "round_half_up",
+    "score_factors",
+]

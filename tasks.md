@@ -776,8 +776,8 @@
 
 ### Phase 3 — Human Review & Audit (Hours 8–13)
 
-- [ ] **P5-13**: Create `backend/app/reviews/service.py` — review handler (blueprint §20.1, §18.4):
-  - `POST /api/v1/incidents/{id}/review` accepts `{decision, hypothesis_id, client_action_id, requested_evidence_id?, reviewer, comment}`
+- [x] **P5-13**: Create `backend/app/reviews/service.py` — review handler (blueprint §20.1, §18.4):
+  - `POST /api/v1/incidents/{id}/review` accepts `{analysis_run_id, decision, hypothesis_id, client_action_id, requested_evidence_id?, reviewer, comment}` and returns `{request_id, generated_at, review}`
   - `client_action_id` is unique per incident; duplicate submission → return existing record (idempotent)
   - `decision=evidence_requested` requires `requested_evidence_id` referencing a `missing` EvidenceItem in the current run
   - `decision=confirmed|rejected` is terminal for that hypothesis in that run; second conflicting terminal → `409 REVIEW_CONFLICT`
@@ -785,7 +785,7 @@
   - Decision against hypothesis outside current analysis run → `409 STALE_ANALYSIS` (include current run ID in response)
   - On Confirm: trigger `incident.status → resolved`, set `confirmed_hypothesis_id`
 
-- [ ] **P5-14**: Create `backend/app/audit/service.py` — append-only audit trail (blueprint §20.3):
+- [x] **P5-14**: Create `backend/app/audit/service.py` — append-only audit trail (blueprint §20.3):
   - Write audit entries for ALL frozen action codes:
     ```
     EVENT_QUARANTINED, EVENT_COLLAPSED, ANOMALY_DETECTED, INCIDENT_OPENED,
@@ -797,7 +797,7 @@
   - Audit payloads: IDs, reason codes, previous/new state, `request_id`, analysis revision — never secrets or full raw payloads
   - No update or delete API
 
-- [ ] **P5-15**: Write `backend/tests/integration/test_review_audit.py`:
+- [x] **P5-15**: Write `backend/tests/integration/test_review_audit.py`:
   - Confirm hypothesis → `REVIEW_CONFIRMED` audit entry + incident status → resolved
   - Reject all hypotheses → incident status → rejected
   - Duplicate `client_action_id` → returns existing review record, no duplicate audit

@@ -16,31 +16,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.db import models
-
-
-# All valid action codes — enforced at the service boundary.
-AUDIT_ACTION_CODES = frozenset(
-    {
-        "EVENT_QUARANTINED",
-        "EVENT_COLLAPSED",
-        "ANOMALY_DETECTED",
-        "INCIDENT_OPENED",
-        "EVENT_ATTACHED",
-        "EVENT_EXCLUDED",
-        "ANALYSIS_PUBLISHED",
-        "PIPELINE_STAGE_FAILED",
-        "EXPLANATION_FALLBACK_USED",
-        "REVIEW_CONFIRMED",
-        "REVIEW_REJECTED",
-        "REVIEW_EVIDENCE_REQUESTED",
-        "INCIDENT_STATUS_CHANGED",
-        "DEMO_RESET",
-    }
-)
+from app.audit.contracts import AUDIT_ACTION_CODES, AuditWrite
 
 
 class AuditRepository:
@@ -86,6 +66,26 @@ class AuditRepository:
         self.session.flush()
         return row
 
+    def append_write(
+        self,
+        *,
+        audit_id: str,
+        write: AuditWrite,
+        timestamp: datetime | None = None,
+    ) -> models.AuditLog:
+        """Persist the validated boundary without exposing raw payload assembly."""
+
+        return self.append(
+            audit_id=audit_id,
+            actor_type=write.actor_type.value,
+            actor_id=write.actor_id,
+            action=write.action,
+            object_type=write.object_type,
+            object_id=write.object_id,
+            payload=write.payload(),
+            timestamp=timestamp,
+        )
+
     # ------------------------------------------------------------------
     # Reads
     # ------------------------------------------------------------------
@@ -114,10 +114,15 @@ class AuditRepository:
     def list_for_incident(
         self, incident_id: str, *, limit: int = 200
     ) -> list[models.AuditLog]:
-        """Return all audit entries that reference a given incident_id."""
+        """Return incident-owned and event-owned entries for one incident."""
         stmt = (
             select(models.AuditLog)
-            .where(models.AuditLog.object_id == incident_id)
+            .where(
+                or_(
+                    models.AuditLog.object_id == incident_id,
+                    models.AuditLog.payload["incident_id"].as_string() == incident_id,
+                )
+            )
             .order_by(models.AuditLog.timestamp.asc())
             .limit(limit)
         )

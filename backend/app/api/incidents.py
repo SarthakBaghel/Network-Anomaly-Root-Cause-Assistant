@@ -5,8 +5,11 @@ from typing import Any, Literal, Annotated
 import base64
 import binascii
 import json
-import yaml
-from pathlib import Path
+import uuid
+from collections import defaultdict
+from datetime import datetime, timezone
+from itertools import pairwise
+from typing import Annotated, Any, Never
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
@@ -28,7 +31,7 @@ from app.contracts import (
     IncidentStatus,
     InvestigationResponse,
     PlaybookRecommendation,
-    ReviewDecision,
+    ReviewMutationResponse,
     ReviewRecord,
     ReviewRequest,
     TimelineItem,
@@ -37,27 +40,49 @@ from app.contracts import (
     ExplanationClaim,
     EvidenceCoverage,
 )
-from app.ingestion.pipeline import event_to_contract
-from app.topology.graph import get_topology_graph
-from app.api.topology import _incident_annotation
+from app.db import models
+from app.db.repositories import (
+    AnalysisRunRepository,
+    EvidenceRepository,
+    EventRepository,
+    HypothesisRepository,
+    IncidentRepository,
+    ReviewRepository,
+)
+from app.orchestration.orchestrator import orchestrator
+from app.playbooks.engine import get_step
+from app.audit.service import audit_service
+from app.reviews.service import ReviewServiceError, review_service
+from app.topology.graph import TopologyPathNotFoundError, get_topology_graph
+
+from .dependencies import get_session
+
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
+DatabaseSession = Annotated[Session, Depends(get_session)]
 
-def _to_utc(dt: datetime | None) -> datetime | None:
-    if dt is None:
-        return None
-    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
-def load_playbook_steps() -> dict[str, dict[str, Any]]:
-    yaml_path = Path(__file__).resolve().parents[1] / "fixtures" / "playbooks.yaml"
-    with open(yaml_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    steps = {}
-    for item in data.get("steps", []):
-        steps[item["step_id"]] = item
-    return steps
+def _api_error(status_code: int, code: str, message: str, **details: Any) -> Never:
+    raise HTTPException(
+        status_code=status_code,
+        detail={
+            "code": code,
+            "message": message,
+            "details": [
+                {"field": field, "reason_code": str(reason)}
+                for field, reason in details.items()
+            ],
+        },
+    )
 
-def incident_to_summary(row: models.Incident) -> IncidentSummary:
+
+def _utc(value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _incident_contract(row: models.Incident) -> IncidentSummary:
     return IncidentSummary(
         incident_id=row.id,
         title=row.title,
@@ -103,6 +128,74 @@ def ev_to_contract(row: models.Evidence) -> EvidenceItem:
         reason_code=row.reason_code,
         created_at=_to_utc(row.created_at)
     )
+
+
+def _event_contract(row: models.Event) -> CanonicalEvent:
+    return CanonicalEvent(
+        event_id=row.id,
+        timestamp=_utc(row.timestamp),
+        ingested_at=_utc(row.ingested_at),
+        entity_id=row.entity_id,
+        modality=row.modality,
+        event_type=row.event_type,
+        severity=row.severity,
+        signal_name=row.signal_name,
+        signal_value=row.signal_value,
+        unit=row.unit,
+        trace_or_session_id=row.trace_or_session_id,
+        source=row.source,
+        source_record_id=row.source_record_id,
+        schema_version=row.schema_version,
+        quality_flags=list(row.quality_flags or []),
+        raw_payload=dict(row.raw_payload or {}),
+    )
+
+
+def _review_contract(row: models.Review) -> ReviewRecord:
+    return ReviewRecord(
+        review_id=row.id,
+        incident_id=row.incident_id,
+        analysis_run_id=row.analysis_run_id,
+        hypothesis_id=row.hypothesis_id,
+        decision=row.decision,
+        client_action_id=row.client_action_id,
+        requested_evidence_id=row.requested_evidence_id,
+        reviewer=row.reviewer,
+        comment=row.comment,
+        created_at=_utc(row.created_at),
+    )
+
+
+def _current_context(
+    session: Session, incident_id: str
+) -> tuple[models.Incident, models.AnalysisRun, str]:
+    incident = IncidentRepository(session).get_by_id(incident_id)
+    if incident is None:
+        _api_error(
+            http_status.HTTP_404_NOT_FOUND,
+            "NOT_FOUND",
+            f"Incident not found: {incident_id}",
+        )
+
+    # Read the pointer once. Every child query in this request uses this local
+    # immutable value rather than independently selecting a "latest" row.
+    run_id = incident.current_analysis_run_id
+    if run_id is None:
+        _api_error(
+            http_status.HTTP_409_CONFLICT,
+            "ANALYSIS_NOT_AVAILABLE",
+            f"Incident {incident_id} has no published analysis run",
+        )
+    run = AnalysisRunRepository(session).get_by_id(run_id)
+    if run is None or run.incident_id != incident_id or run.status != "current":
+        _api_error(
+            http_status.HTTP_409_CONFLICT,
+            "STALE_ANALYSIS",
+            f"Incident {incident_id} does not point to a valid current analysis run",
+            current_analysis_run_id=run_id,
+        )
+    return incident, run, run_id
+
 
 def _encode_cursor(row: models.Incident, filters: dict[str, Any]) -> str:
     payload = json.dumps(
@@ -336,42 +429,10 @@ def explanation(incident_id: str, session: Session = Depends(get_session)) -> Ex
     )
 
 @router.get("/{incident_id}/audit", response_model=list[AuditRecord])
-def audit(incident_id: str, session: Session = Depends(get_session)) -> list[AuditRecord]:
-    repo = IncidentRepository(session)
-    row = repo.get_by_id(incident_id)
-    if row is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
-        )
-    stmt = select(models.AuditLog)
-    all_rows = session.execute(stmt).scalars().all()
-    rows = []
-    for r in all_rows:
-        payload = dict(r.payload or {})
-        is_match = (
-            (r.object_type == "incident" and r.object_id == incident_id) or
-            (payload.get("incident_id") == incident_id)
-        )
-        if is_match:
-            rows.append(r)
-    # Sort descending by timestamp
-    rows.sort(key=lambda x: (x.timestamp, x.id), reverse=True)
-    
-    return [
-        AuditRecord(
-            audit_id=r.id,
-            timestamp=_to_utc(r.timestamp),
-            actor_type=r.actor_type,
-            actor_id=r.actor_id,
-            action=r.action,
-            object_type=r.object_type,
-            object_id=r.object_id,
-            request_id=str(r.payload.get("request_id") if r.payload and r.payload.get("request_id") is not None else r.id),
-            analysis_run_id=r.payload.get("analysis_run_id") if r.payload else None,
-            payload=dict(r.payload) if r.payload else {}
-        ) for r in rows
-    ]
+def audit(incident_id: str, session: DatabaseSession) -> list[AuditRecord]:
+    if IncidentRepository(session).get_by_id(incident_id) is None:
+        _api_error(http_status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Incident not found")
+    return audit_service.list_for_incident(incident_id, session)
 
 @router.post("/{incident_id}/recompute", response_model=dict[str, Any])
 def recompute(incident_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
@@ -391,190 +452,17 @@ def recompute(incident_id: str, session: Session = Depends(get_session)) -> dict
     run_id = orchestrator._run_rca_and_publish(row, trigger_event=None, session=session)
     return {"analysis_run_id": run_id}
 
-@router.post("/{incident_id}/review", response_model=ReviewRecord)
-def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_session)) -> ReviewRecord:
-    repo = IncidentRepository(session)
-    incident = repo.get_by_id(incident_id)
-    if incident is None:
-        raise HTTPException(
-            status_code=404,
-            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
-        )
-        
-    if incident.status in ("resolved", "rejected"):
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "INCIDENT_CLOSED", "message": "Incident is already closed", "details": []}
-        )
+@router.post("/{incident_id}/review", response_model=ReviewMutationResponse)
+def review(
+    incident_id: str,
+    review_request: ReviewRequest,
+    session: DatabaseSession,
+) -> ReviewMutationResponse:
+    try:
+        return review_service.submit(incident_id, review_request, session)
+    except ReviewServiceError as exc:
+        _api_error(exc.status_code, exc.code, exc.message, **exc.details)
 
-    # Check idempotency
-    stmt_existing = select(models.Review).where(
-        models.Review.incident_id == incident_id,
-        models.Review.client_action_id == req.client_action_id
-    )
-    existing = session.execute(stmt_existing).scalar_one_or_none()
-    if existing is not None:
-        return ReviewRecord(
-            review_id=existing.id,
-            incident_id=existing.incident_id,
-            analysis_run_id=existing.analysis_run_id,
-            hypothesis_id=existing.hypothesis_id,
-            decision=existing.decision,
-            client_action_id=existing.client_action_id,
-            requested_evidence_id=existing.requested_evidence_id,
-            reviewer=existing.reviewer,
-            comment=existing.comment,
-            created_at=_to_utc(existing.created_at)
-        )
-
-    # Check if hypothesis belongs to the current analysis run
-    if not incident.current_analysis_run_id or req.analysis_run_id != incident.current_analysis_run_id:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "STALE_ANALYSIS", "message": "Stale analysis run", "details": []}
-        )
-        
-    hyp = session.scalar(
-        select(models.Hypothesis).where(
-            models.Hypothesis.analysis_run_id == incident.current_analysis_run_id,
-            models.Hypothesis.id == req.hypothesis_id
-        )
-    )
-    if hyp is None:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "code": "STALE_ANALYSIS",
-                "message": "Stale analysis run",
-                "details": [{"field": "hypothesis_id", "reason_code": "STALE_RUN_ID", "analysis_run_id": incident.current_analysis_run_id}]
-            }
-        )
-
-    # Validate evidence requested
-    if req.decision.value == "evidence_requested":
-        if not req.requested_evidence_id:
-            raise HTTPException(
-                status_code=422,
-                detail={"code": "VALIDATION_ERROR", "message": "requested_evidence_id is required", "details": []}
-            )
-        evidence_row = session.scalar(
-            select(models.Evidence).where(
-                models.Evidence.analysis_run_id == incident.current_analysis_run_id,
-                models.Evidence.id == req.requested_evidence_id
-            )
-        )
-        if evidence_row is None or evidence_row.kind != "missing":
-            raise HTTPException(
-                status_code=422,
-                detail={"code": "VALIDATION_ERROR", "message": "Can only request evidence for missing evidence items", "details": []}
-            )
-
-    # Check for conflict in terminal decision
-    # (Resolved/rejected was already checked above, but let's be double sure if there's any concurrent reviews)
-    if req.decision in (ReviewDecision.CONFIRMED, ReviewDecision.REJECTED):
-        pass
-
-    # Save the review
-    review_id = f"rev_{uuid.uuid4().hex[:12]}"
-    now = datetime.now(tz=timezone.utc)
-    review_row = models.Review(
-        id=review_id,
-        incident_id=incident_id,
-        analysis_run_id=incident.current_analysis_run_id,
-        hypothesis_id=req.hypothesis_id,
-        decision=req.decision.value,
-        client_action_id=req.client_action_id,
-        requested_evidence_id=req.requested_evidence_id,
-        reviewer=req.reviewer,
-        comment=req.comment,
-        created_at=now
-    )
-    session.add(review_row)
-    
-    # Audit trail
-    audit_repo = AuditRepository(session)
-    
-    old_status = incident.status
-    if req.decision == ReviewDecision.CONFIRMED:
-        incident.confirmed_hypothesis_id = req.hypothesis_id
-        incident.status = "resolved"
-        
-        audit_repo.append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="user",
-            actor_id=req.reviewer,
-            action="REVIEW_CONFIRMED",
-            object_type="hypothesis",
-            object_id=req.hypothesis_id,
-            payload={"incident_id": incident_id, "comment": req.comment}
-        )
-        audit_repo.append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="system",
-            actor_id="review_service",
-            action="INCIDENT_STATUS_CHANGED",
-            object_type="incident",
-            object_id=incident_id,
-            payload={"previous_status": old_status, "new_status": "resolved"}
-        )
-    elif req.decision == ReviewDecision.REJECTED:
-        audit_repo.append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="user",
-            actor_id=req.reviewer,
-            action="REVIEW_REJECTED",
-            object_type="hypothesis",
-            object_id=req.hypothesis_id,
-            payload={"incident_id": incident_id, "comment": req.comment}
-        )
-        
-        # Check if all hypotheses in the current run are rejected
-        stmt_all_hyps = select(models.Hypothesis).where(models.Hypothesis.analysis_run_id == incident.current_analysis_run_id)
-        all_hyps = session.execute(stmt_all_hyps).scalars().all()
-        
-        stmt_rejected_reviews = select(models.Review).where(
-            models.Review.analysis_run_id == incident.current_analysis_run_id,
-            models.Review.decision == ReviewDecision.REJECTED.value
-        )
-        rejected_hyp_ids = {r.hypothesis_id for r in session.execute(stmt_rejected_reviews).scalars().all()}
-        # Add the one currently being rejected
-        rejected_hyp_ids.add(req.hypothesis_id)
-        
-        if all(h.id in rejected_hyp_ids for h in all_hyps):
-            incident.status = "rejected"
-            audit_repo.append(
-                audit_id=f"aud_{uuid.uuid4().hex}",
-                actor_type="system",
-                actor_id="review_service",
-                action="INCIDENT_STATUS_CHANGED",
-                object_type="incident",
-                object_id=incident_id,
-                payload={"previous_status": old_status, "new_status": "rejected"}
-            )
-    elif req.decision == ReviewDecision.EVIDENCE_REQUESTED:
-        audit_repo.append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="user",
-            actor_id=req.reviewer,
-            action="REVIEW_EVIDENCE_REQUESTED",
-            object_type="evidence",
-            object_id=req.requested_evidence_id or "",
-            payload={"incident_id": incident_id, "comment": req.comment, "hypothesis_id": req.hypothesis_id}
-        )
-        
-    session.flush()
-    return ReviewRecord(
-        review_id=review_id,
-        incident_id=incident_id,
-        analysis_run_id=incident.current_analysis_run_id,
-        hypothesis_id=req.hypothesis_id,
-        decision=req.decision,
-        client_action_id=req.client_action_id,
-        requested_evidence_id=req.requested_evidence_id,
-        reviewer=req.reviewer,
-        comment=req.comment,
-        created_at=now
-    )
 
 @router.get("/{incident_id}/investigation", response_model=InvestigationResponse)
 def investigation(incident_id: str, session: Session = Depends(get_session)) -> InvestigationResponse:

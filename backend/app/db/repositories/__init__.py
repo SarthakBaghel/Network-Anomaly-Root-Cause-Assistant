@@ -7,6 +7,7 @@ directly and they do NOT import model internals outside these classes.
 from .anomaly_repository import AnomalyRepository
 from .audit_repository import AUDIT_ACTION_CODES, AuditRepository
 from .event_repository import EventRepository
+from .historical_incident_repository import HistoricalIncidentRepository
 from .hypothesis_repository import EvidenceRepository, HypothesisRepository
 from .incident_repository import (
     AnalysisRunRepository,
@@ -27,4 +28,3 @@ __all__ = [
     "IncidentRepository",
     "ReviewRepository",
 ]
-

@@ -42,3 +42,11 @@ class ReviewRequest(UtcModel):
         if requested != (self.requested_evidence_id is not None):
             raise ValueError("requested_evidence_id is required only for evidence_requested")
         return self
+
+
+class ReviewMutationResponse(UtcModel):
+    """Idempotent mutation envelope required by blueprint §18.4."""
+
+    request_id: str = Field(min_length=1)
+    generated_at: datetime
+    review: ReviewRecord

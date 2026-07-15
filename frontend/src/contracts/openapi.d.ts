@@ -498,6 +498,18 @@ export interface components {
              */
             timestamp: string;
         };
+        /** BatchIngestionResponse */
+        BatchIngestionResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Request Id */
+            request_id: string;
+            /** Results */
+            results: components["schemas"]["IngestionMutationResponse"][];
+        };
         /** CanonicalEvent */
         CanonicalEvent: {
             /** Entity Id */
@@ -670,6 +682,41 @@ export interface components {
             /** Top Hypothesis Id */
             top_hypothesis_id: string | null;
         };
+        /** IngestionMutationResponse */
+        IngestionMutationResponse: {
+            /**
+             * Analysis State
+             * @default not_started
+             * @enum {string}
+             */
+            analysis_state: "not_started" | "processed";
+            /** Collapsed Group Id */
+            collapsed_group_id?: string | null;
+            /** Event Id */
+            event_id?: string | null;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Incident Id */
+            incident_id?: string | null;
+            /** Quarantine Id */
+            quarantine_id?: string | null;
+            /** Reason Codes */
+            reason_codes?: string[];
+            /** Representative Event Id */
+            representative_event_id?: string | null;
+            /** Request Id */
+            request_id: string;
+            /** Source Record Id */
+            source_record_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "collapsed" | "quarantined";
+        };
         /** InvestigationResponse */
         InvestigationResponse: {
             analysis_run: components["schemas"]["AnalysisRun"];
@@ -735,10 +782,36 @@ export interface components {
             title: string;
         };
         /**
+         * RawIngestionRequest
+         * @description One source-specific record plus its source-adapter identity.
+         */
+        RawIngestionRequest: {
+            /** Raw */
+            raw: Record<string, never>;
+            /** Request Id */
+            request_id?: string | null;
+            /** Source */
+            source: string;
+        };
+        /**
          * ReviewDecision
          * @enum {string}
          */
         ReviewDecision: "confirmed" | "rejected" | "evidence_requested";
+        /**
+         * ReviewMutationResponse
+         * @description Idempotent mutation envelope required by blueprint §18.4.
+         */
+        ReviewMutationResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Request Id */
+            request_id: string;
+            review: components["schemas"]["ReviewRecord"];
+        };
         /** ReviewRecord */
         ReviewRecord: {
             /** Analysis Run Id */
@@ -861,7 +934,11 @@ export type $defs = Record<string, never>;
 export interface operations {
     list_events_api_v1_events_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                modality?: string | null;
+                entity_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -877,6 +954,15 @@ export interface operations {
                     "application/json": components["schemas"]["CanonicalEvent"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     ingest_event_api_v1_events_post: {
@@ -888,7 +974,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CanonicalEvent"];
+                "application/json": components["schemas"]["RawIngestionRequest"];
             };
         };
         responses: {
@@ -898,7 +984,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["IngestionMutationResponse"];
                 };
             };
             /** @description Validation Error */
@@ -921,7 +1007,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CanonicalEvent"][];
+                "application/json": components["schemas"]["RawIngestionRequest"][];
             };
         };
         responses: {
@@ -931,7 +1017,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["BatchIngestionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1306,7 +1392,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReviewRecord"];
+                    "application/json": components["schemas"]["ReviewMutationResponse"];
                 };
             };
             /** @description Validation Error */

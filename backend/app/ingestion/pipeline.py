@@ -1,226 +1,325 @@
+"""Minimal persistent ingestion boundary required by the Phase-3 audit handoff.
+
+Person 3 can extend this module with batch recomputation and detector integration;
+the accepted/collapsed/quarantined outcomes and audit fields are frozen here.
+"""
+
 from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+import re
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
-import ulid
-from pydantic import ValidationError
-from sqlalchemy import Select, select
+import yaml
 from sqlalchemy.orm import Session
 
+from app.audit.contracts import AuditWrite
+from app.audit.service import audit_service
 from app.config import settings
-from app.contracts import CanonicalEvent
-from app.db.models import CollapsedEventGroup, Entity, Event, QuarantinedEvent
+from app.contracts import CanonicalEvent, IngestionMutationResponse
+from app.db import models
+from app.db.repositories import EventRepository
 from app.ingestion.adapters import ADAPTERS
-from app.ingestion.adapters.base import AdapterError, SourceAdapter
-from app.ingestion.catalogue import log_rule
-from app.ingestion.redaction import redact_payload
+from app.ingestion.adapters.base import AdapterError
 
 
-UTC = timezone.utc
-TOPOLOGY_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "topology.json"
-
-
-class AcceptedEventPublisher(Protocol):
-    def publish(self, event: CanonicalEvent) -> None: ...
-    def publish_batch(self, events: list[CanonicalEvent]) -> None: ...
-
-
-class NullPublisher:
-    def publish(self, event: CanonicalEvent) -> None:
-        del event
-
-    def publish_batch(self, events: list[CanonicalEvent]) -> None:
-        del events
-
-
-@dataclass(frozen=True)
-class IngestionResult:
-    status: str
-    event_id: str | None
-    reason_codes: list[str]
-    collapsed_group_id: str | None = None
-
-
-def _new_id(prefix: str) -> str:
-    return f"{prefix}_{ulid.new()}"
+_SENSITIVE_KEY = re.compile(
+    r"password|passwd|token|secret|api_key|authorization", re.IGNORECASE
+)
+_LOG_TEMPLATE_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "reference_profiles"
+    / "log_templates.yaml"
+)
 
 
 def _utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
-def _json_bytes(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True, default=str).encode()
+def _redact(value: Any) -> tuple[Any, bool]:
+    if isinstance(value, dict):
+        redacted: dict[str, Any] = {}
+        changed = False
+        for key, item in value.items():
+            if _SENSITIVE_KEY.search(str(key)):
+                redacted[key] = "[REDACTED]"
+                changed = True
+            else:
+                redacted[key], item_changed = _redact(item)
+                changed = changed or item_changed
+        return redacted, changed
+    if isinstance(value, list):
+        output: list[Any] = []
+        changed = False
+        for item in value:
+            clean, item_changed = _redact(item)
+            output.append(clean)
+            changed = changed or item_changed
+        return output, changed
+    return value, False
 
 
-def duplicate_fingerprint(event: CanonicalEvent) -> str:
-    bucket = int(event.timestamp.timestamp()) // settings.duplicate_bucket_seconds
-    normalized_signal = event.signal_name or event.event_type
-    value = f"{event.entity_id}|{event.modality.value}|{event.event_type}|{normalized_signal}|{bucket}"
-    return hashlib.sha256(value.encode()).hexdigest()
+def _source_record_id(raw: dict[str, Any]) -> str | None:
+    payload = raw.get("payload", raw)
+    if not isinstance(payload, dict):
+        return None
+    for key in ("sample_id", "record_id", "fingerprint", "change_id"):
+        value = payload.get(key)
+        if value is not None:
+            return str(value)
+    return None
+
+
+def _repeatable_log_codes() -> frozenset[str]:
+    catalogue = yaml.safe_load(_LOG_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    return frozenset(
+        row["event_code"]
+        for row in catalogue.get("templates", [])
+        if row.get("repeatable") is True
+    )
+
+
+_REPEATABLE_LOG_CODES = _repeatable_log_codes()
 
 
 def _is_collapsible(event: CanonicalEvent) -> bool:
-    if event.modality.value == "alert":
-        return True
-    if event.modality.value == "log":
-        rule = log_rule(event.event_type)
-        return bool(rule and rule.get("repeatable"))
-    return False
+    return event.modality.value == "alert" or (
+        event.modality.value == "log" and event.event_type in _REPEATABLE_LOG_CODES
+    )
 
 
-def _to_contract(row: Event) -> CanonicalEvent:
-    return CanonicalEvent(
-        event_id=row.id,
-        timestamp=_utc(row.timestamp),
-        ingested_at=_utc(row.ingested_at),
-        entity_id=row.entity_id,
-        modality=row.modality,
-        event_type=row.event_type,
-        severity=row.severity,
-        signal_name=row.signal_name,
-        signal_value=row.signal_value,
-        unit=row.unit,
-        trace_or_session_id=row.trace_or_session_id,
-        source=row.source,
-        source_record_id=row.source_record_id,
-        schema_version=row.schema_version,
-        quality_flags=list(row.quality_flags),
-        raw_payload=dict(row.raw_payload),
+def _duplicate_fingerprint(event: CanonicalEvent) -> str:
+    timestamp = int(_utc(event.timestamp).timestamp())
+    bucket = timestamp // settings.duplicate_bucket_seconds
+    normalized_signal = event.signal_name or ""
+    material = "|".join(
+        (
+            event.entity_id,
+            event.modality.value,
+            event.event_type,
+            normalized_signal,
+            str(bucket),
+        )
+    )
+    return hashlib.sha256(material.encode()).hexdigest()
+
+
+def _event_row(event: CanonicalEvent) -> models.Event:
+    return models.Event(
+        id=event.event_id,
+        timestamp=_utc(event.timestamp),
+        ingested_at=_utc(event.ingested_at),
+        entity_id=event.entity_id,
+        modality=event.modality.value,
+        event_type=event.event_type,
+        severity=event.severity,
+        signal_name=event.signal_name,
+        signal_value=event.signal_value,
+        unit=event.unit,
+        trace_or_session_id=event.trace_or_session_id,
+        source=event.source,
+        source_record_id=event.source_record_id,
+        schema_version=event.schema_version,
+        quality_flags=list(event.quality_flags),
+        raw_payload=dict(event.raw_payload),
+        status="accepted",
     )
 
 
 class IngestionPipeline:
-    def __init__(
-        self,
-        session: Session,
-        *,
-        publisher: AcceptedEventPublisher | None = None,
-        adapters: dict[str, SourceAdapter] | None = None,
-    ) -> None:
-        self.session = session
-        if publisher is None:
-            from app.orchestration.publisher import OrchestrationPublisher
-            self.publisher: AcceptedEventPublisher = OrchestrationPublisher(session)
-        else:
-            self.publisher = publisher
-        self.adapters = adapters or ADAPTERS
+    """Adapt, validate and persist one source-specific record without committing."""
 
-    def ingest(self, source: str, raw: Any, *, publish: bool = True) -> IngestionResult:
-        received_at = datetime.now(UTC)
-        redacted_raw, raw_was_redacted = redact_payload(raw)
-        if len(_json_bytes(raw)) > settings.event_max_payload_bytes:
-            return self._quarantine(redacted_raw, received_at, "PAYLOAD_TOO_LARGE")
-        if not isinstance(raw, dict):
-            return self._quarantine(redacted_raw, received_at, "INVALID_PAYLOAD_TYPE")
-        adapter = self.adapters.get(source)
+    def ingest(
+        self,
+        *,
+        source: str,
+        raw: dict[str, Any],
+        request_id: str,
+        session: Session,
+    ) -> IngestionMutationResponse:
+        now = datetime.now(timezone.utc)
+        clean_raw, _ = _redact(raw)
+        encoded_size = len(
+            json.dumps(raw, sort_keys=True, separators=(",", ":"), default=str).encode()
+        )
+        adapter = ADAPTERS.get(source)
         if adapter is None:
-            return self._quarantine(redacted_raw, received_at, "UNKNOWN_SOURCE")
+            return self._quarantine(
+                source=source,
+                raw=clean_raw,
+                source_record_id=_source_record_id(raw),
+                request_id=request_id,
+                reason_codes=["UNKNOWN_SOURCE"],
+                now=now,
+                session=session,
+            )
+        if encoded_size > settings.event_max_payload_bytes:
+            return self._quarantine(
+                source=source,
+                raw=clean_raw,
+                source_record_id=_source_record_id(raw),
+                request_id=request_id,
+                reason_codes=["PAYLOAD_TOO_LARGE"],
+                now=now,
+                session=session,
+            )
         try:
             event = adapter.adapt(raw)
-            event_payload, event_was_redacted = redact_payload(event.raw_payload)
-            flags = list(dict.fromkeys(event.quality_flags + (["RAW_PAYLOAD_REDACTED"] if raw_was_redacted or event_was_redacted else [])))
-            event = event.model_copy(update={"raw_payload": event_payload, "quality_flags": flags})
-            # Revalidate copies so modality rules and datetime boundaries remain enforced.
-            event = CanonicalEvent.model_validate(event.model_dump())
-        except AdapterError as exc:
-            return self._quarantine(redacted_raw, received_at, exc.reason_code, str(exc))
-        except ValidationError as exc:
-            errors = [{"reason_code": "CANONICAL_VALIDATION_ERROR", "location": list(item["loc"]), "message": item["msg"]} for item in exc.errors()]
-            return self._quarantine_errors(redacted_raw, received_at, errors)
+        except (AdapterError, ValueError) as exc:
+            return self._quarantine(
+                source=source,
+                raw=clean_raw,
+                source_record_id=_source_record_id(raw),
+                request_id=request_id,
+                reason_codes=[getattr(exc, "reason_code", "VALIDATION_ERROR")],
+                now=now,
+                session=session,
+            )
 
-        self._ensure_reference_entities()
-        if self.session.get(Entity, event.entity_id) is None:
-            return self._quarantine(redacted_raw, received_at, "UNKNOWN_ENTITY", event.entity_id)
+        if session.get(models.Entity, event.entity_id) is None:
+            return self._quarantine(
+                source=source,
+                raw=clean_raw,
+                source_record_id=event.source_record_id,
+                request_id=request_id,
+                reason_codes=["UNKNOWN_ENTITY"],
+                now=now,
+                session=session,
+            )
 
-        existing = self.session.scalar(select(Event).where(Event.source == event.source, Event.source_record_id == event.source_record_id))
-        if existing is not None:
-            if _to_contract(existing).model_dump(mode="json") == event.model_dump(mode="json"):
-                return IngestionResult("idempotent", existing.id, [])
-            return self._quarantine(redacted_raw, received_at, "SOURCE_RECORD_CONFLICT")
-
-        fingerprint = duplicate_fingerprint(event)
-        if _is_collapsible(event):
-            group = self.session.scalar(select(CollapsedEventGroup).where(CollapsedEventGroup.fingerprint == fingerprint))
-            representative = self._find_representative(event, fingerprint)
-            if representative is not None:
-                if group is None:
-                    group = CollapsedEventGroup(id=_new_id("ceg"), fingerprint=fingerprint, first_seen=representative.timestamp, last_seen=event.timestamp, event_count=2, representative_event_id=representative.id)
-                    self.session.add(group)
-                else:
-                    group.event_count += 1
-                    group.first_seen = min(_utc(group.first_seen), event.timestamp)
-                    group.last_seen = max(_utc(group.last_seen), event.timestamp)
-                self.session.flush()
-                return IngestionResult("collapsed", representative.id, [], group.id)
-
-        row = Event(
-            id=event.event_id, timestamp=event.timestamp, ingested_at=event.ingested_at,
-            entity_id=event.entity_id, modality=event.modality.value, event_type=event.event_type,
-            severity=event.severity, signal_name=event.signal_name, signal_value=event.signal_value,
-            unit=event.unit, trace_or_session_id=event.trace_or_session_id, source=event.source,
-            source_record_id=event.source_record_id, schema_version=event.schema_version,
-            quality_flags=event.quality_flags, raw_payload=event.raw_payload, status="accepted",
+        clean_payload, changed = _redact(event.raw_payload)
+        quality_flags = list(event.quality_flags)
+        if changed and "RAW_PAYLOAD_REDACTED" not in quality_flags:
+            quality_flags.append("RAW_PAYLOAD_REDACTED")
+        event = event.model_copy(
+            update={"raw_payload": clean_payload, "quality_flags": quality_flags}
         )
-        self.session.add(row)
-        self.session.flush()
-        if publish:
-            self.publisher.publish(event)
-        return IngestionResult("created", event.event_id, [])
 
-    def ingest_many(self, records: list[tuple[str, Any]]) -> list[IngestionResult]:
-        results: list[IngestionResult] = []
-        accepted: list[CanonicalEvent] = []
-        for source, raw in records:
-            result = self.ingest(source, raw, publish=False)
-            results.append(result)
-            if result.status == "created" and result.event_id:
-                row = self.session.get(Event, result.event_id)
-                if row is not None:
-                    accepted.append(_to_contract(row))
-        if accepted:
-            self.publisher.publish_batch(accepted)
-        return results
+        repo = EventRepository(session)
+        if event.source_record_id is not None:
+            existing = repo.get_by_source_record(event.source, event.source_record_id)
+            if existing is not None:
+                return IngestionMutationResponse(
+                    status="accepted",
+                    request_id=request_id,
+                    generated_at=now,
+                    event_id=existing.id,
+                    source_record_id=existing.source_record_id,
+                    reason_codes=["IDEMPOTENT_RETRY"],
+                    analysis_state="not_started",
+                )
 
-    def _find_representative(self, event: CanonicalEvent, fingerprint: str) -> Event | None:
-        seconds = settings.duplicate_bucket_seconds
-        bucket_start = datetime.fromtimestamp((int(event.timestamp.timestamp()) // seconds) * seconds, UTC)
-        query: Select[tuple[Event]] = select(Event).where(
-            Event.entity_id == event.entity_id,
-            Event.modality == event.modality.value,
-            Event.event_type == event.event_type,
-            Event.timestamp >= bucket_start,
-            Event.timestamp < bucket_start + timedelta(seconds=seconds),
-        ).order_by(Event.timestamp, Event.id)
-        return next((row for row in self.session.scalars(query) if duplicate_fingerprint(_to_contract(row)) == fingerprint), None)
+        fingerprint = _duplicate_fingerprint(event)
+        if _is_collapsible(event):
+            group = repo.get_collapsed_group_by_fingerprint(fingerprint)
+            if group is not None:
+                repo.increment_collapsed_group(group.id, _utc(event.timestamp))
+                audit_service.append(
+                    AuditWrite(
+                        action="EVENT_COLLAPSED",
+                        actor_type="system",
+                        actor_id="ingestion_pipeline",
+                        object_type="collapsed_event_group",
+                        object_id=group.id,
+                        request_id=request_id,
+                        reason_codes=["DUPLICATE_FINGERPRINT"],
+                        metadata={
+                            "collapsed_group_id": group.id,
+                            "representative_event_id": group.representative_event_id,
+                            "source": source,
+                            "source_record_id": event.source_record_id,
+                        },
+                    ),
+                    session,
+                    timestamp=now,
+                )
+                return IngestionMutationResponse(
+                    status="collapsed",
+                    request_id=request_id,
+                    generated_at=now,
+                    collapsed_group_id=group.id,
+                    representative_event_id=group.representative_event_id,
+                    source_record_id=event.source_record_id,
+                    reason_codes=["DUPLICATE_FINGERPRINT"],
+                    analysis_state="not_started",
+                )
 
-    def _ensure_reference_entities(self) -> None:
-        if self.session.scalar(select(Entity.id).limit(1)) is not None:
-            return
-        with TOPOLOGY_PATH.open(encoding="utf-8") as handle:
-            topology = json.load(handle)
-        for node in topology["nodes"]:
-            self.session.add(Entity(id=node["id"], name=node["name"], entity_type=node["entity_type"], service=node["service"], criticality=node["criticality"], metadata_json=node.get("metadata", {})))
-        self.session.flush()
+        repo.persist_accepted(_event_row(event))
+        if _is_collapsible(event):
+            repo.persist_collapsed_group(
+                models.CollapsedEventGroup(
+                    id=f"col_{uuid.uuid4().hex[:20]}",
+                    fingerprint=fingerprint,
+                    first_seen=_utc(event.timestamp),
+                    last_seen=_utc(event.timestamp),
+                    event_count=1,
+                    representative_event_id=event.event_id,
+                )
+            )
+        return IngestionMutationResponse(
+            status="accepted",
+            request_id=request_id,
+            generated_at=now,
+            event_id=event.event_id,
+            source_record_id=event.source_record_id,
+            analysis_state="not_started",
+        )
 
-    def _quarantine(self, raw: Any, received_at: datetime, code: str, message: str | None = None) -> IngestionResult:
-        error = {"reason_code": code}
-        if message:
-            error["message"] = message
-        return self._quarantine_errors(raw, received_at, [error])
+    def _quarantine(
+        self,
+        *,
+        source: str,
+        raw: dict[str, Any],
+        source_record_id: str | None,
+        request_id: str,
+        reason_codes: list[str],
+        now: datetime,
+        session: Session,
+    ) -> IngestionMutationResponse:
+        quarantine_id = f"qevt_{uuid.uuid4().hex[:20]}"
+        EventRepository(session).persist_quarantined(
+            models.QuarantinedEvent(
+                id=quarantine_id,
+                received_at=now,
+                raw_payload=raw,
+                validation_errors=[{"reason_code": code} for code in reason_codes],
+            )
+        )
+        audit_service.append(
+            AuditWrite(
+                action="EVENT_QUARANTINED",
+                actor_type="system",
+                actor_id="ingestion_pipeline",
+                object_type="quarantined_event",
+                object_id=quarantine_id,
+                request_id=request_id,
+                reason_codes=reason_codes,
+                metadata={
+                    "quarantine_id": quarantine_id,
+                    "source": source,
+                    "source_record_id": source_record_id,
+                },
+            ),
+            session,
+            timestamp=now,
+        )
+        return IngestionMutationResponse(
+            status="quarantined",
+            request_id=request_id,
+            generated_at=now,
+            quarantine_id=quarantine_id,
+            source_record_id=source_record_id,
+            reason_codes=reason_codes,
+            analysis_state="not_started",
+        )
 
-    def _quarantine_errors(self, raw: Any, received_at: datetime, errors: list[dict[str, Any]]) -> IngestionResult:
-        identifier = _new_id("qev")
-        self.session.add(QuarantinedEvent(id=identifier, received_at=received_at, raw_payload=raw, validation_errors=errors))
-        self.session.flush()
-        return IngestionResult("quarantined", None, [str(error["reason_code"]) for error in errors])
 
-
-event_to_contract = _to_contract
+ingestion_pipeline = IngestionPipeline()

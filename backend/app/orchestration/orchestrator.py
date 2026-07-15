@@ -28,26 +28,59 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import threading
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
 
+import yaml
 from sqlalchemy.orm import Session
 
+from app.audit.contracts import AuditWrite
+from app.audit.service import audit_service
+from app.contracts import ExplanationOutput
 from app.db import models
 from app.db.repositories import (
     AnalysisRunRepository,
     AnomalyRepository,
-    AuditRepository,
     EvidenceRepository,
     HypothesisRepository,
     IncidentRepository,
 )
+from app.rca.contracts import TopologyStates
+from app.topology.graph import get_topology_graph
 
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERSION = "rca-rules-1.1"
+FALLBACK_REASON_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+
+
+@dataclass(frozen=True)
+class AnalysisBuildContext:
+    """Immutable identity of the analysis revision currently being built."""
+
+    analysis_run_id: str
+    incident_id: str
+
+
+@dataclass(frozen=True)
+class ExplanationDraft:
+    """A validated, run-scoped explanation awaiting atomic persistence."""
+
+    output: ExplanationOutput
+    validated: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.output, ExplanationOutput):
+            raise TypeError("ExplanationDraft.output must be an ExplanationOutput")
+        if not isinstance(self.validated, bool):
+            raise TypeError("ExplanationDraft.validated must be a boolean")
 
 
 # ---------------------------------------------------------------------------
@@ -84,14 +117,15 @@ class IncidentManagerProtocol(Protocol):
 
 @runtime_checkable
 class AnalysisEngineProtocol(Protocol):
-    """Implemented by app.rca (Person 4) — pure function, no DB commits."""
+    """Implemented by Person 1's adapter around Person 4's pure RCA engine."""
 
     def analyse(
         self,
         incident: models.Incident,
         session: Session,
+        context: AnalysisBuildContext,
     ) -> "AnalysisResult":
-        """Return a complete analysis result without opening a DB transaction."""
+        """Assemble and map a complete result without committing the session."""
         ...
 
 
@@ -101,10 +135,11 @@ class AnalysisEngineProtocol(Protocol):
 
 
 class AnalysisResult:
-    """Typed container returned by AnalysisEngineProtocol.analyse().
+    """Publisher-facing container returned by AnalysisEngineProtocol.analyse().
 
     Hypothesis, evidence, recommendation, and explanation rows are pre-built
-    ORM objects (without PKs committed). The orchestrator inserts them.
+    ORM objects (without PKs committed). Pure computation uses the separate
+    ``RcaComputationResult`` boundary; the adapter creates this container.
     """
 
     def __init__(
@@ -112,12 +147,64 @@ class AnalysisResult:
         hypotheses: list[models.Hypothesis],
         evidence_rows: list[models.Evidence],
         recommendation_rows: list[models.PlaybookRecommendation],
-        explanation_payload: dict[str, Any],
+        explanation_payload: dict[str, Any] | None = None,
+        *,
+        explanation_rows: list[ExplanationDraft] | None = None,
+        explanation_fallback_reason: str | None = None,
+        explanation_fallback_attempt_count: int = 0,
+        topology_states: TopologyStates | None = None,
+        conflict_reason_codes: tuple[str, ...] = (),
+        evidence_requirements: dict[str, tuple[str, ...]] | None = None,
     ) -> None:
+        if explanation_payload is not None and explanation_rows is not None:
+            raise ValueError(
+                "provide explanation_rows or deprecated explanation_payload, not both"
+            )
         self.hypotheses = hypotheses
         self.evidence_rows = evidence_rows
         self.recommendation_rows = recommendation_rows
+        if explanation_rows is not None:
+            self.explanation_rows = list(explanation_rows)
+        elif explanation_payload is not None:
+            self.explanation_rows = [
+                ExplanationDraft(
+                    output=ExplanationOutput.model_validate(explanation_payload)
+                )
+            ]
+        else:
+            self.explanation_rows = []
         self.explanation_payload = explanation_payload
+        self.explanation_fallback_reason = explanation_fallback_reason
+        self.explanation_fallback_attempt_count = explanation_fallback_attempt_count
+        self.topology_states = topology_states or TopologyStates()
+        self.conflict_reason_codes = tuple(conflict_reason_codes)
+        self.evidence_requirements = MappingProxyType(
+            {
+                key: tuple(requirements)
+                for key, requirements in (evidence_requirements or {}).items()
+            }
+        )
+        self._validate_fallback_metadata()
+
+    def _validate_fallback_metadata(self) -> None:
+        reason = self.explanation_fallback_reason
+        attempts = self.explanation_fallback_attempt_count
+        if isinstance(attempts, bool) or not isinstance(attempts, int):
+            raise TypeError("explanation fallback attempt count must be an integer")
+        if reason is None:
+            if attempts != 0:
+                raise ValueError(
+                    "fallback attempt count must be zero when no fallback occurred"
+                )
+            return
+        if not FALLBACK_REASON_PATTERN.fullmatch(reason):
+            raise ValueError(
+                "explanation fallback reason must be an uppercase reason code"
+            )
+        if attempts < 1:
+            raise ValueError(
+                "fallback attempt count must be positive when fallback occurred"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +314,6 @@ class AnalysisOrchestrator:
     ) -> list[models.Anomaly]:
         """Call the detector and persist resulting anomaly rows."""
         anomaly_repo = AnomalyRepository(session)
-        audit_repo = AuditRepository(session)
 
         if self._detector is None:
             return []
@@ -235,19 +321,23 @@ class AnalysisOrchestrator:
         anomalies = self._detector.evaluate_event(event, session)
         for anomaly in anomalies:
             anomaly_repo.persist(anomaly)
-            audit_repo.append(
-                audit_id=f"aud_{uuid.uuid4().hex}",
-                actor_type="system",
-                actor_id="detector",
-                action="ANOMALY_DETECTED",
-                object_type="anomaly",
-                object_id=anomaly.id,
-                payload={
-                    "event_id": event.id,
-                    "detector_id": anomaly.detector_id,
-                    "score": anomaly.score,
-                    "context_only": anomaly.context_only,
-                },
+            audit_service.append(
+                AuditWrite(
+                    action="ANOMALY_DETECTED",
+                    actor_type="system",
+                    actor_id="detector",
+                    object_type="anomaly",
+                    object_id=anomaly.id,
+                    request_id=f"pipeline:{event.id}",
+                    reason_codes=[anomaly.detector_id],
+                    metadata={
+                        "event_id": event.id,
+                        "detector_id": anomaly.detector_id,
+                        "score": anomaly.score,
+                        "context_only": anomaly.context_only,
+                    },
+                ),
+                session,
             )
         return anomalies
 
@@ -278,7 +368,6 @@ class AnalysisOrchestrator:
         """
         run_repo = AnalysisRunRepository(session)
         incident_repo = IncidentRepository(session)
-        audit_repo = AuditRepository(session)
 
         # Build fingerprint
         attached = incident_repo.get_attached_events(incident.id)
@@ -314,25 +403,33 @@ class AnalysisOrchestrator:
         )
         run_repo.create(new_run)
 
-        # Run the pure analysis engine (no DB commits inside)
+        context = AnalysisBuildContext(
+            analysis_run_id=new_run.id,
+            incident_id=incident.id,
+        )
         try:
-            analysis_result: AnalysisResult | None = None
-            if self._analysis_engine is not None:
-                analysis_result = self._analysis_engine.analyse(incident, session)
+            # A savepoint keeps the building run outside the publication unit.
+            # Any invalid child output rolls back without disturbing the prior
+            # current run; the building row can then be marked failed.
+            with session.begin_nested():
+                analysis_result: AnalysisResult | None = None
+                if self._analysis_engine is not None:
+                    analysis_result = self._analysis_engine.analyse(
+                        incident, session, context
+                    )
 
-            # Atomically publish: insert children → supersede prior → swap pointer
-            self._atomic_publish(
-                new_run=new_run,
-                analysis_result=analysis_result,
-                incident=incident,
-                session=session,
-                run_repo=run_repo,
-                incident_repo=incident_repo,
-                audit_repo=audit_repo,
-            )
+                # Atomically publish: insert children → supersede prior → swap pointer
+                self._atomic_publish(
+                    new_run=new_run,
+                    analysis_result=analysis_result,
+                    incident=incident,
+                    session=session,
+                    run_repo=run_repo,
+                    incident_repo=incident_repo,
+                )
         except Exception as exc:
             self._persist_failed_run(
-                run_id=new_run_id,
+                run_id=new_run.id,
                 incident_id=incident.id,
                 reason=f"rca_publication: {type(exc).__name__}: {exc}",
                 session=session,
@@ -349,7 +446,6 @@ class AnalysisOrchestrator:
         session: Session,
         run_repo: AnalysisRunRepository,
         incident_repo: IncidentRepository,
-        audit_repo: AuditRepository,
     ) -> None:
         """Insert all children, mark prior superseded, swap current pointer.
 
@@ -363,6 +459,9 @@ class AnalysisOrchestrator:
         top_hypothesis_id: str | None = None
 
         if analysis_result is not None:
+            self._validate_analysis_result(new_run, incident, analysis_result)
+            self._validate_explanation_rows(new_run, incident, analysis_result)
+
             # Insert hypotheses
             for hyp in analysis_result.hypotheses:
                 hyp.analysis_run_id = new_run.id
@@ -381,18 +480,42 @@ class AnalysisOrchestrator:
                 rec.incident_id = incident.id
                 session.add(rec)
 
-            # Insert explanation
-            if analysis_result.explanation_payload:
+            # Append every validated explanation; never replace earlier rows.
+            for draft in analysis_result.explanation_rows:
+                output = draft.output
                 explanation = models.Explanation(
                     id=f"exp_{uuid.uuid4().hex[:12]}",
                     analysis_run_id=new_run.id,
                     incident_id=incident.id,
-                    generator="template",
-                    validated=True,
-                    payload=analysis_result.explanation_payload,
+                    generator=output.generator,
+                    validated=draft.validated,
+                    payload=output.model_dump(mode="json"),
                     created_at=datetime.now(tz=timezone.utc),
                 )
                 session.add(explanation)
+
+            if analysis_result.explanation_fallback_reason is not None:
+                audit_service.append(
+                    AuditWrite(
+                        action="EXPLANATION_FALLBACK_USED",
+                        actor_type="system",
+                        actor_id="explanation_service",
+                        object_type="incident",
+                        object_id=incident.id,
+                        incident_id=incident.id,
+                        analysis_run_id=new_run.id,
+                        analysis_revision=new_run.revision,
+                        request_id=f"analysis:{new_run.id}",
+                        reason_codes=[analysis_result.explanation_fallback_reason],
+                        metadata={
+                            "reason_code": analysis_result.explanation_fallback_reason,
+                            "attempt_count": (
+                                analysis_result.explanation_fallback_attempt_count
+                            ),
+                        },
+                    ),
+                    session,
+                )
 
             session.flush()
 
@@ -417,21 +540,158 @@ class AnalysisOrchestrator:
         )
 
         # Audit
-        audit_repo.append(
-            audit_id=f"aud_{uuid.uuid4().hex}",
-            actor_type="system",
-            actor_id="orchestrator",
-            action="ANALYSIS_PUBLISHED",
-            object_type="incident",
-            object_id=incident.id,
-            payload={
-                "analysis_run_id": new_run.id,
-                "revision": new_run.revision,
-                "fingerprint": new_run.input_fingerprint,
-                "prior_run_id": prior_run_id,
-                "algorithm_version": ALGORITHM_VERSION,
-            },
+        audit_service.append(
+            AuditWrite(
+                action="ANALYSIS_PUBLISHED",
+                actor_type="system",
+                actor_id="orchestrator",
+                object_type="incident",
+                object_id=incident.id,
+                incident_id=incident.id,
+                analysis_run_id=new_run.id,
+                analysis_revision=new_run.revision,
+                request_id=f"analysis:{new_run.id}",
+                metadata={
+                    "revision": new_run.revision,
+                    "fingerprint": new_run.input_fingerprint,
+                    "prior_run_id": prior_run_id,
+                    "algorithm_version": ALGORITHM_VERSION,
+                },
+            ),
+            session,
         )
+
+    @staticmethod
+    def _validate_analysis_result(
+        new_run: models.AnalysisRun,
+        incident: models.Incident,
+        analysis_result: AnalysisResult,
+    ) -> None:
+        """Reject cross-run, dangling, or non-catalogue publisher input."""
+
+        hypotheses = analysis_result.hypotheses
+        hypothesis_ids = {item.id for item in hypotheses}
+        if len(hypothesis_ids) != len(hypotheses):
+            raise ValueError("analysis result hypothesis IDs must be unique")
+        ranks = sorted(item.rank for item in hypotheses)
+        if ranks != list(range(1, len(ranks) + 1)):
+            raise ValueError("analysis result ranks must be unique and consecutive")
+        for hypothesis in hypotheses:
+            if hypothesis.analysis_run_id != new_run.id:
+                raise ValueError("hypothesis analysis_run_id does not match pending run")
+            if hypothesis.incident_id != incident.id:
+                raise ValueError("hypothesis incident_id does not match pending incident")
+
+        conflicting_codes: set[str] = set()
+        for evidence in analysis_result.evidence_rows:
+            if evidence.analysis_run_id != new_run.id:
+                raise ValueError("evidence analysis_run_id does not match pending run")
+            if evidence.incident_id != incident.id:
+                raise ValueError("evidence incident_id does not match pending incident")
+            if evidence.hypothesis_id not in hypothesis_ids:
+                raise ValueError("evidence references an unknown pending hypothesis")
+            if evidence.kind == "conflicting":
+                conflicting_codes.add(evidence.reason_code)
+
+        for recommendation in analysis_result.recommendation_rows:
+            if recommendation.analysis_run_id != new_run.id:
+                raise ValueError(
+                    "recommendation analysis_run_id does not match pending run"
+                )
+            if recommendation.incident_id != incident.id:
+                raise ValueError(
+                    "recommendation incident_id does not match pending incident"
+                )
+            if recommendation.hypothesis_id not in hypothesis_ids:
+                raise ValueError(
+                    "recommendation references an unknown pending hypothesis"
+                )
+
+        declared_conflicts = set(analysis_result.conflict_reason_codes)
+        known_conflicts = AnalysisOrchestrator._catalogue_conflict_reason_codes()
+        if not declared_conflicts.issubset(known_conflicts):
+            raise ValueError("analysis result contains a non-catalogue conflict code")
+        if not declared_conflicts.issubset(conflicting_codes):
+            raise ValueError("declared conflict code has no conflicting evidence row")
+
+        valid_requirement_keys = hypothesis_ids | {item.type for item in hypotheses}
+        if not set(analysis_result.evidence_requirements).issubset(
+            valid_requirement_keys
+        ):
+            raise ValueError("evidence requirements reference an unknown hypothesis")
+        if any(
+            len(requirements) != len(set(requirements))
+            for requirements in analysis_result.evidence_requirements.values()
+        ):
+            raise ValueError("evidence requirements must be unique per hypothesis")
+
+        topology = get_topology_graph()
+        node_ids = set(topology.graph.nodes)
+        seen_nodes: set[str] = set()
+        for state in analysis_result.topology_states.nodes:
+            if state.entity_id not in node_ids:
+                raise ValueError("topology state references an unknown entity")
+            if state.entity_id in seen_nodes:
+                raise ValueError("topology node state is duplicated")
+            seen_nodes.add(state.entity_id)
+        edge_ids = {
+            (row["source"], row["target"], row["relation_type"])
+            for row in topology.edge_records
+        }
+        seen_edges: set[tuple[str, str, str]] = set()
+        for state in analysis_result.topology_states.edges:
+            identity = (state.source, state.target, state.relation_type.value)
+            if identity not in edge_ids:
+                raise ValueError("topology state references an unknown typed edge")
+            if identity in seen_edges:
+                raise ValueError("topology edge state is duplicated")
+            seen_edges.add(identity)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def _catalogue_conflict_reason_codes() -> set[str]:
+        path = Path(__file__).resolve().parents[1] / "fixtures" / "hypotheses.yaml"
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        return {
+            str(pattern["pattern_id"])
+            for hypothesis in payload.get("hypotheses", [])
+            for pattern in hypothesis.get("conflict_patterns", [])
+            if isinstance(pattern, dict) and pattern.get("pattern_id")
+        }
+
+    @staticmethod
+    def _validate_explanation_rows(
+        new_run: models.AnalysisRun,
+        incident: models.Incident,
+        analysis_result: AnalysisResult,
+    ) -> None:
+        rows = analysis_result.explanation_rows
+        if not rows:
+            raise ValueError("analysis result must include a template explanation")
+        hypothesis_ids = {item.id for item in analysis_result.hypotheses}
+        identities: set[tuple[str, str]] = set()
+        has_template = False
+        for draft in rows:
+            if not draft.validated:
+                raise ValueError("unvalidated explanation drafts cannot be published")
+            output = draft.output
+            if output.analysis_run_id != new_run.id:
+                raise ValueError("explanation analysis_run_id does not match pending run")
+            if output.incident_id != incident.id:
+                raise ValueError("explanation incident_id does not match pending incident")
+            if output.hypothesis_id not in hypothesis_ids:
+                raise ValueError(
+                    "explanation hypothesis_id is not part of the pending run"
+                )
+            identity = (output.generator, output.hypothesis_id)
+            if identity in identities:
+                raise ValueError(
+                    "duplicate explanation generator for the same hypothesis"
+                )
+            identities.add(identity)
+            has_template = has_template or output.generator == "template"
+        if not has_template:
+            raise ValueError("analysis result must retain a template explanation")
 
     def _persist_failed_run(
         self,
@@ -442,20 +702,27 @@ class AnalysisOrchestrator:
     ) -> None:
         """Mark a building run as failed. Leave prior run current. Write audit."""
         run_repo = AnalysisRunRepository(session)
-        audit_repo = AuditRepository(session)
         try:
             run_repo.mark_failed(run_id, reason)
-            audit_repo.append(
-                audit_id=f"aud_{uuid.uuid4().hex}",
-                actor_type="system",
-                actor_id="orchestrator",
-                action="PIPELINE_STAGE_FAILED",
-                object_type="incident",
-                object_id=incident_id,
-                payload={
-                    "failed_run_id": run_id,
-                    "reason": reason[:500],
-                },
+            failed_run = run_repo.get_by_id(run_id)
+            audit_service.append(
+                AuditWrite(
+                    action="PIPELINE_STAGE_FAILED",
+                    actor_type="system",
+                    actor_id="orchestrator",
+                    object_type="incident",
+                    object_id=incident_id,
+                    incident_id=incident_id,
+                    analysis_run_id=run_id,
+                    analysis_revision=failed_run.revision if failed_run else None,
+                    request_id=f"analysis:{run_id}",
+                    reason_codes=["PIPELINE_STAGE_FAILED"],
+                    metadata={
+                        "failed_run_id": run_id,
+                        "sanitized_reason": reason[:500],
+                    },
+                ),
+                session,
             )
             session.flush()
         except Exception:

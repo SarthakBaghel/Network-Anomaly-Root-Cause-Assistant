@@ -2,35 +2,70 @@
   "records": [
     {
       "action": "EVENT_EXCLUDED",
-      "actor_id": null,
+      "actor_id": "incident_manager",
       "actor_type": "system",
-      "analysis_run_id": "run_007",
-      "audit_id": "audit_excluded_auth_001",
+      "analysis_run_id": null,
+      "audit_id": "audit_001",
       "object_id": "evt_01kxfzg3m0bt57m96k687mmwt6",
       "object_type": "event",
       "payload": {
+        "attachment_score": -0.15,
+        "decision": "excluded",
+        "event_id": "evt_01kxfzg3m0bt57m96k687mmwt6",
+        "incident_id": "inc_001",
         "reason_codes": [
           "INCOMPATIBLE_MAINTENANCE_SYMPTOM",
           "EXPLICIT_DIFFERENT_TRACE"
-        ]
+        ],
+        "request_id": "pipeline:evt_01kxfzg3m0bt57m96k687mmwt6"
       },
-      "request_id": "req_batch_t120",
-      "timestamp": "2026-07-14T09:32:00.200Z"
+      "request_id": "pipeline:evt_01kxfzg3m0bt57m96k687mmwt6",
+      "timestamp": "2026-07-14T09:32:01.000Z"
     },
     {
       "action": "ANALYSIS_PUBLISHED",
-      "actor_id": null,
+      "actor_id": "orchestrator",
       "actor_type": "system",
       "analysis_run_id": "run_007",
-      "audit_id": "audit_published_007",
-      "object_id": "run_007",
-      "object_type": "analysis_run",
+      "audit_id": "audit_002",
+      "object_id": "inc_001",
+      "object_type": "incident",
       "payload": {
-        "revision": 7,
-        "top_hypothesis_id": "hyp_001"
+        "algorithm_version": "rca-rules-1.1",
+        "analysis_revision": 7,
+        "analysis_run_id": "run_007",
+        "fingerprint": "sha256:22c3c3a525dac5fbcb5d7a2e7c1d5246b7b32673b30c5cfc2579a68d60110224",
+        "incident_id": "inc_001",
+        "prior_run_id": "run_006",
+        "request_id": "analysis:run_007",
+        "revision": 7
       },
-      "request_id": "req_batch_t100",
-      "timestamp": "2026-07-14T09:31:41.320Z"
+      "request_id": "analysis:run_007",
+      "timestamp": "2026-07-14T09:32:02.000Z"
+    },
+    {
+      "action": "REVIEW_CONFIRMED",
+      "actor_id": "team-demo-user",
+      "actor_type": "user",
+      "analysis_run_id": "run_007",
+      "audit_id": "audit_003",
+      "object_id": "inc_001",
+      "object_type": "incident",
+      "payload": {
+        "analysis_revision": 7,
+        "analysis_run_id": "run_007",
+        "decision": "confirmed",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "reason_codes": [
+          "CONFIRMED"
+        ],
+        "request_id": "req_golden_review_001",
+        "requested_evidence_id": null,
+        "review_id": "rev_001"
+      },
+      "request_id": "req_golden_review_001",
+      "timestamp": "2026-07-14T09:32:03.000Z"
     }
   ],
   "schema_version": "1.0",

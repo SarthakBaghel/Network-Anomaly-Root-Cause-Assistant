@@ -21,6 +21,7 @@ from app.contracts import (
     Hypothesis,
     IncidentSummary,
     IncidentStatus,
+    IncidentListResponse,
     InvestigationResponse,
     PlaybookRecommendation,
     ReviewMutationResponse,
@@ -310,7 +311,7 @@ def _decode_cursor(
             }
         )
 
-@router.get("", response_model=dict[str, Any])
+@router.get("", response_model=IncidentListResponse)
 def list_incidents(
     status_filter: Annotated[IncidentStatus | None, Query(alias="status")] = None,
     primary_entity_id: Annotated[str | None, Query(min_length=1)] = None,
@@ -318,7 +319,7 @@ def list_incidents(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     cursor: str | None = None,
     session: Session = Depends(get_session),
-) -> dict[str, Any]:
+) -> IncidentListResponse:
     filters = {
         "status": status_filter.value if status_filter else None,
         "primary_entity_id": primary_entity_id,
@@ -335,10 +336,10 @@ def list_incidents(
         limit=limit + 1,
     )
     page = rows[:limit]
-    return {
-        "items": [_incident_contract(row) for row in page],
-        "next_cursor": _encode_cursor(page[-1], filters) if len(rows) > limit else None,
-    }
+    return IncidentListResponse(
+        items=[_incident_contract(row) for row in page],
+        next_cursor=_encode_cursor(page[-1], filters) if len(rows) > limit else None,
+    )
 
 @router.get("/{incident_id}", response_model=IncidentSummary)
 def incident_summary(incident_id: str, session: Session = Depends(get_session)) -> IncidentSummary:

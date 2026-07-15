@@ -654,6 +654,34 @@
         "title": "Hypothesis",
         "type": "object"
       },
+      "IncidentListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "IncidentListResponse",
+        "type": "object"
+      },
       "IncidentStatus": {
         "enum": [
           "open",
@@ -2177,8 +2205,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response List Incidents Api V1 Incidents Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/IncidentListResponse"
                 }
               }
             },

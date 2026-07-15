@@ -21,3 +21,7 @@ class IncidentSummary(UtcModel):
     top_hypothesis_id: str | None
     confirmed_hypothesis_id: str | None
 
+
+class IncidentListResponse(UtcModel):
+    items: list[IncidentSummary]
+    next_cursor: str | None = None

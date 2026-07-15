@@ -1,467 +1,344 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-from decimal import Decimal, ROUND_HALF_UP
+import sys
+from contextlib import contextmanager
+from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
-import yaml
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKEND_FIXTURES = ROOT / "backend" / "tests" / "fixtures"
-GOLDEN_EVENTS = BACKEND_FIXTURES / "golden_events.jsonl"
-TOPOLOGY = ROOT / "backend" / "app" / "fixtures" / "topology.json"
-PLAYBOOKS = ROOT / "backend" / "app" / "fixtures" / "playbooks.yaml"
-FRONTEND_MOCK = ROOT / "frontend" / "src" / "test-fixtures" / "golden-investigation-response.json"
-FRONTEND_EVENTS = ROOT / "frontend" / "src" / "test-fixtures" / "golden-events.json"
-PHASE3_REVIEW_SEED = BACKEND_FIXTURES / "phase3_review_seed.json"
-RUN_ID = "run_007"
-INCIDENT_ID = "inc_001"
+BACKEND = ROOT / "backend"
+BACKEND_FIXTURES = BACKEND / "tests" / "fixtures"
+FRONTEND_FIXTURES = ROOT / "frontend" / "src" / "test-fixtures"
+sys.path.insert(0, str(BACKEND))
 
-WEIGHTS = {
-    "symptom_compatibility": Decimal("0.25"),
-    "topology_relevance": Decimal("0.20"),
-    "direct_logs_alerts": Decimal("0.15"),
-    "propagation_consistency": Decimal("0.15"),
-    "metric_anomaly": Decimal("0.10"),
-    "change_causal_fit": Decimal("0.10"),
-    "temporal_proximity": Decimal("0.03"),
-    "historical_similarity": Decimal("0.02"),
-}
+from app.api import simulator as simulator_api  # noqa: E402
+from app.db import models  # noqa: E402
+from app.db import session as db_session  # noqa: E402
+from app.main import app  # noqa: E402
+from app.incidents.manager import serialize_incident_bundle  # noqa: E402
+from app.orchestration import reset_service  # noqa: E402
+from app.orchestration.orchestrator import orchestrator  # noqa: E402
+from app.rca import WEIGHT_VALUES  # noqa: E402
+from app.simulator.engine import SimulatorEngine  # noqa: E402
+
+
+SCENARIO_ID = "gateway_rate_limit_disabled"
+GOLDEN_INCIDENT_ID = "inc_001"
+GOLDEN_RUN_ID = "run_007"
+GOLDEN_GENERATED_AT = "2026-07-14T09:31:41.500Z"
+GOLDEN_CREATED_AT = "2026-07-14T09:31:41.000Z"
+GOLDEN_COMPLETED_AT = "2026-07-14T09:31:41.320Z"
 
 
 def pretty(value: Any) -> str:
     return json.dumps(value, indent=2, sort_keys=True) + "\n"
 
 
-def score(factors: dict[str, float]) -> float:
-    weighted = sum(WEIGHTS[name] * Decimal(str(value)) for name, value in factors.items())
-    return float((Decimal("100") * weighted).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
-
-
-def load_events() -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
-    events = [json.loads(line) for line in GOLDEN_EVENTS.read_text(encoding="utf-8").splitlines()]
-    return events, {event["source_record_id"]: event for event in events}
-
-
-def build_hypotheses() -> list[dict[str, Any]]:
-    definitions = [
-        (
-            "hyp_001",
-            "configuration_regression",
-            "api-gateway-01",
-            1,
-            {"available": 6, "expected": 7},
-            {
-                "symptom_compatibility": 1.0,
-                "topology_relevance": 1.0,
-                "direct_logs_alerts": 0.6,
-                "propagation_consistency": 1.0,
-                "metric_anomaly": 0.91,
-                "change_causal_fit": 1.0,
-                "temporal_proximity": 1.0,
-                "historical_similarity": 0.5,
-            },
-            "A gateway rate-limit change is the highest-ranked explanation for the observed traffic and downstream errors.",
-        ),
-        (
-            "hyp_002",
-            "dos_or_traffic_surge",
-            "api-gateway-01",
-            2,
-            {"available": 2, "expected": 3},
-            {
-                "symptom_compatibility": 0.5,
-                "topology_relevance": 1.0,
-                "direct_logs_alerts": 0.6,
-                "propagation_consistency": 1.0,
-                "metric_anomaly": 0.91,
-                "change_causal_fit": 0.0,
-                "temporal_proximity": 0.0,
-                "historical_similarity": 0.0,
-            },
-            "A traffic surge explains the impact pattern, but stable raw ingress and source distribution conflict with an external DoS cause.",
-        ),
-        (
-            "hyp_003",
-            "database_connection_exhaustion",
-            "payment-db-01",
-            3,
-            {"available": 2, "expected": 3},
-            {
-                "symptom_compatibility": 0.5,
-                "topology_relevance": 0.5,
-                "direct_logs_alerts": 0.6,
-                "propagation_consistency": 0.6667,
-                "metric_anomaly": 0.0,
-                "change_causal_fit": 0.0,
-                "temporal_proximity": 0.0,
-                "historical_similarity": 0.0,
-            },
-            "A payment timeout references the database, but normal database utilization conflicts with connection exhaustion.",
-        ),
-    ]
-    return [
-        {
-            "hypothesis_id": hypothesis_id,
-            "analysis_run_id": RUN_ID,
-            "incident_id": INCIDENT_ID,
-            "hypothesis_type": hypothesis_type,
-            "candidate_entity_id": entity,
-            "rank": rank,
-            "evidence_score": score(factors),
-            "evidence_coverage": coverage,
-            "factor_scores": factors,
-            "summary": summary,
-        }
-        for hypothesis_id, hypothesis_type, entity, rank, coverage, factors, summary in definitions
-    ]
-
-
-def evaluation(source: str, event: dict[str, Any], score_value: float, reasons: list[str], decision: str = "attached") -> dict[str, Any]:
-    return {
-        "event_id": event["event_id"],
-        "source_record_id": source,
-        "decision": decision,
-        "attachment_score": score_value,
-        "attachment_reasons": reasons,
-    }
-
-
-def build_incident_bundle(by_source: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    attached_specs = [
-        ("config-change-000001", 0.9, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "WITHIN_60_SECONDS"]),
-        ("prom-raw_ingress_requests_per_second-0241", 1.0, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("prom-forwarded_requests_per_second-0242", 1.0, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("prom-active_connections_total-0243", 1.0, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("prom-connection_utilization-0244", 1.0, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("prom-tcp_resets_total-0245", 1.0, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("prom-tcp_retransmissions_total-0246", 1.0, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("alert-gateway-forwarded-0001", 1.0, ["SAME_ENTITY", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("prom-checkout_p95_latency_ms-0247", 1.0, ["ONE_TRAFFIC_HOP", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("log-payment-timeout-0001", 0.75, ["TWO_TRAFFIC_HOPS", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("alert-checkout-error-0001", 0.9, ["ONE_TRAFFIC_HOP", "SHARED_SCENARIO_TRACE", "COMPATIBLE_SYMPTOM"]),
-        ("prom-db_connection_utilization-0248", 0.4, ["SHARED_SCENARIO_TRACE", "CONFLICTING_DB_EVIDENCE"]),
-    ]
-    attached = [evaluation(source, by_source[source], value, reasons) for source, value, reasons in attached_specs]
-    excluded = [
-        evaluation(
-            "log-auth-certificate-0001",
-            by_source["log-auth-certificate-0001"],
-            -0.15,
-            ["INCOMPATIBLE_MAINTENANCE_SYMPTOM", "EXPLICIT_DIFFERENT_TRACE"],
-            decision="excluded",
+def _expect(response, status_code: int = 200) -> dict[str, Any]:
+    if response.status_code != status_code:
+        raise RuntimeError(
+            f"production request failed ({response.status_code}): {response.text}"
         )
-    ]
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise RuntimeError("production request did not return an object")
+    return payload
+
+
+@contextmanager
+def _production_client() -> Iterator[tuple[TestClient, sessionmaker]]:
+    """Run the real application pipeline against an isolated in-memory database."""
+
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    models.Base.metadata.create_all(engine)
+    session_factory = sessionmaker(
+        bind=engine,
+        expire_on_commit=False,
+        class_=Session,
+    )
+    simulator = SimulatorEngine(background=False)
+    old_session_factory = db_session.SessionLocal
+    old_simulator = simulator_api.simulator_engine
+    old_components = (
+        orchestrator._detector,
+        orchestrator._incident_manager,
+        orchestrator._analysis_engine,
+        reset_service._simulator_hook,
+    )
+    db_session.SessionLocal = session_factory
+    simulator_api.simulator_engine = simulator
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            yield client, session_factory
+    finally:
+        db_session.SessionLocal = old_session_factory
+        simulator_api.simulator_engine = old_simulator
+        (
+            orchestrator._detector,
+            orchestrator._incident_manager,
+            orchestrator._analysis_engine,
+            reset_service._simulator_hook,
+        ) = old_components
+        engine.dispose()
+
+
+def _production_snapshot() -> dict[str, Any]:
+    """Reset and replay through production routes, then collect actual handoffs."""
+
+    with _production_client() as (client, session_factory):
+        _expect(client.post("/api/v1/simulator/reset"))
+        _expect(client.post(f"/api/v1/simulator/scenarios/{SCENARIO_ID}/trigger"))
+
+        incident_list = _expect(client.get("/api/v1/incidents"))
+        incidents = incident_list.get("items", [])
+        if len(incidents) != 1:
+            raise RuntimeError(
+                f"production replay must create exactly one incident, got {len(incidents)}"
+            )
+        incident_id = incidents[0]["incident_id"]
+        investigation = _expect(
+            client.get(f"/api/v1/incidents/{incident_id}/investigation")
+        )
+        run_id = investigation["analysis_run_id"]
+
+        events: list[dict[str, Any]] = []
+        cursor: str | None = None
+        while True:
+            params: dict[str, Any] = {"limit": 200}
+            if cursor is not None:
+                params["cursor"] = cursor
+            events_envelope = _expect(client.get("/api/v1/events", params=params))
+            page = events_envelope.get("items", [])
+            if not isinstance(page, list):
+                raise RuntimeError("production events response contains a non-list page")
+            events.extend(page)
+            cursor = events_envelope.get("next_cursor")
+            if cursor is None:
+                break
+        if not events:
+            raise RuntimeError("production replay returned no events")
+        events.sort(key=lambda item: (item["timestamp"], item["event_id"]))
+
+        with session_factory() as session:
+            run = session.get(models.AnalysisRun, run_id)
+            if run is None:
+                raise RuntimeError("published production analysis run is missing")
+            incident_bundle = serialize_incident_bundle(session, incident_id)
+            run_metadata = {
+                "typed_paths": deepcopy(run.typed_paths),
+                "conflict_reason_codes": list(run.conflict_reason_codes),
+                "evidence_requirements": deepcopy(run.evidence_requirements),
+            }
+
+        top_hypothesis = min(investigation["hypotheses"], key=lambda item: item["rank"])
+        review_envelope = _expect(
+            client.post(
+                f"/api/v1/incidents/{incident_id}/review",
+                json={
+                    "analysis_run_id": run_id,
+                    "hypothesis_id": top_hypothesis["hypothesis_id"],
+                    "decision": "confirmed",
+                    "client_action_id": "golden-review-action-001",
+                    "reviewer": "team-demo-user",
+                    "comment": "Confirmed from the production-generated golden replay.",
+                },
+            )
+        )
+        audit = client.get(f"/api/v1/incidents/{incident_id}/audit")
+        if audit.status_code != 200 or not isinstance(audit.json(), list):
+            raise RuntimeError(f"production audit request failed: {audit.text}")
+
+        return {
+            "investigation": investigation,
+            "incident_bundle": incident_bundle,
+            "events": events,
+            "run_metadata": run_metadata,
+            "review": review_envelope["review"],
+            "audit": audit.json(),
+        }
+
+
+def _id_mapping(investigation: dict[str, Any], review: dict[str, Any], audit: list[dict[str, Any]]) -> dict[str, str]:
+    mapping = {
+        investigation["incident"]["incident_id"]: GOLDEN_INCIDENT_ID,
+        investigation["analysis_run_id"]: GOLDEN_RUN_ID,
+    }
+    hypotheses = sorted(investigation["hypotheses"], key=lambda item: item["rank"])
+    for index, hypothesis in enumerate(hypotheses, 1):
+        mapping[hypothesis["hypothesis_id"]] = f"hyp_{index:03d}"
+
+    evidence_index = 1
+    recommendation_index = 1
+    for hypothesis in hypotheses:
+        hypothesis_id = hypothesis["hypothesis_id"]
+        for item in investigation["evidence_by_hypothesis"][hypothesis_id]:
+            mapping[item["evidence_id"]] = f"ev_{evidence_index:03d}"
+            evidence_index += 1
+        for item in investigation["recommendations_by_hypothesis"][hypothesis_id]:
+            mapping[item["recommendation_id"]] = f"rec_{recommendation_index:03d}"
+            recommendation_index += 1
+
+    mapping[review["review_id"]] = "rev_001"
+    return mapping
+
+
+def _replace_ids(value: Any, mapping: dict[str, str]) -> Any:
+    if isinstance(value, dict):
+        return {
+            mapping.get(str(key), str(key)): _replace_ids(item, mapping)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_replace_ids(item, mapping) for item in value]
+    if isinstance(value, str):
+        replaced = value
+        for runtime_id, golden_id in sorted(
+            mapping.items(), key=lambda item: len(item[0]), reverse=True
+        ):
+            replaced = replaced.replace(runtime_id, golden_id)
+        return replaced
+    return value
+
+
+def _normalize_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    mapping = _id_mapping(
+        snapshot["investigation"], snapshot["review"], snapshot["audit"]
+    )
+    normalized = _replace_ids(deepcopy(snapshot), mapping)
+    investigation = normalized["investigation"]
+    investigation["generated_at"] = GOLDEN_GENERATED_AT
+    investigation["analysis_run"]["created_at"] = GOLDEN_CREATED_AT
+    investigation["analysis_run"]["completed_at"] = GOLDEN_COMPLETED_AT
+    for rows in investigation["evidence_by_hypothesis"].values():
+        for item in rows:
+            item["created_at"] = GOLDEN_CREATED_AT
+    normalized["review"]["created_at"] = "2026-07-14T09:32:30.000Z"
+    return normalized
+
+
+def _expected_analysis(investigation: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
-        "version": "golden-incident-bundle-1.0",
-        "incident": {
-            "incident_id": INCIDENT_ID,
-            "current_analysis_run_id": RUN_ID,
-            "title": "Checkout degradation through API gateway",
-            "status": "investigating",
-            # Blueprint §12.2: maximum opening-capable attached anomaly score.
-            "severity": 1.0,
-            "started_at": "2026-07-14T09:30:00.000Z",
-            "last_event_at": "2026-07-14T09:31:40.000Z",
-            "primary_entity_id": "api-gateway-01",
-            "affected_entity_ids": ["api-gateway-01", "checkout-api-01", "payment-api-01"],
-            "anomaly_count": 9,
-            "top_hypothesis_id": "hyp_001",
-            "confirmed_hypothesis_id": None,
-        },
-        "attached_events": attached,
-        "excluded_events": excluded,
+        "version": "golden-expected-analysis-1.0",
+        "analysis_run_id": investigation["analysis_run_id"],
+        "incident_id": investigation["incident"]["incident_id"],
+        "algorithm_version": investigation["analysis_run"]["algorithm_version"],
+        "weights": WEIGHT_VALUES,
+        "hypotheses": investigation["hypotheses"],
+        "typed_paths": metadata["typed_paths"],
+        "conflict_reason_codes": metadata["conflict_reason_codes"],
     }
 
 
-def evidence_item(
-    evidence_id: str,
-    hypothesis_id: str,
-    kind: str,
-    source_event_id: str | None,
-    statement: str,
-    relevance: float,
-    reason_code: str,
-) -> dict[str, Any]:
-    return {
-        "evidence_id": evidence_id,
-        "analysis_run_id": RUN_ID,
-        "incident_id": INCIDENT_ID,
-        "hypothesis_id": hypothesis_id,
-        "kind": kind,
-        "source_event_id": source_event_id,
-        "statement": statement,
-        "relevance": relevance,
-        "reason_code": reason_code,
-        "created_at": "2026-07-14T09:31:41.000Z",
-    }
-
-
-def build_evidence(by_source: dict[str, dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
-    event_id = lambda source: by_source[source]["event_id"]
-    return {
-        "hyp_001": [
-            evidence_item("ev_001", "hyp_001", "observed", event_id("prom-forwarded_requests_per_second-0242"), "Gateway forwarded request rate reached 7,800 requests/s.", 0.95, "METRIC_THRESHOLD_EXCEEDED"),
-            evidence_item("ev_002", "hyp_001", "observed", event_id("prom-connection_utilization-0244"), "Gateway connection utilization reached 0.92.", 0.92, "CONNECTION_UTILIZATION_HIGH"),
-            evidence_item("ev_003", "hyp_001", "correlated", event_id("config-change-000001"), "Gateway rate limiting was disabled 30 seconds before the first symptom.", 0.9, "PRECEDING_RELEVANT_CHANGE"),
-            evidence_item("ev_004", "hyp_001", "conflicting", event_id("alert-gateway-forwarded-0001"), "The gateway alert is also compatible with a traffic-surge alternative and does not prove the change caused the incident.", 0.45, "ALTERNATIVE_CAUSE_SIGNAL"),
-            evidence_item("ev_005", "hyp_001", "missing", None, "Obtain WAF decision logs for 09:25–09:35 UTC.", 0.5, "MISSING_WAF_DECISION_LOGS"),
-        ],
-        "hyp_002": [
-            evidence_item("ev_006", "hyp_002", "observed", event_id("prom-forwarded_requests_per_second-0242"), "Gateway forwarded request rate reached 7,800 requests/s.", 0.9, "FORWARDED_TRAFFIC_SPIKE"),
-            evidence_item("ev_007", "hyp_002", "correlated", event_id("alert-gateway-forwarded-0001"), "A critical gateway traffic alert fired after the metric spike.", 0.7, "TRAFFIC_ALERT_CORRELATED"),
-            evidence_item("ev_008", "hyp_002", "conflicting", event_id("prom-raw_ingress_requests_per_second-0241"), "Raw ingress remained stable near 7,800 requests/s with no new source distribution.", 0.95, "STABLE_RAW_INGRESS"),
-            evidence_item("ev_009", "hyp_002", "missing", None, "Obtain WAF decisions and client/source-distribution details.", 0.5, "MISSING_SOURCE_DISTRIBUTION"),
-        ],
-        "hyp_003": [
-            evidence_item("ev_010", "hyp_003", "observed", event_id("log-payment-timeout-0001"), "Payment API logged a timeout referencing payment-db-01.", 0.8, "DEPENDENCY_TIMEOUT_LOG"),
-            evidence_item("ev_011", "hyp_003", "correlated", event_id("prom-checkout_p95_latency_ms-0247"), "Checkout latency increased on the dependency path to the payment database.", 0.6, "DEPENDENCY_PATH_LATENCY"),
-            evidence_item("ev_012", "hyp_003", "conflicting", event_id("prom-db_connection_utilization-0248"), "Payment database connection utilization remained normal at 0.44.", 0.95, "NORMAL_DB_UTILIZATION"),
-            evidence_item("ev_013", "hyp_003", "missing", None, "Obtain database connection-pool wait and rejected-lease metrics.", 0.5, "MISSING_DB_POOL_WAITS"),
-        ],
-    }
-
-
-def recommendation(
-    recommendation_id: str,
-    hypothesis_id: str,
-    step_id: str,
-) -> dict[str, Any]:
-    catalogue = yaml.safe_load(PLAYBOOKS.read_text(encoding="utf-8"))
-    step = next(item for item in catalogue["steps"] if item["step_id"] == step_id)
-    return {
-        "recommendation_id": recommendation_id,
-        "analysis_run_id": RUN_ID,
-        "incident_id": INCIDENT_ID,
-        "hypothesis_id": hypothesis_id,
-        "step_id": step_id,
-        "title": step["title"],
-        "step_type": step["step_type"],
-        "risk_level": step["risk_level"],
-        "requires_human_approval": step["requires_human_approval"],
-        "instructions": "\n".join(step["instructions"]),
-        "rationale": "Catalogue-backed recommendation; not automatically executed.",
-    }
-
-
-def build_recommendations() -> dict[str, list[dict[str, Any]]]:
-    return {
-        "hyp_001": [
-            recommendation("rec_001", "hyp_001", "inspect-config-diff"),
-            recommendation("rec_002", "hyp_001", "propose-config-rollback"),
-        ],
-        "hyp_002": [recommendation("rec_003", "hyp_002", "inspect-ingress-distribution")],
-        "hyp_003": [recommendation("rec_004", "hyp_003", "inspect-db-pool")],
-    }
-
-
-def topology_snapshot() -> dict[str, Any]:
-    topology = json.loads(TOPOLOGY.read_text(encoding="utf-8"))
-    states = {
-        "api-gateway-01": "suspected_root",
-        "checkout-api-01": "primary_affected",
-        "payment-api-01": "impact_path",
-        "payment-db-01": "blast_radius",
-        "auth-api-01": "blast_radius",
-    }
-    nodes = [
-        {
-            "id": node["id"],
-            "name": node["name"],
-            "type": node["entity_type"],
-            "service": node["service"],
-            "criticality": node["criticality"],
-            "state": states[node["id"]],
-        }
-        for node in topology["nodes"]
-    ]
-    edges = [
-        {
-            **edge,
-            "state": "impact_path"
-            if edge["relation_type"] == "sends_traffic_to" and edge["target"] != "auth-api-01"
-            else "blast_radius",
-        }
-        for edge in topology["edges"]
-    ]
-    return {"fixture_version": topology["version"], "nodes": nodes, "edges": edges}
-
-
-def build_investigation(
-    events: list[dict[str, Any]],
-    by_source: dict[str, dict[str, Any]],
-    incident_bundle: dict[str, Any],
-    hypotheses: list[dict[str, Any]],
-) -> dict[str, Any]:
-    evidence = build_evidence(by_source)
-    relevance_by_event: dict[str, dict[str, list[str]]] = {}
-    for hypothesis_id, items in evidence.items():
-        for item in items:
-            source_event_id = item["source_event_id"]
-            if source_event_id is None:
-                continue
-            by_hypothesis = relevance_by_event.setdefault(source_event_id, {})
-            by_hypothesis.setdefault(hypothesis_id, []).append(item["reason_code"])
-
-    evaluation_by_event = {
-        evaluation["event_id"]: evaluation
-        for group in (incident_bundle["attached_events"], incident_bundle["excluded_events"])
-        for evaluation in group
-    }
-    timeline = []
-    for event in events:
-        evaluation_data = evaluation_by_event.get(event["event_id"])
-        if evaluation_data is None:
-            continue
-        timeline.append(
-            {
-                "event": event,
-                "attachment_decision": evaluation_data["decision"],
-                "attachment_score": evaluation_data["attachment_score"],
-                "attachment_reasons": evaluation_data["attachment_reasons"],
-                "hypothesis_relevance": relevance_by_event.get(event["event_id"], {})
-                if evaluation_data["decision"] == "attached"
-                else {},
-            }
-        )
-    fingerprint_source = "|".join(
-        f"{item['event']['event_id']}:{json.dumps(item['event'], sort_keys=True)}"
-        for item in timeline
-        if item["attachment_decision"] == "attached"
+def _phase3_seed(investigation: dict[str, Any]) -> dict[str, Any]:
+    top_hypothesis_id = min(
+        investigation["hypotheses"], key=lambda item: item["rank"]
+    )["hypothesis_id"]
+    evidence = sorted(
+        investigation["evidence_by_hypothesis"][top_hypothesis_id],
+        key=lambda item: item["evidence_id"],
     )
-    fingerprint = hashlib.sha256(fingerprint_source.encode()).hexdigest()
-    recommendations = build_recommendations()
+    missing = next(item for item in evidence if item["kind"] == "missing")
+    non_missing = next(item for item in evidence if item["kind"] != "missing")
+    excluded = next(
+        item for item in investigation["timeline"] if item["attachment_decision"] == "excluded"
+    )
     return {
-        "generated_at": "2026-07-14T09:31:41.500Z",
-        "analysis_run_id": RUN_ID,
-        "analysis_run": {
-            "analysis_run_id": RUN_ID,
-            "incident_id": INCIDENT_ID,
-            "revision": 7,
-            "status": "current",
-            "trigger_event_id": by_source["prom-db_connection_utilization-0248"]["event_id"],
-            "input_fingerprint": f"sha256:{fingerprint}",
-            "created_at": "2026-07-14T09:31:41.000Z",
-            "completed_at": "2026-07-14T09:31:41.320Z",
-            "algorithm_version": "rca-rules-1.1",
-        },
-        "incident": incident_bundle["incident"],
-        "timeline": timeline,
-        "topology": topology_snapshot(),
-        "hypotheses": hypotheses,
-        "evidence_by_hypothesis": evidence,
-        "recommendations_by_hypothesis": recommendations,
-        "explanation": {
-            "analysis_run_id": RUN_ID,
-            "incident_id": INCIDENT_ID,
-            "hypothesis_id": "hyp_001",
-            "generator": "template",
-            "summary": "The probable root cause is a gateway configuration regression after rate limiting was disabled.",
-            "claims": [
-                {"claim": "Forwarded traffic increased after the configuration change.", "evidence_ids": ["ev_001", "ev_003"]},
-                {"claim": "Stable raw ingress weakens an external DoS explanation.", "evidence_ids": ["ev_008"]},
-            ],
-            "diagnostic_step_ids": ["inspect-config-diff", "compare-pre-post-metrics"],
-            "remediation_step_ids": ["propose-config-rollback"],
-        },
-        "reviews": [],
+        "incident_id": investigation["incident"]["incident_id"],
+        "current_analysis_run_id": investigation["analysis_run_id"],
+        "current_hypothesis_ids": [item["hypothesis_id"] for item in investigation["hypotheses"]],
+        "excluded_event_id": excluded["event"]["event_id"],
+        "initial_review_ids": [],
+        "missing_evidence_id": missing["evidence_id"],
+        "non_missing_evidence_id": non_missing["evidence_id"],
+        "superseded_analysis_run_id": "run_006",
+        "superseded_hypothesis_id": "hyp_old",
     }
 
 
 def build_outputs() -> dict[Path, str]:
-    events, by_source = load_events()
-    hypotheses = build_hypotheses()
-    if [item["evidence_score"] for item in hypotheses] != [92.1, 65.6, 41.5]:
-        raise ValueError("frozen evidence scores do not calculate correctly")
-    incident_bundle = build_incident_bundle(by_source)
-    expected = {
-        "schema_version": "1.0",
-        "version": "golden-expected-analysis-1.0",
-        "analysis_run_id": RUN_ID,
-        "incident_id": INCIDENT_ID,
-        "algorithm_version": "rca-rules-1.1",
-        "weights": {name: float(value) for name, value in WEIGHTS.items()},
-        "hypotheses": hypotheses,
-        "typed_paths": {
-            "configuration_traffic_impact": ["api-gateway-01", "checkout-api-01", "payment-api-01"],
-            "database_dependency": ["checkout-api-01", "payment-api-01", "payment-db-01"],
-        },
-        "conflict_reason_codes": ["STABLE_RAW_INGRESS", "NORMAL_DB_UTILIZATION"],
+    snapshot = _normalize_snapshot(_production_snapshot())
+    investigation = snapshot["investigation"]
+    review = snapshot["review"]
+    audit_order = {
+        "EVENT_EXCLUDED": 1,
+        "ANALYSIS_PUBLISHED": 2,
+        "REVIEW_CONFIRMED": 3,
     }
-    investigation = build_investigation(events, by_source, incident_bundle, hypotheses)
+    audit = sorted(
+        (
+            item
+            for item in snapshot["audit"]
+            if item["action"] in audit_order
+            and (
+                item["action"] != "ANALYSIS_PUBLISHED"
+                or item["analysis_run_id"] == GOLDEN_RUN_ID
+            )
+        ),
+        key=lambda item: (audit_order[item["action"]], item["object_id"]),
+    )
+    for index, item in enumerate(audit, 1):
+        item["audit_id"] = f"audit_{index:03d}"
+        item["timestamp"] = f"2026-07-14T09:32:{index:02d}.000Z"
+        if item["action"] == "ANALYSIS_PUBLISHED":
+            item["payload"]["prior_run_id"] = "run_006"
+        if item["action"] == "REVIEW_CONFIRMED":
+            item["request_id"] = "req_golden_review_001"
+            item["payload"]["request_id"] = "req_golden_review_001"
+    if [item["evidence_score"] for item in investigation["hypotheses"]] != [92.1, 65.6, 41.5]:
+        raise RuntimeError("production replay no longer reproduces the approved RCA scores")
+    if investigation["incident"]["anomaly_count"] != 9:
+        raise RuntimeError("production replay no longer reproduces nine actionable anomalies")
+
     review_examples = {
         "schema_version": "1.0",
         "version": "review-examples-1.0",
-        "records": [
-            {
-                "review_id": "rev_001",
-                "incident_id": INCIDENT_ID,
-                "analysis_run_id": RUN_ID,
-                "hypothesis_id": "hyp_001",
-                "decision": "confirmed",
-                "client_action_id": "review-action-001",
-                "requested_evidence_id": None,
-                "reviewer": "team-demo-user",
-                "comment": "Confirmed after reviewing the config diff and stable ingress distribution.",
-                "created_at": "2026-07-14T09:32:30.000Z",
-            }
-        ],
+        "records": [review],
     }
     audit_examples = {
         "schema_version": "1.0",
         "version": "audit-examples-1.0",
-        "records": [
-            {
-                "audit_id": "audit_excluded_auth_001",
-                "timestamp": "2026-07-14T09:32:00.200Z",
-                "actor_type": "system",
-                "actor_id": None,
-                "action": "EVENT_EXCLUDED",
-                "object_type": "event",
-                "object_id": by_source["log-auth-certificate-0001"]["event_id"],
-                "request_id": "req_batch_t120",
-                "analysis_run_id": RUN_ID,
-                "payload": {"reason_codes": ["INCOMPATIBLE_MAINTENANCE_SYMPTOM", "EXPLICIT_DIFFERENT_TRACE"]},
-            },
-            {
-                "audit_id": "audit_published_007",
-                "timestamp": "2026-07-14T09:31:41.320Z",
-                "actor_type": "system",
-                "actor_id": None,
-                "action": "ANALYSIS_PUBLISHED",
-                "object_type": "analysis_run",
-                "object_id": RUN_ID,
-                "request_id": "req_batch_t100",
-                "analysis_run_id": RUN_ID,
-                "payload": {"revision": 7, "top_hypothesis_id": "hyp_001"},
-            },
-        ],
+        "records": audit,
     }
-    phase3_review_seed = json.loads(PHASE3_REVIEW_SEED.read_text(encoding="utf-8"))
-    phase3_review_seed["excluded_event_id"] = by_source["log-auth-certificate-0001"]["event_id"]
     return {
-        BACKEND_FIXTURES / "golden_expected_analysis.json": pretty(expected),
-        BACKEND_FIXTURES / "golden_incident_bundle.json": pretty(incident_bundle),
+        BACKEND_FIXTURES / "golden_expected_analysis.json": pretty(
+            _expected_analysis(investigation, snapshot["run_metadata"])
+        ),
+        BACKEND_FIXTURES / "golden_incident_bundle.json": pretty(
+            snapshot["incident_bundle"]
+        ),
         BACKEND_FIXTURES / "golden_investigation_response.json": pretty(investigation),
         BACKEND_FIXTURES / "golden_review_examples.json": pretty(review_examples),
         BACKEND_FIXTURES / "golden_audit_examples.json": pretty(audit_examples),
-        FRONTEND_MOCK: pretty(investigation),
-        FRONTEND_EVENTS: pretty(events),
-        PHASE3_REVIEW_SEED: pretty(phase3_review_seed),
+        BACKEND_FIXTURES / "phase3_review_seed.json": pretty(
+            _phase3_seed(investigation)
+        ),
+        FRONTEND_FIXTURES / "golden-investigation-response.json": pretty(investigation),
+        FRONTEND_FIXTURES / "golden-events.json": pretty(snapshot["events"]),
     }
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Generate normalized handoff artifacts from a real production replay."
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     outputs = build_outputs()
-    stale = []
+    stale: list[str] = []
     for path, content in outputs.items():
         if args.check:
             if not path.exists() or path.read_text(encoding="utf-8") != content:
@@ -470,8 +347,11 @@ def main() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
     if stale:
-        raise SystemExit("handoff fixtures are stale: " + ", ".join(stale))
-    print(f"{'validated' if args.check else 'generated'} {len(outputs)} handoff artifacts")
+        raise SystemExit("production-generated handoff artifacts are stale: " + ", ".join(stale))
+    print(
+        f"{'validated' if args.check else 'generated'} {len(outputs)} "
+        "handoff artifacts from production replay"
+    )
 
 
 if __name__ == "__main__":

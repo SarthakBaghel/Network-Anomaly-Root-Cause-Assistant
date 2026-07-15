@@ -235,3 +235,19 @@ contracts only when its affected owners have reviewed it.
   hook failure fails the request rather than reporting a partial reset as
   successful.
 - **Affected owners:** Persons 1, 3, 4, and 5
+
+## M0-017 — Production-derived UI handoffs
+
+- **Status:** accepted for the P0 production integration
+- **Golden generation:** P4/P5 handoff artifacts are captured from an isolated
+  reset and raw replay through the production FastAPI application. Volatile
+  database IDs and wall-clock timestamps are normalized only after the real
+  detector, incident, RCA, evidence, playbook, explanation, review, and audit
+  paths have completed.
+- **Frontend contract:** `backend/openapi.json` is generated from the production
+  FastAPI app and P2's TypeScript declarations are generated from that file.
+  Drift checks fail when either generated artifact is stale.
+- **Live UI:** the MSW-disabled Playwright configuration starts migrated SQLite,
+  FastAPI, and Vite processes and discovers incident, run, hypothesis, evidence,
+  review, and audit identities from production responses at runtime.
+- **Affected owners:** Persons 1, 2, 4, and 5

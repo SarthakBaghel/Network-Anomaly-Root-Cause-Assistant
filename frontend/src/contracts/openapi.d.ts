@@ -684,6 +684,13 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /** IncidentListResponse */
+        IncidentListResponse: {
+            /** Items */
+            items: components["schemas"]["IncidentSummary"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /**
          * IncidentStatus
          * @enum {string}
@@ -1304,7 +1311,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["IncidentListResponse"];
                 };
             };
             /** @description Validation Error */

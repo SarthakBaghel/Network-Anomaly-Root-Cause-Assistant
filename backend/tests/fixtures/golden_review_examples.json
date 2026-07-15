@@ -2,8 +2,8 @@
   "records": [
     {
       "analysis_run_id": "run_007",
-      "client_action_id": "review-action-001",
-      "comment": "Confirmed after reviewing the config diff and stable ingress distribution.",
+      "client_action_id": "golden-review-action-001",
+      "comment": "Confirmed from the production-generated golden replay.",
       "created_at": "2026-07-14T09:32:30.000Z",
       "decision": "confirmed",
       "hypothesis_id": "hyp_001",

@@ -1,4 +1,4 @@
-.PHONY: bootstrap fixtures openapi types test build validate validate-fixtures guard verify
+.PHONY: bootstrap fixtures check-fixtures openapi check-openapi types check-types live-e2e test build validate validate-fixtures guard verify
 
 bootstrap:
 	./scripts/bootstrap.sh
@@ -7,13 +7,25 @@ fixtures:
 	.venv/bin/python scripts/build_network_profile.py
 	.venv/bin/python scripts/build_handoff_fixtures.py
 
+check-fixtures:
+	.venv/bin/python scripts/build_handoff_fixtures.py --check
+
 openapi:
 	.venv/bin/python scripts/generate_openapi.py
+
+check-openapi:
+	.venv/bin/python scripts/generate_openapi.py --check
 
 types: openapi
 	cd frontend && npm run generate-types
 
 generate-types: types
+
+check-types: check-openapi
+	cd frontend && npm run check-generated-types
+
+live-e2e:
+	cd frontend && npm run e2e:live
 
 validate:
 	.venv/bin/python scripts/validate_milestone0.py
@@ -34,4 +46,4 @@ build:
 	cd frontend && npm run build
 
 # Full CI gate: validate + test + build
-verify: validate-fixtures test build
+verify: check-fixtures check-types validate-fixtures test build

@@ -111,7 +111,13 @@ class SimulatorEngine:
             return self.status()
 
     def trigger(self, scenario_id: str) -> dict:
-        if scenario_id not in {"gateway_rate_limit", SCENARIO_KEY, SCENARIO_ID, TRACE_ID}:
+        if scenario_id not in {
+            "gateway_rate_limit",
+            "gateway_rate_limit_disabled",
+            SCENARIO_KEY,
+            SCENARIO_ID,
+            TRACE_ID,
+        }:
             raise KeyError(scenario_id)
         self._stop_worker()
         with self._lock:

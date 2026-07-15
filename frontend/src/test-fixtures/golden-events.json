@@ -3,7 +3,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz39f02cahhpqb2q8qyxdm",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -36,7 +36,7 @@
     "signal_value": 7768.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0001",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -44,7 +44,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz39f04errswhqmmhbw3km",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -77,7 +77,7 @@
     "signal_value": 179.28,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0007",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -85,7 +85,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz39f06rrgcgrt9th1fhbv",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -118,7 +118,7 @@
     "signal_value": 0.3486,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0004",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -126,7 +126,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz39f0816t2frvzpv6tr14",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -159,7 +159,7 @@
     "signal_value": 2390.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0002",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -167,7 +167,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz39f09ke8ebd03x5k43nz",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -200,7 +200,7 @@
     "signal_value": 5.976,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0006",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -208,7 +208,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz39f0q5kpr3gmy3496zx6",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -241,7 +241,7 @@
     "signal_value": 1195.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0003",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -249,7 +249,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz39f0qveev0gpztfcf4jx",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -282,7 +282,7 @@
     "signal_value": 0.4183,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0008",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -290,7 +290,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz39f0ypn4aw7dca1yrknr",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:25:00.120Z",
+    "ingested_at": "2026-07-14T09:25:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -323,7 +323,7 @@
     "signal_value": 1.992,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0005",
-    "timestamp": "2026-07-14T09:25:00.000Z",
+    "timestamp": "2026-07-14T09:25:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -331,7 +331,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3k7g02vehpgbzxvtvh3e",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -364,7 +364,7 @@
     "signal_value": 0.3493,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0012",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -372,7 +372,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz3k7gbxr65q2ff9524p2e",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -405,7 +405,7 @@
     "signal_value": 179.64,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0015",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -413,7 +413,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3k7gcw5m2mqe4a86334g",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -446,7 +446,7 @@
     "signal_value": 1.996,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0013",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -454,7 +454,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3k7gkfc1rb3v7g8z8msc",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -487,7 +487,7 @@
     "signal_value": 5.988,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0014",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -495,7 +495,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3k7gkkyqm62qbd9cmexf",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -528,7 +528,7 @@
     "signal_value": 1197.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0011",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -536,7 +536,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3k7gp274n4hrffvda0h1",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -569,7 +569,7 @@
     "signal_value": 7784.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0009",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -577,7 +577,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3k7gpedbhhphhbpq3k49",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -610,7 +610,7 @@
     "signal_value": 2395.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0010",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -618,7 +618,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz3k7gxwns48jr6d11qrpx",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:10.120Z",
+    "ingested_at": "2026-07-14T09:25:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -651,7 +651,7 @@
     "signal_value": 0.4192,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0016",
-    "timestamp": "2026-07-14T09:25:10.000Z",
+    "timestamp": "2026-07-14T09:25:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -659,7 +659,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz3x004c2wk4vnbfdcbhrx",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -692,7 +692,7 @@
     "signal_value": 180.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0023",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -700,7 +700,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3x004n9panmm5v82wxyk",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -733,7 +733,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0017",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -741,7 +741,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3x00bdynsgwpe4fdjah1",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -774,7 +774,7 @@
     "signal_value": 1200.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0019",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -782,7 +782,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3x00bj55zkqvv78kyknt",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -815,7 +815,7 @@
     "signal_value": 2.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0021",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -823,7 +823,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3x00cqmyw62swx2c68j1",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -856,7 +856,7 @@
     "signal_value": 6.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0022",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -864,7 +864,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3x00pavw99tk4wr2et87",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -897,7 +897,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0018",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -905,7 +905,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz3x00vy58p0yhk4qnwgxt",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -938,7 +938,7 @@
     "signal_value": 0.35,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0020",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -946,7 +946,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz3x00x609ab8fb7mehfem",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:20.120Z",
+    "ingested_at": "2026-07-14T09:25:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -979,7 +979,7 @@
     "signal_value": 0.42,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0024",
-    "timestamp": "2026-07-14T09:25:20.000Z",
+    "timestamp": "2026-07-14T09:25:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -987,7 +987,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz46rg3g8n5d4x15ne31zv",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1020,7 +1020,7 @@
     "signal_value": 180.36,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0031",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -1028,7 +1028,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz46rg5kj18ymmxvsezck5",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1061,7 +1061,7 @@
     "signal_value": 6.012,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0030",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -1069,7 +1069,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz46rga23pc2fkxax5ddnf",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1102,7 +1102,7 @@
     "signal_value": 1202.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0027",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -1110,7 +1110,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz46rgd0s6d1s0s2dd1jrz",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1143,7 +1143,7 @@
     "signal_value": 4690.5855,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0026",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -1151,7 +1151,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz46rgh038yvs557vf6azf",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1184,7 +1184,7 @@
     "signal_value": 7815.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0025",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -1192,7 +1192,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz46rgtg8b9h8reqn1a1na",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1225,7 +1225,7 @@
     "signal_value": 0.3507,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0028",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -1233,7 +1233,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz46rgva07aqfvqdva9q4k",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1266,7 +1266,7 @@
     "signal_value": 2.004,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0029",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -1274,7 +1274,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz46rgxpde6txzqyz58482",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:30.120Z",
+    "ingested_at": "2026-07-14T09:25:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1307,7 +1307,7 @@
     "signal_value": 0.4208,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0032",
-    "timestamp": "2026-07-14T09:25:30.000Z",
+    "timestamp": "2026-07-14T09:25:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -1315,7 +1315,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz4gh03sz5vqtpg2rwms7t",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1348,7 +1348,7 @@
     "signal_value": 0.4217,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0040",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -1356,7 +1356,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4gh07cy3m6rmnzfhyjqr",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1389,7 +1389,7 @@
     "signal_value": 2.008,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0037",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -1397,7 +1397,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4gh0ep888nsp03td31ys",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1430,7 +1430,7 @@
     "signal_value": 6.024,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0038",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -1438,7 +1438,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4gh0f98aa6pr2xn6tfx8",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1471,7 +1471,7 @@
     "signal_value": 7831.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0033",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -1479,7 +1479,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz4gh0rgzjq2vfgne3ssfb",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1512,7 +1512,7 @@
     "signal_value": 180.72,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0039",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -1520,7 +1520,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4gh0twjwy0frpfr8z0mx",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1553,7 +1553,7 @@
     "signal_value": 109.4145,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0034",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -1561,7 +1561,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4gh0v9kntamqbsjxqh8c",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1594,7 +1594,7 @@
     "signal_value": 0.3514,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0036",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -1602,7 +1602,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4gh0yrae867rrh2vs8bn",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:25:40.120Z",
+    "ingested_at": "2026-07-14T09:25:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1635,7 +1635,7 @@
     "signal_value": 1204.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0035",
-    "timestamp": "2026-07-14T09:25:40.000Z",
+    "timestamp": "2026-07-14T09:25:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -1643,7 +1643,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4t9g931hatw87tn2d4b9",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1676,7 +1676,7 @@
     "signal_value": 5.976,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0046",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -1684,7 +1684,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4t9g9f29fdbgm43k0xs0",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1717,7 +1717,7 @@
     "signal_value": 7768.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0041",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -1725,7 +1725,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4t9gf3n4315b55xbtztk",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1758,7 +1758,7 @@
     "signal_value": 0.3486,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0044",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -1766,7 +1766,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz4t9gp8dm0e94v3yfc1xc",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1799,7 +1799,7 @@
     "signal_value": 179.28,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0047",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -1807,7 +1807,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4t9gqrn0tnzcet660pmj",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1840,7 +1840,7 @@
     "signal_value": 4690.5855,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0042",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -1848,7 +1848,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4t9grbjyvxtwa9b0aqgw",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1881,7 +1881,7 @@
     "signal_value": 1.992,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0045",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -1889,7 +1889,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz4t9gwz31szj7gn38h080",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1922,7 +1922,7 @@
     "signal_value": 1195.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0043",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -1930,7 +1930,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz4t9gxb1f8b4fbp6kxt00",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:25:50.120Z",
+    "ingested_at": "2026-07-14T09:25:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -1963,7 +1963,7 @@
     "signal_value": 0.4183,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0048",
-    "timestamp": "2026-07-14T09:25:50.000Z",
+    "timestamp": "2026-07-14T09:25:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -1971,7 +1971,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5420856js44ec2dejwt4",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2004,7 +2004,7 @@
     "signal_value": 0.3493,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0052",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -2012,7 +2012,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz54209t3z5tgaggvgb3vf",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2045,7 +2045,7 @@
     "signal_value": 179.64,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0055",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -2053,7 +2053,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5420crebjbe3dq5qmq9q",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2086,7 +2086,7 @@
     "signal_value": 1197.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0051",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -2094,7 +2094,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5420fmyy32xe5bykvzvk",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2127,7 +2127,7 @@
     "signal_value": 109.4145,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0050",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -2135,7 +2135,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5420mxv98pc2kbm5ykje",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2168,7 +2168,7 @@
     "signal_value": 7784.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0049",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -2176,7 +2176,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5420w4bhnvcmh22rqm1f",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2209,7 +2209,7 @@
     "signal_value": 1.996,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0053",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -2217,7 +2217,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5420x31qt66ac1m4m8c0",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2250,7 +2250,7 @@
     "signal_value": 5.988,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0054",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -2258,7 +2258,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz5420xke9ckhz6drv1dxn",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:00.120Z",
+    "ingested_at": "2026-07-14T09:26:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2291,7 +2291,7 @@
     "signal_value": 0.4192,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0056",
-    "timestamp": "2026-07-14T09:26:00.000Z",
+    "timestamp": "2026-07-14T09:26:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -2299,7 +2299,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5dtg3jcf6aysc8cvgg44",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2332,7 +2332,7 @@
     "signal_value": 6.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0062",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -2340,7 +2340,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz5dtga6hny85m0h2tnkt5",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2373,7 +2373,7 @@
     "signal_value": 180.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0063",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -2381,7 +2381,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5dtgd13ksgxx47920y5j",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2414,7 +2414,7 @@
     "signal_value": 0.35,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0060",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -2422,7 +2422,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5dtgjb77yx4m02w8htmy",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2455,7 +2455,7 @@
     "signal_value": 1200.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0059",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -2463,7 +2463,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5dtgntkygks8rjccbvvm",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2496,7 +2496,7 @@
     "signal_value": 4690.5855,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0058",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -2504,7 +2504,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5dtgpydysjqymzgzj615",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2537,7 +2537,7 @@
     "signal_value": 2.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0061",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -2545,7 +2545,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz5dtgtnkdgvrrhrychxtt",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2578,7 +2578,7 @@
     "signal_value": 0.42,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0064",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -2586,7 +2586,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5dtgykkna8vpjn4f89sc",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:26:10.120Z",
+    "ingested_at": "2026-07-14T09:26:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2619,7 +2619,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0057",
-    "timestamp": "2026-07-14T09:26:10.000Z",
+    "timestamp": "2026-07-14T09:26:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -2627,7 +2627,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz5qk043mt692fq824trmb",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2660,7 +2660,7 @@
     "signal_value": 180.36,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0071",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -2668,7 +2668,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5qk0bcb3h8qv979fchhy",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2701,7 +2701,7 @@
     "signal_value": 0.3507,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0068",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -2709,7 +2709,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5qk0pty9zp8zc8hbwcgp",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2742,7 +2742,7 @@
     "signal_value": 7815.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0065",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -2750,7 +2750,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5qk0rtv5a914k4cnssw6",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2783,7 +2783,7 @@
     "signal_value": 2.004,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0069",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -2791,7 +2791,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5qk0sx7fcqq7ejqa19gt",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2824,7 +2824,7 @@
     "signal_value": 1202.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0067",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -2832,7 +2832,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5qk0t5kbdmkg70m6rm7b",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2865,7 +2865,7 @@
     "signal_value": 109.4145,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0066",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -2873,7 +2873,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz5qk0w4cbehfm6scwgn8q",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2906,7 +2906,7 @@
     "signal_value": 0.4208,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0072",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -2914,7 +2914,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz5qk0wjwmfpynq6xh2b3c",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:26:20.120Z",
+    "ingested_at": "2026-07-14T09:26:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2947,7 +2947,7 @@
     "signal_value": 6.012,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0070",
-    "timestamp": "2026-07-14T09:26:20.000Z",
+    "timestamp": "2026-07-14T09:26:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -2955,7 +2955,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz61bg8nw6mpf3dzd72prj",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -2988,7 +2988,7 @@
     "signal_value": 6.024,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0078",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -2996,7 +2996,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz61bg9k50x12me529yetz",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3029,7 +3029,7 @@
     "signal_value": 7831.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0073",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -3037,7 +3037,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz61bgfztxkgnyb10ndtv0",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3070,7 +3070,7 @@
     "signal_value": 0.3514,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0076",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -3078,7 +3078,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz61bggqj9e8vw2w6bm9hb",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3111,7 +3111,7 @@
     "signal_value": 180.72,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0079",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -3119,7 +3119,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz61bgk62de287e3ek5eqr",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3152,7 +3152,7 @@
     "signal_value": 2.008,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0077",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -3160,7 +3160,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz61bgktk81248bb89nm2v",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3193,7 +3193,7 @@
     "signal_value": 4690.5855,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0074",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -3201,7 +3201,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz61bgrr8pgsntmh0mxvwx",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3234,7 +3234,7 @@
     "signal_value": 1204.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0075",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -3242,7 +3242,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz61bgy0zy8cvg2q0cbps4",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:30.120Z",
+    "ingested_at": "2026-07-14T09:26:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3275,7 +3275,7 @@
     "signal_value": 0.4217,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0080",
-    "timestamp": "2026-07-14T09:26:30.000Z",
+    "timestamp": "2026-07-14T09:26:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -3283,7 +3283,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6b40143h2cse8czk0z6y",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3316,7 +3316,7 @@
     "signal_value": 1.992,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0085",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -3324,7 +3324,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6b403ysgyym4kqcs15cw",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3357,7 +3357,7 @@
     "signal_value": 0.3486,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0084",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -3365,7 +3365,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6b408bege76s43t07tgg",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3398,7 +3398,7 @@
     "signal_value": 1195.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0083",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -3406,7 +3406,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6b40ayrgh4dk2twhdwrf",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3439,7 +3439,7 @@
     "signal_value": 109.4145,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0082",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -3447,7 +3447,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz6b40fzzdr76kqbmpk7yt",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3480,7 +3480,7 @@
     "signal_value": 179.28,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0087",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -3488,7 +3488,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz6b40me3jtber7yhyf2yr",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3521,7 +3521,7 @@
     "signal_value": 0.4183,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0088",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -3529,7 +3529,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6b40s8swx6d041ks0psh",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3562,7 +3562,7 @@
     "signal_value": 5.976,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0086",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -3570,7 +3570,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6b40wxehx4xfx8rdt9ye",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:26:40.120Z",
+    "ingested_at": "2026-07-14T09:26:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3603,7 +3603,7 @@
     "signal_value": 7768.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0081",
-    "timestamp": "2026-07-14T09:26:40.000Z",
+    "timestamp": "2026-07-14T09:26:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -3611,7 +3611,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz6mwg2m6pvkd6gatgqqp1",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3644,7 +3644,7 @@
     "signal_value": 179.64,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0095",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -3652,7 +3652,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6mwg9kq06tyjb25490wg",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3685,7 +3685,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0090",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -3693,7 +3693,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6mwgd0fs1wemd46551nv",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3726,7 +3726,7 @@
     "signal_value": 5.988,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0094",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -3734,7 +3734,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6mwgds61q8dv1sc0zxbc",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3767,7 +3767,7 @@
     "signal_value": 7784.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0089",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -3775,7 +3775,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6mwgm34aa3c44jy8pxgj",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3808,7 +3808,7 @@
     "signal_value": 1.996,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0093",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -3816,7 +3816,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6mwgmg8hfe5dq8j8nyqw",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3849,7 +3849,7 @@
     "signal_value": 1197.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0091",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -3857,7 +3857,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz6mwgpf8n3nn0c9vscqcv",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3890,7 +3890,7 @@
     "signal_value": 0.4192,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0096",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -3898,7 +3898,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6mwgw0hwj721364nfc27",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:26:50.120Z",
+    "ingested_at": "2026-07-14T09:26:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3931,7 +3931,7 @@
     "signal_value": 0.3493,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0092",
-    "timestamp": "2026-07-14T09:26:50.000Z",
+    "timestamp": "2026-07-14T09:26:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -3939,7 +3939,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6yn02skeecjqqc5k70br",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -3972,7 +3972,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0098",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -3980,7 +3980,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz6yn0csqynk2my78jj0g7",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4013,7 +4013,7 @@
     "signal_value": 0.42,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0104",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -4021,7 +4021,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz6yn0d8qjys7qbpedxz02",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4054,7 +4054,7 @@
     "signal_value": 180.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0103",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -4062,7 +4062,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6yn0j3rfqrbmeytk4c5j",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4095,7 +4095,7 @@
     "signal_value": 1200.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0099",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -4103,7 +4103,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6yn0r36r5eb34v3ahq0h",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4136,7 +4136,7 @@
     "signal_value": 2.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0101",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -4144,7 +4144,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6yn0revf1fdkccky07nv",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4177,7 +4177,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0097",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -4185,7 +4185,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6yn0sd7vqd3z1hg70a9g",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4218,7 +4218,7 @@
     "signal_value": 6.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0102",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -4226,7 +4226,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz6yn0v6ftxjgkw37w69kx",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:00.120Z",
+    "ingested_at": "2026-07-14T09:27:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4259,7 +4259,7 @@
     "signal_value": 0.35,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0100",
-    "timestamp": "2026-07-14T09:27:00.000Z",
+    "timestamp": "2026-07-14T09:27:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -4267,7 +4267,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz78dg1pjc7sxj7cxp1efh",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4300,7 +4300,7 @@
     "signal_value": 180.36,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0111",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -4308,7 +4308,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz78dg25gg83pdnz56a4rk",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4341,7 +4341,7 @@
     "signal_value": 1202.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0107",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -4349,7 +4349,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz78dg3t1yw3e4rgpvnk14",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4382,7 +4382,7 @@
     "signal_value": 0.3507,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0108",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -4390,7 +4390,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz78dgbgx9er64eaessg4g",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4423,7 +4423,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0106",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -4431,7 +4431,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz78dgemv8d4n3av1qdwk5",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4464,7 +4464,7 @@
     "signal_value": 0.4208,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0112",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -4472,7 +4472,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz78dgnye956v9bfgrxqpk",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4505,7 +4505,7 @@
     "signal_value": 7815.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0105",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -4513,7 +4513,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz78dgtbmvtzhqm1qmk3m2",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4546,7 +4546,7 @@
     "signal_value": 2.004,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0109",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -4554,7 +4554,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz78dgyjnwpz6tgm1an9wj",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:27:10.120Z",
+    "ingested_at": "2026-07-14T09:27:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4587,7 +4587,7 @@
     "signal_value": 6.012,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0110",
-    "timestamp": "2026-07-14T09:27:10.000Z",
+    "timestamp": "2026-07-14T09:27:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -4595,7 +4595,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7j6017s07qnvw544jtx3",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4628,7 +4628,7 @@
     "signal_value": 7831.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0113",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -4636,7 +4636,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7j60a9h7q6k47cbss9tz",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4669,7 +4669,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0114",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -4677,7 +4677,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz7j60gm2pcwhv2dn54j0s",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4710,7 +4710,7 @@
     "signal_value": 0.4217,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0120",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -4718,7 +4718,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7j60kt320ktxavsj9ck7",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4751,7 +4751,7 @@
     "signal_value": 1204.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0115",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -4759,7 +4759,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7j60m16y4e8tdt8g82ja",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4792,7 +4792,7 @@
     "signal_value": 0.3514,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0116",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -4800,7 +4800,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7j60r022qspyd268a04v",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4833,7 +4833,7 @@
     "signal_value": 2.008,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0117",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -4841,7 +4841,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz7j60wqayd6px8msw0czh",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4874,7 +4874,7 @@
     "signal_value": 180.72,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0119",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -4882,7 +4882,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7j60xrsn1xdn1r5f76d8",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:27:20.120Z",
+    "ingested_at": "2026-07-14T09:27:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4915,7 +4915,7 @@
     "signal_value": 6.024,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0118",
-    "timestamp": "2026-07-14T09:27:20.000Z",
+    "timestamp": "2026-07-14T09:27:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -4923,7 +4923,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7vyg11jhwcgyz0ztds4t",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4956,7 +4956,7 @@
     "signal_value": 0.3486,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0124",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -4964,7 +4964,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7vyg4ycznja08mswczrn",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -4997,7 +4997,7 @@
     "signal_value": 1195.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0123",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -5005,7 +5005,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz7vyg73ckzcaammk13vvg",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5038,7 +5038,7 @@
     "signal_value": 0.4183,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0128",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -5046,7 +5046,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7vyg91763gbnf7vbky8z",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5079,7 +5079,7 @@
     "signal_value": 7768.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0121",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -5087,7 +5087,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7vyg96fe36ry5qmzws7m",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5120,7 +5120,7 @@
     "signal_value": 5.976,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0126",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -5128,7 +5128,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz7vygdt34p39np9njsjfh",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5161,7 +5161,7 @@
     "signal_value": 179.28,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0127",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -5169,7 +5169,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7vyge1wys340kfvgp1bj",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5202,7 +5202,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0122",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -5210,7 +5210,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz7vygpdtq8nxchtysw5xk",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:27:30.120Z",
+    "ingested_at": "2026-07-14T09:27:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5243,7 +5243,7 @@
     "signal_value": 1.992,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0125",
-    "timestamp": "2026-07-14T09:27:30.000Z",
+    "timestamp": "2026-07-14T09:27:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -5251,7 +5251,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz85q0465fvpv3n9rmya6x",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5284,7 +5284,7 @@
     "signal_value": 1.996,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0133",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -5292,7 +5292,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz85q0dfpxjyrxrebmajj2",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5325,7 +5325,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0130",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -5333,7 +5333,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz85q0g1gk782rw0w84wk3",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5366,7 +5366,7 @@
     "signal_value": 0.4192,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0136",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -5374,7 +5374,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz85q0hgyew2788bdk8bf3",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5407,7 +5407,7 @@
     "signal_value": 5.988,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0134",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -5415,7 +5415,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz85q0pn218kz98mqmxxw4",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5448,7 +5448,7 @@
     "signal_value": 0.3493,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0132",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -5456,7 +5456,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz85q0t4r2tm4ebvp8gmb5",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5489,7 +5489,7 @@
     "signal_value": 179.64,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0135",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -5497,7 +5497,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz85q0tw7as00m2by8ezx5",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5530,7 +5530,7 @@
     "signal_value": 1197.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0131",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -5538,7 +5538,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz85q0zkv487v9gz3zs1yx",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:27:40.120Z",
+    "ingested_at": "2026-07-14T09:27:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5571,7 +5571,7 @@
     "signal_value": 7784.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0129",
-    "timestamp": "2026-07-14T09:27:40.000Z",
+    "timestamp": "2026-07-14T09:27:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -5579,7 +5579,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8ffg66pbmwh5z51acxkx",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5612,7 +5612,7 @@
     "signal_value": 0.35,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0140",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -5620,7 +5620,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz8ffg79vpvzjvyem1cj7s",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5653,7 +5653,7 @@
     "signal_value": 180.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0143",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -5661,7 +5661,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8ffgb4c9k7ww917cbjyq",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5694,7 +5694,7 @@
     "signal_value": 1200.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0139",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -5702,7 +5702,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8ffgcdrx91vrg4j55rqa",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5735,7 +5735,7 @@
     "signal_value": 2.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0141",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -5743,7 +5743,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz8ffgjd44jjdtztz6vn99",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5776,7 +5776,7 @@
     "signal_value": 0.42,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0144",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -5784,7 +5784,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8ffgmcdtc71ttw4j21m3",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5817,7 +5817,7 @@
     "signal_value": 6.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0142",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -5825,7 +5825,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8ffgppdgz6a6c7afh9jq",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5858,7 +5858,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0138",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -5866,7 +5866,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8ffgzp9jx8ej37spjf58",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:27:50.120Z",
+    "ingested_at": "2026-07-14T09:27:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5899,7 +5899,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0137",
-    "timestamp": "2026-07-14T09:27:50.000Z",
+    "timestamp": "2026-07-14T09:27:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -5907,7 +5907,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8s804sg1dm2sr1pssp77",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5940,7 +5940,7 @@
     "signal_value": 1202.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0147",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -5948,7 +5948,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8s805hkkfps835dnc5nv",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -5981,7 +5981,7 @@
     "signal_value": 0.3507,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0148",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -5989,7 +5989,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz8s8060x1tspq7e6r6a0e",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6022,7 +6022,7 @@
     "signal_value": 180.36,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0151",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -6030,7 +6030,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz8s809bm20pwfcf8z9s07",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6063,7 +6063,7 @@
     "signal_value": 0.4208,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0152",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -6071,7 +6071,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8s809wq64864zy3mt0p2",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6104,7 +6104,7 @@
     "signal_value": 2.004,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0149",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -6112,7 +6112,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8s80tdt5nan9p0waczt6",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6145,7 +6145,7 @@
     "signal_value": 7815.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0145",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -6153,7 +6153,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8s80vg5p4t5mexwjysk2",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6186,7 +6186,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0146",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -6194,7 +6194,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz8s80w23s37gvdb9hxr85",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:28:00.120Z",
+    "ingested_at": "2026-07-14T09:28:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6227,7 +6227,7 @@
     "signal_value": 6.012,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0150",
-    "timestamp": "2026-07-14T09:28:00.000Z",
+    "timestamp": "2026-07-14T09:28:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -6235,7 +6235,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz930g3a3e6xjxsvmtyh5q",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6268,7 +6268,7 @@
     "signal_value": 2.008,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0157",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -6276,7 +6276,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz930g3e8wj9c8t0h46trd",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6309,7 +6309,7 @@
     "signal_value": 0.3514,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0156",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -6317,7 +6317,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz930gejweb8z3vhn1n7w1",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6350,7 +6350,7 @@
     "signal_value": 0.4217,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0160",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -6358,7 +6358,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz930gmyrq7ny294q4w4ch",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6391,7 +6391,7 @@
     "signal_value": 7831.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0153",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -6399,7 +6399,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz930gn6kd8fk04p176aef",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6432,7 +6432,7 @@
     "signal_value": 180.72,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0159",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -6440,7 +6440,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz930grxzparn47vv49x3y",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6473,7 +6473,7 @@
     "signal_value": 1204.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0155",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -6481,7 +6481,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz930gt3avj68frf70r6ea",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6514,7 +6514,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0154",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -6522,7 +6522,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz930gz58yxcnbv0nathbk",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:28:10.120Z",
+    "ingested_at": "2026-07-14T09:28:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6555,7 +6555,7 @@
     "signal_value": 6.024,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0158",
-    "timestamp": "2026-07-14T09:28:10.000Z",
+    "timestamp": "2026-07-14T09:28:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -6563,7 +6563,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9cs0869zjeec36zkzyta",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6596,7 +6596,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0162",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -6604,7 +6604,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9cs0byvzsads75cyvnsb",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6637,7 +6637,7 @@
     "signal_value": 1.992,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0165",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -6645,7 +6645,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz9cs0er4dndp0xpkv7sz2",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6678,7 +6678,7 @@
     "signal_value": 0.4183,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0168",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -6686,7 +6686,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9cs0hj8cgrq8x127nmbx",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6719,7 +6719,7 @@
     "signal_value": 5.976,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0166",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -6727,7 +6727,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9cs0p7v4dkg3he55jvm2",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6760,7 +6760,7 @@
     "signal_value": 7768.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0161",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -6768,7 +6768,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9cs0qtn78hfe2n6mq2ny",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6801,7 +6801,7 @@
     "signal_value": 1195.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0163",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -6809,7 +6809,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9cs0s2q087cba8tbgav8",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6842,7 +6842,7 @@
     "signal_value": 0.3486,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0164",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -6850,7 +6850,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz9cs0y520adfgpakhsnqb",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:28:20.120Z",
+    "ingested_at": "2026-07-14T09:28:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6883,7 +6883,7 @@
     "signal_value": 179.28,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0167",
-    "timestamp": "2026-07-14T09:28:20.000Z",
+    "timestamp": "2026-07-14T09:28:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -6891,7 +6891,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfz9phg0j9x0gppcc53fq0e",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6924,7 +6924,7 @@
     "signal_value": 0.4192,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0176",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -6932,7 +6932,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9phg3pc1214zx5ny4jab",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -6965,7 +6965,7 @@
     "signal_value": 0.3493,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0172",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -6973,7 +6973,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9phg7d6z23ddjmbg7td9",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7006,7 +7006,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0170",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -7014,7 +7014,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9phg8w8hfe6s6m24rgd9",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7047,7 +7047,7 @@
     "signal_value": 7784.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0169",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -7055,7 +7055,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9phgdkb0v4dn1dvfw52g",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7088,7 +7088,7 @@
     "signal_value": 5.988,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0174",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -7096,7 +7096,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9phgnz77vesy7ej7tnrh",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7129,7 +7129,7 @@
     "signal_value": 1197.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0171",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -7137,7 +7137,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfz9phgq3q31gp7s8a4e8dd",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7170,7 +7170,7 @@
     "signal_value": 179.64,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0175",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -7178,7 +7178,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfz9phgwnpmncmtajb3zqxb",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:28:30.120Z",
+    "ingested_at": "2026-07-14T09:28:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7211,7 +7211,7 @@
     "signal_value": 1.996,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0173",
-    "timestamp": "2026-07-14T09:28:30.000Z",
+    "timestamp": "2026-07-14T09:28:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -7219,7 +7219,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfza0a0c4h3k1y5xvaffc7r",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7252,7 +7252,7 @@
     "signal_value": 1200.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0179",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -7260,7 +7260,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfza0a0cy90sncwdhteq5d6",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7293,7 +7293,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0177",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -7301,7 +7301,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfza0a0e375d10b3zv6x4me",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7334,7 +7334,7 @@
     "signal_value": 0.42,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0184",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -7342,7 +7342,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfza0a0efnm9g3yctwkvd9e",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7375,7 +7375,7 @@
     "signal_value": 6.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0182",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -7383,7 +7383,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfza0a0kke6sj6wntntqhat",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7416,7 +7416,7 @@
     "signal_value": 2.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0181",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -7424,7 +7424,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfza0a0msg2kabpb228gkhd",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7457,7 +7457,7 @@
     "signal_value": 180.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0183",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -7465,7 +7465,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfza0a0nkmneddy4p8kkke2",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7498,7 +7498,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0178",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -7506,7 +7506,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfza0a0tdjjsxmferyh8xz4",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:40.120Z",
+    "ingested_at": "2026-07-14T09:28:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7539,7 +7539,7 @@
     "signal_value": 0.35,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0180",
-    "timestamp": "2026-07-14T09:28:40.000Z",
+    "timestamp": "2026-07-14T09:28:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -7547,7 +7547,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaa2g5dxahm3trwr7vqbx",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7580,7 +7580,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0186",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -7588,7 +7588,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaa2gd070ek44kp8yr4ns",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7621,7 +7621,7 @@
     "signal_value": 6.012,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0190",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -7629,7 +7629,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaa2gd2ey757wpm32ppvp",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7662,7 +7662,7 @@
     "signal_value": 2.004,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0189",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -7670,7 +7670,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzaa2gjptqv4ymxr35vpc5",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7703,7 +7703,7 @@
     "signal_value": 180.36,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0191",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -7711,7 +7711,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaa2gkbtgb6t50fj8wm8s",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7744,7 +7744,7 @@
     "signal_value": 0.3507,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0188",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -7752,7 +7752,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaa2gkte8hkyp1fendk2e",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7785,7 +7785,7 @@
     "signal_value": 1202.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0187",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -7793,7 +7793,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaa2gpms5jvna8arvd3f5",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7826,7 +7826,7 @@
     "signal_value": 7815.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0185",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -7834,7 +7834,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzaa2gvsd0199yv5czjanq",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:28:50.120Z",
+    "ingested_at": "2026-07-14T09:28:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7867,7 +7867,7 @@
     "signal_value": 0.4208,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0192",
-    "timestamp": "2026-07-14T09:28:50.000Z",
+    "timestamp": "2026-07-14T09:28:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -7875,7 +7875,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzakv03bya6s8gt2qqwhth",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7908,7 +7908,7 @@
     "signal_value": 0.3514,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0196",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -7916,7 +7916,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzakv08aaxpmmmbckyyjxx",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7949,7 +7949,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0194",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -7957,7 +7957,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzakv08kmy5kqxj3q1ykys",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -7990,7 +7990,7 @@
     "signal_value": 2.008,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0197",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -7998,7 +7998,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzakv0bwm76a438m9w6zy0",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8031,7 +8031,7 @@
     "signal_value": 1204.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0195",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -8039,7 +8039,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzakv0cfa6xvmker7drvft",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8072,7 +8072,7 @@
     "signal_value": 180.72,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0199",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -8080,7 +8080,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzakv0gys5csfj262xgwde",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8113,7 +8113,7 @@
     "signal_value": 7831.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0193",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -8121,7 +8121,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzakv0j4rcwpty8h7mqvy4",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8154,7 +8154,7 @@
     "signal_value": 0.4217,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0200",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -8162,7 +8162,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzakv0p3qkj40n4a1th8ma",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:29:00.120Z",
+    "ingested_at": "2026-07-14T09:29:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8195,7 +8195,7 @@
     "signal_value": 6.024,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0198",
-    "timestamp": "2026-07-14T09:29:00.000Z",
+    "timestamp": "2026-07-14T09:29:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -8203,7 +8203,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaxkg4550j5b8p77w7x7m",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8236,7 +8236,7 @@
     "signal_value": 1.992,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0205",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -8244,7 +8244,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaxkg68js5p6ytrpsbewr",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8277,7 +8277,7 @@
     "signal_value": 7768.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0201",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -8285,7 +8285,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaxkg9x9fjd5g8tyrm0z2",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8318,7 +8318,7 @@
     "signal_value": 5.976,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0206",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -8326,7 +8326,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaxkgcv9sf4sp8pkxgfj5",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8359,7 +8359,7 @@
     "signal_value": 0.3486,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0204",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -8367,7 +8367,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzaxkgf5vtm7s84b5wdan4",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8400,7 +8400,7 @@
     "signal_value": 0.4183,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0208",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -8408,7 +8408,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaxkgrw63f52c2drave9p",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8441,7 +8441,7 @@
     "signal_value": 1195.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0203",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -8449,7 +8449,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzaxkgsqbtty0kqhmntqfp",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8482,7 +8482,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0202",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -8490,7 +8490,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzaxkgvqy9dbwtbyvkk303",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:29:10.120Z",
+    "ingested_at": "2026-07-14T09:29:10.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8523,7 +8523,7 @@
     "signal_value": 179.28,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0207",
-    "timestamp": "2026-07-14T09:29:10.000Z",
+    "timestamp": "2026-07-14T09:29:10Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -8531,7 +8531,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzb7c017nrc9mbgwkrrmpv",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8564,7 +8564,7 @@
     "signal_value": 7784.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0209",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -8572,7 +8572,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzb7c08p6560b46yrs3dt8",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8605,7 +8605,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0210",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -8613,7 +8613,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzb7c0e47e21b159rzrsgz",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8646,7 +8646,7 @@
     "signal_value": 0.4192,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0216",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -8654,7 +8654,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzb7c0gdnfd3b2q4gps49g",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8687,7 +8687,7 @@
     "signal_value": 5.988,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0214",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -8695,7 +8695,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzb7c0nxwjy1617jg2vpjk",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8728,7 +8728,7 @@
     "signal_value": 1.996,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0213",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -8736,7 +8736,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzb7c0pmsxzmt9afv1cmmp",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8769,7 +8769,7 @@
     "signal_value": 1197.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0211",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -8777,7 +8777,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzb7c0rhtps5n25petd1za",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8810,7 +8810,7 @@
     "signal_value": 0.3493,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0212",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -8818,7 +8818,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzb7c0zc1hqs1rwnznzvrc",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:29:20.120Z",
+    "ingested_at": "2026-07-14T09:29:20.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8851,7 +8851,7 @@
     "signal_value": 179.64,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0215",
-    "timestamp": "2026-07-14T09:29:20.000Z",
+    "timestamp": "2026-07-14T09:29:20Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -8859,7 +8859,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbh4g6436x0nt6nrb227r",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8892,7 +8892,7 @@
     "signal_value": 6.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0222",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -8900,7 +8900,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbh4g68skatwmybqazkaj",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8933,7 +8933,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0217",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -8941,7 +8941,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbh4gedjfnhhjdkmjcb13",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -8974,7 +8974,7 @@
     "signal_value": 2.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0221",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -8982,7 +8982,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbh4gfvrrd3gy6dna0nat",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9015,7 +9015,7 @@
     "signal_value": 0.35,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0220",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -9023,7 +9023,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzbh4gjmwjj64wwv0sn608",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9056,7 +9056,7 @@
     "signal_value": 180.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0223",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -9064,7 +9064,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzbh4gkb15wnan4c2p4m7x",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9097,7 +9097,7 @@
     "signal_value": 0.42,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0224",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -9105,7 +9105,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbh4gtbepawsbnskf24nk",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9138,7 +9138,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0218",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -9146,7 +9146,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbh4gxsngdj5r4fvs1j94",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:29:30.120Z",
+    "ingested_at": "2026-07-14T09:29:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9179,7 +9179,7 @@
     "signal_value": 1200.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0219",
-    "timestamp": "2026-07-14T09:29:30.000Z",
+    "timestamp": "2026-07-14T09:29:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -9187,7 +9187,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbtx05p1ycwgpg5z32fnk",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9220,7 +9220,7 @@
     "signal_value": 2.004,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0229",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -9228,7 +9228,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbtx092s8e5jfc6625mha",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9261,7 +9261,7 @@
     "signal_value": 7815.6,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0225",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -9269,7 +9269,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzbtx0bhwvssz0fsmattec",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9302,7 +9302,7 @@
     "signal_value": 0.4208,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0232",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -9310,7 +9310,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzbtx0d4wr9nb76zmg4kv6",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9343,7 +9343,7 @@
     "signal_value": 180.36,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0231",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -9351,7 +9351,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbtx0f6tfbqm4y50resn9",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9384,7 +9384,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0226",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -9392,7 +9392,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbtx0qhytr9mbrx33ft97",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9425,7 +9425,7 @@
     "signal_value": 6.012,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0230",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -9433,7 +9433,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbtx0t32e2ay6q9c3f5z2",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9466,7 +9466,7 @@
     "signal_value": 0.3507,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0228",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -9474,7 +9474,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzbtx0tam158bbeargh1jf",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:29:40.120Z",
+    "ingested_at": "2026-07-14T09:29:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9507,7 +9507,7 @@
     "signal_value": 1202.4,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0227",
-    "timestamp": "2026-07-14T09:29:40.000Z",
+    "timestamp": "2026-07-14T09:29:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -9515,7 +9515,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzc4ng1fa3n2zqzsxek6mg",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9548,7 +9548,7 @@
     "signal_value": 0.3514,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0236",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -9556,7 +9556,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzc4ng4g8e986svy29vfcy",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9589,7 +9589,7 @@
     "signal_value": 2.008,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0237",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -9597,7 +9597,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzc4ng8bbayb0tqs85jma7",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9630,7 +9630,7 @@
     "signal_value": 0.4217,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0240",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -9638,7 +9638,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzc4ngej4g4b3x3y8aw32g",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9671,7 +9671,7 @@
     "signal_value": 7831.2,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0233",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -9679,7 +9679,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzc4ngj0qeg5x1y2jd4041",
     "event_type": "HEALTH_CHECK_OK",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "log",
     "quality_flags": [
       "SIMULATED"
@@ -9711,7 +9711,7 @@
     "signal_value": null,
     "source": "simulator.syslog",
     "source_record_id": "log-gateway-health-0001",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": null
   },
@@ -9719,7 +9719,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzc4ngjge1v1b0n4nvvwes",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9752,7 +9752,7 @@
     "signal_value": 6.024,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0238",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -9760,7 +9760,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzc4ngr96dkaq5gejzermx",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9793,7 +9793,7 @@
     "signal_value": 2400.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0234",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -9801,7 +9801,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzc4ngvd8e2tzj7g0jknay",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9834,7 +9834,7 @@
     "signal_value": 1204.8,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0235",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -9842,7 +9842,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzc4ngy3k8rx5grq4nzedv",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:29:50.120Z",
+    "ingested_at": "2026-07-14T09:29:50.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9875,7 +9875,7 @@
     "signal_value": 180.72,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0239",
-    "timestamp": "2026-07-14T09:29:50.000Z",
+    "timestamp": "2026-07-14T09:29:50Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -9883,7 +9883,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzcee00ze5ctz9yw9h4fx5",
     "event_type": "CONFIG_VALUE_CHANGED",
-    "ingested_at": "2026-07-14T09:30:00.120Z",
+    "ingested_at": "2026-07-14T09:30:00.120000Z",
     "modality": "config_change",
     "quality_flags": [
       "SIMULATED"
@@ -9916,7 +9916,7 @@
     "signal_value": null,
     "source": "simulator.config_audit",
     "source_record_id": "config-change-000001",
-    "timestamp": "2026-07-14T09:30:00.000Z",
+    "timestamp": "2026-07-14T09:30:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": null
   },
@@ -9924,7 +9924,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
     "event_type": "CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:30:30.120Z",
+    "ingested_at": "2026-07-14T09:30:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9957,7 +9957,7 @@
     "signal_value": 0.92,
     "source": "simulator.prometheus",
     "source_record_id": "prom-connection_utilization-0244",
-    "timestamp": "2026-07-14T09:30:30.000Z",
+    "timestamp": "2026-07-14T09:30:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -9965,7 +9965,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzdbqgn1a7h6y11460m5mc",
     "event_type": "FORWARDED_REQUEST_RATE",
-    "ingested_at": "2026-07-14T09:30:30.120Z",
+    "ingested_at": "2026-07-14T09:30:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -9998,7 +9998,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-forwarded_requests_per_second-0242",
-    "timestamp": "2026-07-14T09:30:30.000Z",
+    "timestamp": "2026-07-14T09:30:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -10006,7 +10006,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzdbqgwrn2emzvj99zx576",
     "event_type": "ACTIVE_CONNECTIONS",
-    "ingested_at": "2026-07-14T09:30:30.120Z",
+    "ingested_at": "2026-07-14T09:30:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -10039,7 +10039,7 @@
     "signal_value": 4100.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-active_connections_total-0243",
-    "timestamp": "2026-07-14T09:30:30.000Z",
+    "timestamp": "2026-07-14T09:30:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "connections"
   },
@@ -10047,7 +10047,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
     "event_type": "RAW_INGRESS_RATE",
-    "ingested_at": "2026-07-14T09:30:30.120Z",
+    "ingested_at": "2026-07-14T09:30:30.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -10080,7 +10080,7 @@
     "signal_value": 7800.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-raw_ingress_requests_per_second-0241",
-    "timestamp": "2026-07-14T09:30:30.000Z",
+    "timestamp": "2026-07-14T09:30:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "requests/s"
   },
@@ -10088,7 +10088,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzdng0djk00hf924wjkmcg",
     "event_type": "TCP_RETRANSMISSIONS",
-    "ingested_at": "2026-07-14T09:30:40.120Z",
+    "ingested_at": "2026-07-14T09:30:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -10121,7 +10121,7 @@
     "signal_value": 72.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_retransmissions_total-0246",
-    "timestamp": "2026-07-14T09:30:40.000Z",
+    "timestamp": "2026-07-14T09:30:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -10129,7 +10129,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzdng0g0e87j0wtk5g24d9",
     "event_type": "TCP_RESETS",
-    "ingested_at": "2026-07-14T09:30:40.120Z",
+    "ingested_at": "2026-07-14T09:30:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -10162,7 +10162,7 @@
     "signal_value": 48.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-tcp_resets_total-0245",
-    "timestamp": "2026-07-14T09:30:40.000Z",
+    "timestamp": "2026-07-14T09:30:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "count/10s"
   },
@@ -10170,7 +10170,7 @@
     "entity_id": "api-gateway-01",
     "event_id": "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
     "event_type": "HIGH_FORWARDED_REQUEST_AND_CONNECTION_RATE",
-    "ingested_at": "2026-07-14T09:30:45.120Z",
+    "ingested_at": "2026-07-14T09:30:45.120000Z",
     "modality": "alert",
     "quality_flags": [
       "SIMULATED"
@@ -10205,7 +10205,7 @@
     "signal_value": null,
     "source": "simulator.alertmanager",
     "source_record_id": "alert-gateway-forwarded-0001",
-    "timestamp": "2026-07-14T09:30:45.000Z",
+    "timestamp": "2026-07-14T09:30:45Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": null
   },
@@ -10213,7 +10213,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfze910bkgejygbss5jan5c",
     "event_type": "CHECKOUT_P95_LATENCY",
-    "ingested_at": "2026-07-14T09:31:00.120Z",
+    "ingested_at": "2026-07-14T09:31:00.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -10246,7 +10246,7 @@
     "signal_value": 1250.0,
     "source": "simulator.prometheus",
     "source_record_id": "prom-checkout_p95_latency_ms-0247",
-    "timestamp": "2026-07-14T09:31:00.000Z",
+    "timestamp": "2026-07-14T09:31:00Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ms"
   },
@@ -10254,7 +10254,7 @@
     "entity_id": "payment-api-01",
     "event_id": "evt_01kxfzeqnrgggktrp2vh8r0vee",
     "event_type": "UPSTREAM_CONNECTION_TIMEOUT",
-    "ingested_at": "2026-07-14T09:31:15.120Z",
+    "ingested_at": "2026-07-14T09:31:15.120000Z",
     "modality": "log",
     "quality_flags": [
       "SIMULATED"
@@ -10287,7 +10287,7 @@
     "signal_value": null,
     "source": "simulator.syslog",
     "source_record_id": "log-payment-timeout-0001",
-    "timestamp": "2026-07-14T09:31:15.000Z",
+    "timestamp": "2026-07-14T09:31:15Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": null
   },
@@ -10295,7 +10295,7 @@
     "entity_id": "checkout-api-01",
     "event_id": "evt_01kxfzf6ag7avaqjas1vfa4pxs",
     "event_type": "HIGH_CHECKOUT_ERROR_RATE",
-    "ingested_at": "2026-07-14T09:31:30.120Z",
+    "ingested_at": "2026-07-14T09:31:30.120000Z",
     "modality": "alert",
     "quality_flags": [
       "SIMULATED"
@@ -10330,7 +10330,7 @@
     "signal_value": null,
     "source": "simulator.alertmanager",
     "source_record_id": "alert-checkout-error-0001",
-    "timestamp": "2026-07-14T09:31:30.000Z",
+    "timestamp": "2026-07-14T09:31:30Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": null
   },
@@ -10338,7 +10338,7 @@
     "entity_id": "payment-db-01",
     "event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
     "event_type": "DB_CONNECTION_UTILIZATION",
-    "ingested_at": "2026-07-14T09:31:40.120Z",
+    "ingested_at": "2026-07-14T09:31:40.120000Z",
     "modality": "metric",
     "quality_flags": [
       "SIMULATED"
@@ -10371,7 +10371,7 @@
     "signal_value": 0.44,
     "source": "simulator.prometheus",
     "source_record_id": "prom-db_connection_utilization-0248",
-    "timestamp": "2026-07-14T09:31:40.000Z",
+    "timestamp": "2026-07-14T09:31:40Z",
     "trace_or_session_id": "scenario_gateway_rate_limit_001",
     "unit": "ratio"
   },
@@ -10379,7 +10379,7 @@
     "entity_id": "auth-api-01",
     "event_id": "evt_01kxfzg3m0bt57m96k687mmwt6",
     "event_type": "CERTIFICATE_EXPIRY_WARNING",
-    "ingested_at": "2026-07-14T09:32:00.120Z",
+    "ingested_at": "2026-07-14T09:32:00.120000Z",
     "modality": "log",
     "quality_flags": [
       "SIMULATED"
@@ -10411,7 +10411,7 @@
     "signal_value": null,
     "source": "simulator.syslog",
     "source_record_id": "log-auth-certificate-0001",
-    "timestamp": "2026-07-14T09:32:00.000Z",
+    "timestamp": "2026-07-14T09:32:00Z",
     "trace_or_session_id": "maintenance_auth_001",
     "unit": null
   }

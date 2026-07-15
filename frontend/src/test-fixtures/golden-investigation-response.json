@@ -5,7 +5,7 @@
     "completed_at": "2026-07-14T09:31:41.320Z",
     "created_at": "2026-07-14T09:31:41.000Z",
     "incident_id": "inc_001",
-    "input_fingerprint": "sha256:3c1b8be46e4b1ccee7b02d38009ec0a16883926bea244a8aae5ba6d59505a3b1",
+    "input_fingerprint": "sha256:22c3c3a525dac5fbcb5d7a2e7c1d5246b7b32673b30c5cfc2579a68d60110224",
     "revision": 7,
     "status": "current",
     "trigger_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj"
@@ -19,6 +19,78 @@
         "evidence_id": "ev_001",
         "hypothesis_id": "hyp_001",
         "incident_id": "inc_001",
+        "kind": "conflicting",
+        "reason_code": "ALTERNATIVE_CAUSE_SIGNAL",
+        "relevance": 0.45,
+        "source_event_id": "evt_01kxfzf6ag7avaqjas1vfa4pxs",
+        "statement": "The gateway alert is also compatible with a traffic-surge alternative and does not prove the configuration change caused the incident."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_002",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "kind": "correlated",
+        "reason_code": "PRECEDING_RELEVANT_CHANGE",
+        "relevance": 0.9,
+        "source_event_id": "evt_01kxfzcee00ze5ctz9yw9h4fx5",
+        "statement": "Gateway configuration change occurred 30 seconds before the first incident symptom."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_003",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "kind": "missing",
+        "reason_code": "MISSING_WAF_DECISION_LOGS",
+        "relevance": 0.5,
+        "source_event_id": null,
+        "statement": "Obtain WAF decision logs for 09:25\u201309:35 UTC."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_004",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "kind": "observed",
+        "reason_code": "CONNECTION_UTILIZATION_HIGH",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
+        "statement": "Payment database connection utilization reached 0.44."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_005",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "kind": "observed",
+        "reason_code": "DEPENDENCY_TIMEOUT_LOG",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfzeqnrgggktrp2vh8r0vee",
+        "statement": "Payment API logged a timeout referencing payment-db-01."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_006",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "kind": "observed",
+        "reason_code": "DOWNSTREAM_LATENCY_INCREASE",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfze910bkgejygbss5jan5c",
+        "statement": "Checkout API latency reached 1,250 ms."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_007",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
         "kind": "observed",
         "reason_code": "METRIC_THRESHOLD_EXCEEDED",
         "relevance": 0.95,
@@ -28,150 +100,138 @@
       {
         "analysis_run_id": "run_007",
         "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_002",
+        "evidence_id": "ev_008",
         "hypothesis_id": "hyp_001",
         "incident_id": "inc_001",
         "kind": "observed",
-        "reason_code": "CONNECTION_UTILIZATION_HIGH",
-        "relevance": 0.92,
-        "source_event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
-        "statement": "Gateway connection utilization reached 0.92."
-      },
-      {
-        "analysis_run_id": "run_007",
-        "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_003",
-        "hypothesis_id": "hyp_001",
-        "incident_id": "inc_001",
-        "kind": "correlated",
-        "reason_code": "PRECEDING_RELEVANT_CHANGE",
-        "relevance": 0.9,
-        "source_event_id": "evt_01kxfzcee00ze5ctz9yw9h4fx5",
-        "statement": "Gateway rate limiting was disabled 30 seconds before the first symptom."
-      },
-      {
-        "analysis_run_id": "run_007",
-        "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_004",
-        "hypothesis_id": "hyp_001",
-        "incident_id": "inc_001",
-        "kind": "conflicting",
-        "reason_code": "ALTERNATIVE_CAUSE_SIGNAL",
-        "relevance": 0.45,
-        "source_event_id": "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
-        "statement": "The gateway alert is also compatible with a traffic-surge alternative and does not prove the change caused the incident."
-      },
-      {
-        "analysis_run_id": "run_007",
-        "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_005",
-        "hypothesis_id": "hyp_001",
-        "incident_id": "inc_001",
-        "kind": "missing",
-        "reason_code": "MISSING_WAF_DECISION_LOGS",
-        "relevance": 0.5,
-        "source_event_id": null,
-        "statement": "Obtain WAF decision logs for 09:25\u201309:35 UTC."
+        "reason_code": "STABLE_RAW_INGRESS_OBSERVED",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
+        "statement": "Gateway raw ingress remained near 7,800 requests/s."
       }
     ],
     "hyp_002": [
       {
         "analysis_run_id": "run_007",
         "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_006",
-        "hypothesis_id": "hyp_002",
-        "incident_id": "inc_001",
-        "kind": "observed",
-        "reason_code": "FORWARDED_TRAFFIC_SPIKE",
-        "relevance": 0.9,
-        "source_event_id": "evt_01kxfzdbqgn1a7h6y11460m5mc",
-        "statement": "Gateway forwarded request rate reached 7,800 requests/s."
-      },
-      {
-        "analysis_run_id": "run_007",
-        "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_007",
-        "hypothesis_id": "hyp_002",
-        "incident_id": "inc_001",
-        "kind": "correlated",
-        "reason_code": "TRAFFIC_ALERT_CORRELATED",
-        "relevance": 0.7,
-        "source_event_id": "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
-        "statement": "A critical gateway traffic alert fired after the metric spike."
-      },
-      {
-        "analysis_run_id": "run_007",
-        "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_008",
+        "evidence_id": "ev_009",
         "hypothesis_id": "hyp_002",
         "incident_id": "inc_001",
         "kind": "conflicting",
         "reason_code": "STABLE_RAW_INGRESS",
         "relevance": 0.95,
         "source_event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
-        "statement": "Raw ingress remained stable near 7,800 requests/s with no new source distribution."
+        "statement": "Gateway raw ingress remained stable with no new source distribution."
       },
       {
         "analysis_run_id": "run_007",
         "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_009",
+        "evidence_id": "ev_010",
+        "hypothesis_id": "hyp_002",
+        "incident_id": "inc_001",
+        "kind": "correlated",
+        "reason_code": "TRAFFIC_ALERT_CORRELATED",
+        "relevance": 0.7,
+        "source_event_id": "evt_01kxfzf6ag7avaqjas1vfa4pxs",
+        "statement": "A gateway traffic alert fired after the forwarded-rate spike."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_011",
         "hypothesis_id": "hyp_002",
         "incident_id": "inc_001",
         "kind": "missing",
-        "reason_code": "MISSING_SOURCE_DISTRIBUTION",
+        "reason_code": "MISSING_WAF_DECISIONS",
         "relevance": 0.5,
         "source_event_id": null,
-        "statement": "Obtain WAF decisions and client/source-distribution details."
+        "statement": "Obtain WAF decision logs."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_012",
+        "hypothesis_id": "hyp_002",
+        "incident_id": "inc_001",
+        "kind": "observed",
+        "reason_code": "RAW_INGRESS_OBSERVED",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
+        "statement": "Gateway raw ingress was 7,800 requests/s."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_013",
+        "hypothesis_id": "hyp_002",
+        "incident_id": "inc_001",
+        "kind": "observed",
+        "reason_code": "SOURCE_DISTRIBUTION_OBSERVED",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
+        "statement": "Gateway raw-ingress record retained the incident source-distribution context."
       }
     ],
     "hyp_003": [
       {
         "analysis_run_id": "run_007",
         "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_010",
-        "hypothesis_id": "hyp_003",
-        "incident_id": "inc_001",
-        "kind": "observed",
-        "reason_code": "DEPENDENCY_TIMEOUT_LOG",
-        "relevance": 0.8,
-        "source_event_id": "evt_01kxfzeqnrgggktrp2vh8r0vee",
-        "statement": "Payment API logged a timeout referencing payment-db-01."
-      },
-      {
-        "analysis_run_id": "run_007",
-        "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_011",
-        "hypothesis_id": "hyp_003",
-        "incident_id": "inc_001",
-        "kind": "correlated",
-        "reason_code": "DEPENDENCY_PATH_LATENCY",
-        "relevance": 0.6,
-        "source_event_id": "evt_01kxfze910bkgejygbss5jan5c",
-        "statement": "Checkout latency increased on the dependency path to the payment database."
-      },
-      {
-        "analysis_run_id": "run_007",
-        "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_012",
+        "evidence_id": "ev_014",
         "hypothesis_id": "hyp_003",
         "incident_id": "inc_001",
         "kind": "conflicting",
         "reason_code": "NORMAL_DB_UTILIZATION",
         "relevance": 0.95,
         "source_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
-        "statement": "Payment database connection utilization remained normal at 0.44."
+        "statement": "Payment database connection utilization remained normal."
       },
       {
         "analysis_run_id": "run_007",
         "created_at": "2026-07-14T09:31:41.000Z",
-        "evidence_id": "ev_013",
+        "evidence_id": "ev_015",
+        "hypothesis_id": "hyp_003",
+        "incident_id": "inc_001",
+        "kind": "correlated",
+        "reason_code": "DEPENDENCY_PATH_LATENCY",
+        "relevance": 0.7,
+        "source_event_id": "evt_01kxfze910bkgejygbss5jan5c",
+        "statement": "Checkout latency increased on the dependency path to the database."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_016",
         "hypothesis_id": "hyp_003",
         "incident_id": "inc_001",
         "kind": "missing",
-        "reason_code": "MISSING_DB_POOL_WAITS",
+        "reason_code": "MISSING_POOL_WAITS",
         "relevance": 0.5,
         "source_event_id": null,
-        "statement": "Obtain database connection-pool wait and rejected-lease metrics."
+        "statement": "Obtain database pool-wait metrics."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_017",
+        "hypothesis_id": "hyp_003",
+        "incident_id": "inc_001",
+        "kind": "observed",
+        "reason_code": "DB_UTILIZATION_OBSERVED",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
+        "statement": "Payment database connection utilization was 0.44."
+      },
+      {
+        "analysis_run_id": "run_007",
+        "created_at": "2026-07-14T09:31:41.000Z",
+        "evidence_id": "ev_018",
+        "hypothesis_id": "hyp_003",
+        "incident_id": "inc_001",
+        "kind": "observed",
+        "reason_code": "DEPENDENCY_TIMEOUT_LOG",
+        "relevance": 0.95,
+        "source_event_id": "evt_01kxfzeqnrgggktrp2vh8r0vee",
+        "statement": "Payment API logged a timeout referencing payment-db-01."
       }
     ]
   },
@@ -179,22 +239,57 @@
     "analysis_run_id": "run_007",
     "claims": [
       {
-        "claim": "Forwarded traffic increased after the configuration change.",
+        "claim": "Observed evidence: Payment database connection utilization reached 0.44.",
         "evidence_ids": [
-          "ev_001",
-          "ev_003"
+          "ev_004"
         ]
       },
       {
-        "claim": "Stable raw ingress weakens an external DoS explanation.",
+        "claim": "Observed evidence: Payment API logged a timeout referencing payment-db-01.",
+        "evidence_ids": [
+          "ev_005"
+        ]
+      },
+      {
+        "claim": "Observed evidence: Checkout API latency reached 1,250 ms.",
+        "evidence_ids": [
+          "ev_006"
+        ]
+      },
+      {
+        "claim": "Observed evidence: Gateway forwarded request rate reached 7,800 requests/s.",
+        "evidence_ids": [
+          "ev_007"
+        ]
+      },
+      {
+        "claim": "Observed evidence: Gateway raw ingress remained near 7,800 requests/s.",
         "evidence_ids": [
           "ev_008"
+        ]
+      },
+      {
+        "claim": "Correlated signal: Gateway configuration change occurred 30 seconds before the first incident symptom.",
+        "evidence_ids": [
+          "ev_002"
+        ]
+      },
+      {
+        "claim": "Conflicting evidence: The gateway alert is also compatible with a traffic-surge alternative and does not prove the configuration change caused the incident.",
+        "evidence_ids": [
+          "ev_001"
+        ]
+      },
+      {
+        "claim": "Missing evidence: Obtain WAF decision logs for 09:25\u201309:35 UTC.",
+        "evidence_ids": [
+          "ev_003"
         ]
       }
     ],
     "diagnostic_step_ids": [
-      "inspect-config-diff",
-      "compare-pre-post-metrics"
+      "compare-pre-post-metrics",
+      "inspect-config-diff"
     ],
     "generator": "template",
     "hypothesis_id": "hyp_001",
@@ -202,7 +297,7 @@
     "remediation_step_ids": [
       "propose-config-rollback"
     ],
-    "summary": "The probable root cause is a gateway configuration regression after rate limiting was disabled."
+    "summary": "The probable root cause is a configuration regression affecting api-gateway-01."
   },
   "generated_at": "2026-07-14T09:31:41.500Z",
   "hypotheses": [
@@ -289,10 +384,10 @@
     "confirmed_hypothesis_id": null,
     "current_analysis_run_id": "run_007",
     "incident_id": "inc_001",
-    "last_event_at": "2026-07-14T09:31:40.000Z",
+    "last_event_at": "2026-07-14T09:31:40Z",
     "primary_entity_id": "api-gateway-01",
     "severity": 1.0,
-    "started_at": "2026-07-14T09:30:00.000Z",
+    "started_at": "2026-07-14T09:30:00Z",
     "status": "investigating",
     "title": "Checkout degradation through API gateway",
     "top_hypothesis_id": "hyp_001"
@@ -303,9 +398,22 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_001",
         "incident_id": "inc_001",
-        "instructions": "Compare the current rate-limit configuration with the last known-good version.\nIdentify changes made immediately before the incident window.",
-        "rationale": "Catalogue-backed recommendation; not automatically executed.",
+        "instructions": "Chart forwarded RPS and connection utilization before and after the change.\nCheck whether raw ingress stayed stable while forwarded traffic increased.",
+        "rationale": "Catalogue-backed step for configuration_regression.",
         "recommendation_id": "rec_001",
+        "requires_human_approval": true,
+        "risk_level": "low",
+        "step_id": "compare-pre-post-metrics",
+        "step_type": "diagnostic",
+        "title": "Compare pre/post-change metrics"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_001",
+        "incident_id": "inc_001",
+        "instructions": "Compare the current rate-limit configuration with the last known-good version.\nIdentify changes made immediately before the incident window.",
+        "rationale": "Catalogue-backed step for configuration_regression.",
+        "recommendation_id": "rec_002",
         "requires_human_approval": true,
         "risk_level": "low",
         "step_id": "inspect-config-diff",
@@ -317,8 +425,8 @@
         "hypothesis_id": "hyp_001",
         "incident_id": "inc_001",
         "instructions": "Prepare a change to re-enable the gateway rate limiter.\nPresent the proposed change and validation plan for human approval; never execute it automatically.",
-        "rationale": "Catalogue-backed recommendation; not automatically executed.",
-        "recommendation_id": "rec_002",
+        "rationale": "Catalogue-backed step for configuration_regression.",
+        "recommendation_id": "rec_003",
         "requires_human_approval": true,
         "risk_level": "low",
         "step_id": "propose-config-rollback",
@@ -332,13 +440,52 @@
         "hypothesis_id": "hyp_002",
         "incident_id": "inc_001",
         "instructions": "Compare source distribution and raw ingress with the incident baseline.\nIdentify abnormal clients, ASNs, geographies, or request paths.",
-        "rationale": "Catalogue-backed recommendation; not automatically executed.",
-        "recommendation_id": "rec_003",
+        "rationale": "Catalogue-backed step for dos_or_traffic_surge.",
+        "recommendation_id": "rec_004",
         "requires_human_approval": true,
         "risk_level": "low",
         "step_id": "inspect-ingress-distribution",
         "step_type": "diagnostic",
         "title": "Inspect ingress distribution"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_002",
+        "incident_id": "inc_001",
+        "instructions": "Examine request volume, connection rate, and bandwidth during the incident window.\nIdentify abnormal spikes and the endpoints receiving the surge.",
+        "rationale": "Catalogue-backed step for dos_or_traffic_surge.",
+        "recommendation_id": "rec_005",
+        "requires_human_approval": true,
+        "risk_level": "low",
+        "step_id": "inspect-ingress-patterns",
+        "step_type": "diagnostic",
+        "title": "Inspect ingress traffic patterns"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_002",
+        "incident_id": "inc_001",
+        "instructions": "Prepare a bounded edge rate-limit proposal for the offending traffic pattern.\nSubmit the proposal for human approval without applying it automatically.",
+        "rationale": "Catalogue-backed step for dos_or_traffic_surge.",
+        "recommendation_id": "rec_006",
+        "requires_human_approval": true,
+        "risk_level": "medium",
+        "step_id": "propose-edge-rate-limit",
+        "step_type": "remediation",
+        "title": "Propose edge rate limiting"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_002",
+        "incident_id": "inc_001",
+        "instructions": "Aggregate traffic by source and compare it with the healthy baseline.\nDistinguish an external attack from a legitimate or internal traffic surge.",
+        "rationale": "Catalogue-backed step for dos_or_traffic_surge.",
+        "recommendation_id": "rec_007",
+        "requires_human_approval": true,
+        "risk_level": "low",
+        "step_id": "validate-source-distribution",
+        "step_type": "diagnostic",
+        "title": "Validate source distribution"
       }
     ],
     "hyp_003": [
@@ -346,14 +493,53 @@
         "analysis_run_id": "run_007",
         "hypothesis_id": "hyp_003",
         "incident_id": "inc_001",
+        "instructions": "Review active versus maximum connections and connection wait time.\nConfirm whether the connection pool was exhausted in the incident window.",
+        "rationale": "Catalogue-backed step for database_connection_exhaustion.",
+        "recommendation_id": "rec_008",
+        "requires_human_approval": true,
+        "risk_level": "low",
+        "step_id": "inspect-db-connections",
+        "step_type": "diagnostic",
+        "title": "Inspect database connections"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_003",
+        "incident_id": "inc_001",
         "instructions": "Inspect active connections, pool waits, and rejected leases.\nCompare connection utilization with the configured pool limit.",
-        "rationale": "Catalogue-backed recommendation; not automatically executed.",
-        "recommendation_id": "rec_004",
+        "rationale": "Catalogue-backed step for database_connection_exhaustion.",
+        "recommendation_id": "rec_009",
         "requires_human_approval": true,
         "risk_level": "low",
         "step_id": "inspect-db-pool",
         "step_type": "diagnostic",
         "title": "Inspect database connection pool"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_003",
+        "incident_id": "inc_001",
+        "instructions": "Prepare a bounded pool-size adjustment for human review.\nInclude capacity impact and a validation plan; do not apply the setting automatically.",
+        "rationale": "Catalogue-backed step for database_connection_exhaustion.",
+        "recommendation_id": "rec_010",
+        "requires_human_approval": true,
+        "risk_level": "medium",
+        "step_id": "propose-db-pool-tuning",
+        "step_type": "remediation",
+        "title": "Propose database pool tuning"
+      },
+      {
+        "analysis_run_id": "run_007",
+        "hypothesis_id": "hyp_003",
+        "incident_id": "inc_001",
+        "instructions": "Identify slow or high-frequency queries holding connections.\nCorrelate query latency with connection-pool saturation.",
+        "rationale": "Catalogue-backed step for database_connection_exhaustion.",
+        "recommendation_id": "rec_011",
+        "requires_human_approval": true,
+        "risk_level": "low",
+        "step_id": "review-query-latency",
+        "step_type": "diagnostic",
+        "title": "Review query latency"
       }
     ]
   },
@@ -371,7 +557,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzcee00ze5ctz9yw9h4fx5",
         "event_type": "CONFIG_VALUE_CHANGED",
-        "ingested_at": "2026-07-14T09:30:00.120Z",
+        "ingested_at": "2026-07-14T09:30:00.120000Z",
         "modality": "config_change",
         "quality_flags": [
           "SIMULATED"
@@ -404,7 +590,7 @@
         "signal_value": null,
         "source": "simulator.config_audit",
         "source_record_id": "config-change-000001",
-        "timestamp": "2026-07-14T09:30:00.000Z",
+        "timestamp": "2026-07-14T09:30:00Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": null
       },
@@ -426,7 +612,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
         "event_type": "CONNECTION_UTILIZATION",
-        "ingested_at": "2026-07-14T09:30:30.120Z",
+        "ingested_at": "2026-07-14T09:30:30.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -459,15 +645,11 @@
         "signal_value": 0.92,
         "source": "simulator.prometheus",
         "source_record_id": "prom-connection_utilization-0244",
-        "timestamp": "2026-07-14T09:30:30.000Z",
+        "timestamp": "2026-07-14T09:30:30Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "ratio"
       },
-      "hypothesis_relevance": {
-        "hyp_001": [
-          "CONNECTION_UTILIZATION_HIGH"
-        ]
-      }
+      "hypothesis_relevance": {}
     },
     {
       "attachment_decision": "attached",
@@ -481,7 +663,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdbqgn1a7h6y11460m5mc",
         "event_type": "FORWARDED_REQUEST_RATE",
-        "ingested_at": "2026-07-14T09:30:30.120Z",
+        "ingested_at": "2026-07-14T09:30:30.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -514,16 +696,13 @@
         "signal_value": 7800.0,
         "source": "simulator.prometheus",
         "source_record_id": "prom-forwarded_requests_per_second-0242",
-        "timestamp": "2026-07-14T09:30:30.000Z",
+        "timestamp": "2026-07-14T09:30:30Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "requests/s"
       },
       "hypothesis_relevance": {
         "hyp_001": [
           "METRIC_THRESHOLD_EXCEEDED"
-        ],
-        "hyp_002": [
-          "FORWARDED_TRAFFIC_SPIKE"
         ]
       }
     },
@@ -539,7 +718,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdbqgwrn2emzvj99zx576",
         "event_type": "ACTIVE_CONNECTIONS",
-        "ingested_at": "2026-07-14T09:30:30.120Z",
+        "ingested_at": "2026-07-14T09:30:30.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -572,7 +751,7 @@
         "signal_value": 4100.0,
         "source": "simulator.prometheus",
         "source_record_id": "prom-active_connections_total-0243",
-        "timestamp": "2026-07-14T09:30:30.000Z",
+        "timestamp": "2026-07-14T09:30:30Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "connections"
       },
@@ -590,7 +769,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
         "event_type": "RAW_INGRESS_RATE",
-        "ingested_at": "2026-07-14T09:30:30.120Z",
+        "ingested_at": "2026-07-14T09:30:30.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -623,12 +802,17 @@
         "signal_value": 7800.0,
         "source": "simulator.prometheus",
         "source_record_id": "prom-raw_ingress_requests_per_second-0241",
-        "timestamp": "2026-07-14T09:30:30.000Z",
+        "timestamp": "2026-07-14T09:30:30Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "requests/s"
       },
       "hypothesis_relevance": {
+        "hyp_001": [
+          "STABLE_RAW_INGRESS_OBSERVED"
+        ],
         "hyp_002": [
+          "RAW_INGRESS_OBSERVED",
+          "SOURCE_DISTRIBUTION_OBSERVED",
           "STABLE_RAW_INGRESS"
         ]
       }
@@ -645,7 +829,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdng0djk00hf924wjkmcg",
         "event_type": "TCP_RETRANSMISSIONS",
-        "ingested_at": "2026-07-14T09:30:40.120Z",
+        "ingested_at": "2026-07-14T09:30:40.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -678,7 +862,7 @@
         "signal_value": 72.0,
         "source": "simulator.prometheus",
         "source_record_id": "prom-tcp_retransmissions_total-0246",
-        "timestamp": "2026-07-14T09:30:40.000Z",
+        "timestamp": "2026-07-14T09:30:40Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "count/10s"
       },
@@ -696,7 +880,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdng0g0e87j0wtk5g24d9",
         "event_type": "TCP_RESETS",
-        "ingested_at": "2026-07-14T09:30:40.120Z",
+        "ingested_at": "2026-07-14T09:30:40.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -729,7 +913,7 @@
         "signal_value": 48.0,
         "source": "simulator.prometheus",
         "source_record_id": "prom-tcp_resets_total-0245",
-        "timestamp": "2026-07-14T09:30:40.000Z",
+        "timestamp": "2026-07-14T09:30:40Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "count/10s"
       },
@@ -747,7 +931,7 @@
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
         "event_type": "HIGH_FORWARDED_REQUEST_AND_CONNECTION_RATE",
-        "ingested_at": "2026-07-14T09:30:45.120Z",
+        "ingested_at": "2026-07-14T09:30:45.120000Z",
         "modality": "alert",
         "quality_flags": [
           "SIMULATED"
@@ -782,18 +966,11 @@
         "signal_value": null,
         "source": "simulator.alertmanager",
         "source_record_id": "alert-gateway-forwarded-0001",
-        "timestamp": "2026-07-14T09:30:45.000Z",
+        "timestamp": "2026-07-14T09:30:45Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": null
       },
-      "hypothesis_relevance": {
-        "hyp_001": [
-          "ALTERNATIVE_CAUSE_SIGNAL"
-        ],
-        "hyp_002": [
-          "TRAFFIC_ALERT_CORRELATED"
-        ]
-      }
+      "hypothesis_relevance": {}
     },
     {
       "attachment_decision": "attached",
@@ -807,7 +984,7 @@
         "entity_id": "checkout-api-01",
         "event_id": "evt_01kxfze910bkgejygbss5jan5c",
         "event_type": "CHECKOUT_P95_LATENCY",
-        "ingested_at": "2026-07-14T09:31:00.120Z",
+        "ingested_at": "2026-07-14T09:31:00.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -840,11 +1017,14 @@
         "signal_value": 1250.0,
         "source": "simulator.prometheus",
         "source_record_id": "prom-checkout_p95_latency_ms-0247",
-        "timestamp": "2026-07-14T09:31:00.000Z",
+        "timestamp": "2026-07-14T09:31:00Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "ms"
       },
       "hypothesis_relevance": {
+        "hyp_001": [
+          "DOWNSTREAM_LATENCY_INCREASE"
+        ],
         "hyp_003": [
           "DEPENDENCY_PATH_LATENCY"
         ]
@@ -862,7 +1042,7 @@
         "entity_id": "payment-api-01",
         "event_id": "evt_01kxfzeqnrgggktrp2vh8r0vee",
         "event_type": "UPSTREAM_CONNECTION_TIMEOUT",
-        "ingested_at": "2026-07-14T09:31:15.120Z",
+        "ingested_at": "2026-07-14T09:31:15.120000Z",
         "modality": "log",
         "quality_flags": [
           "SIMULATED"
@@ -895,11 +1075,14 @@
         "signal_value": null,
         "source": "simulator.syslog",
         "source_record_id": "log-payment-timeout-0001",
-        "timestamp": "2026-07-14T09:31:15.000Z",
+        "timestamp": "2026-07-14T09:31:15Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": null
       },
       "hypothesis_relevance": {
+        "hyp_001": [
+          "DEPENDENCY_TIMEOUT_LOG"
+        ],
         "hyp_003": [
           "DEPENDENCY_TIMEOUT_LOG"
         ]
@@ -917,7 +1100,7 @@
         "entity_id": "checkout-api-01",
         "event_id": "evt_01kxfzf6ag7avaqjas1vfa4pxs",
         "event_type": "HIGH_CHECKOUT_ERROR_RATE",
-        "ingested_at": "2026-07-14T09:31:30.120Z",
+        "ingested_at": "2026-07-14T09:31:30.120000Z",
         "modality": "alert",
         "quality_flags": [
           "SIMULATED"
@@ -952,11 +1135,18 @@
         "signal_value": null,
         "source": "simulator.alertmanager",
         "source_record_id": "alert-checkout-error-0001",
-        "timestamp": "2026-07-14T09:31:30.000Z",
+        "timestamp": "2026-07-14T09:31:30Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": null
       },
-      "hypothesis_relevance": {}
+      "hypothesis_relevance": {
+        "hyp_001": [
+          "ALTERNATIVE_CAUSE_SIGNAL"
+        ],
+        "hyp_002": [
+          "TRAFFIC_ALERT_CORRELATED"
+        ]
+      }
     },
     {
       "attachment_decision": "attached",
@@ -969,7 +1159,7 @@
         "entity_id": "payment-db-01",
         "event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
         "event_type": "DB_CONNECTION_UTILIZATION",
-        "ingested_at": "2026-07-14T09:31:40.120Z",
+        "ingested_at": "2026-07-14T09:31:40.120000Z",
         "modality": "metric",
         "quality_flags": [
           "SIMULATED"
@@ -1002,12 +1192,16 @@
         "signal_value": 0.44,
         "source": "simulator.prometheus",
         "source_record_id": "prom-db_connection_utilization-0248",
-        "timestamp": "2026-07-14T09:31:40.000Z",
+        "timestamp": "2026-07-14T09:31:40Z",
         "trace_or_session_id": "scenario_gateway_rate_limit_001",
         "unit": "ratio"
       },
       "hypothesis_relevance": {
+        "hyp_001": [
+          "CONNECTION_UTILIZATION_HIGH"
+        ],
         "hyp_003": [
+          "DB_UTILIZATION_OBSERVED",
           "NORMAL_DB_UTILIZATION"
         ]
       }
@@ -1023,7 +1217,7 @@
         "entity_id": "auth-api-01",
         "event_id": "evt_01kxfzg3m0bt57m96k687mmwt6",
         "event_type": "CERTIFICATE_EXPIRY_WARNING",
-        "ingested_at": "2026-07-14T09:32:00.120Z",
+        "ingested_at": "2026-07-14T09:32:00.120000Z",
         "modality": "log",
         "quality_flags": [
           "SIMULATED"
@@ -1055,7 +1249,7 @@
         "signal_value": null,
         "source": "simulator.syslog",
         "source_record_id": "log-auth-certificate-0001",
-        "timestamp": "2026-07-14T09:32:00.000Z",
+        "timestamp": "2026-07-14T09:32:00Z",
         "trace_or_session_id": "maintenance_auth_001",
         "unit": null
       },
@@ -1082,7 +1276,7 @@
         "relation_type": "sends_traffic_to",
         "relationship": "queries",
         "source": "payment-api-01",
-        "state": "impact_path",
+        "state": "blast_radius",
         "target": "payment-db-01"
       },
       {
@@ -1096,28 +1290,28 @@
         "relation_type": "depends_on",
         "relationship": "requires_checkout_response",
         "source": "api-gateway-01",
-        "state": "blast_radius",
+        "state": null,
         "target": "checkout-api-01"
       },
       {
         "relation_type": "depends_on",
         "relationship": "requires_payment_service",
         "source": "checkout-api-01",
-        "state": "blast_radius",
+        "state": null,
         "target": "payment-api-01"
       },
       {
         "relation_type": "depends_on",
         "relationship": "requires_payment_store",
         "source": "payment-api-01",
-        "state": "blast_radius",
+        "state": null,
         "target": "payment-db-01"
       },
       {
         "relation_type": "depends_on",
         "relationship": "requires_authentication",
         "source": "api-gateway-01",
-        "state": "blast_radius",
+        "state": null,
         "target": "auth-api-01"
       }
     ],
@@ -1136,7 +1330,7 @@
         "id": "checkout-api-01",
         "name": "Checkout API",
         "service": "checkout-api",
-        "state": "primary_affected",
+        "state": "impact_path",
         "type": "service"
       },
       {

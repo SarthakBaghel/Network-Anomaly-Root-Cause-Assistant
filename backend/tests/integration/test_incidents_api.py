@@ -30,6 +30,16 @@ def _dt(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _golden_evidence_id(*, missing: bool) -> str:
+    golden = _load(FIXTURES / "golden_investigation_response.json")
+    top_hypothesis = min(golden["hypotheses"], key=lambda item: item["rank"])
+    return next(
+        item["evidence_id"]
+        for item in golden["evidence_by_hypothesis"][top_hypothesis["hypothesis_id"]]
+        if (item["kind"] == "missing") is missing
+    )
+
+
 def _seed(session) -> None:
     golden = _load(FIXTURES / "golden_investigation_response.json")
     topology = _load(ROOT / "backend" / "app" / "fixtures" / "topology.json")
@@ -478,7 +488,7 @@ def test_review_is_idempotent_audited_and_closes_on_confirmation(
         "hypothesis_id": "hyp_001",
         "decision": "evidence_requested",
         "client_action_id": "action-request-waf",
-        "requested_evidence_id": "ev_005",
+        "requested_evidence_id": _golden_evidence_id(missing=True),
         "reviewer": "operator-1",
         "comment": "Collect WAF logs",
     }
@@ -554,7 +564,7 @@ def test_stale_and_non_missing_evidence_reviews_are_rejected(client: TestClient)
             "hypothesis_id": "hyp_001",
             "decision": "evidence_requested",
             "client_action_id": "invalid-evidence-action",
-            "requested_evidence_id": "ev_001",
+            "requested_evidence_id": _golden_evidence_id(missing=False),
             "reviewer": "operator-1",
             "comment": "invalid",
         },

@@ -23,7 +23,7 @@ from .base import (
 from .evidence import EvidenceItem
 from .events import CanonicalEvent
 from .hypotheses import EvidenceCoverage, Hypothesis
-from .incidents import IncidentSummary
+from .incidents import IncidentListResponse, IncidentSummary
 from .ingestion import (
     BatchIngestionResponse,
     EventListResponse,
@@ -60,6 +60,7 @@ __all__ = [
     "Hypothesis",
     "IncidentStatus",
     "IncidentSummary",
+    "IncidentListResponse",
     "IngestionMutationResponse",
     "InvestigationResponse",
     "Modality",

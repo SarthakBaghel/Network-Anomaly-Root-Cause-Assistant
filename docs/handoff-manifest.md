@@ -8,15 +8,15 @@ competing copies.
 |---:|---|---|---|
 | 1 | Person 1 | `backend/app/contracts/`, `backend/openapi.json`, frozen IDs and errors | All |
 | 2 | Person 3 | raw scenario bundle, `golden_events.jsonl`, `golden_anomalies.json` | P1, P4, P5 |
-| 3 | Person 4 | `topology.json`, `golden_expected_analysis.json`, `golden_incident_bundle.json` | P1, P2, P5 |
-| 4 | Person 5 | `golden_investigation_response.json`, review/audit examples | P1, P2 |
+| 3 | Persons 1 and 4 | production-generated `golden_expected_analysis.json`, `golden_incident_bundle.json` | P2, P5 |
+| 4 | Persons 1 and 5 | production-generated `golden_investigation_response.json`, review/audit examples | P2 |
 | 5 | Person 2 | `frontend/src/routes.ts`, `frontend/src/test-fixtures/testid-manifest.ts` | P1 |
 
 ## Generated checksums
 
 | Artifact | SHA-256 |
 |---|---|
-| `backend/openapi.json` | `5067e4a0cd297a842850d1bb4992cd4d01e741572b38bb1b6a222d96a2003a26` |
+| `backend/openapi.json` | `bdcd7b2eec1d905fe152998a6475e9338880bbc4bd635432e79b7f219bc64149` |
 | `backend/app/fixtures/topology.json` | `69b6523e1e6e59e3a9f470be141517a7e3cbef2097d08187d8c3ca90a15ef6a0` |
 | `backend/app/fixtures/hypotheses.yaml` | `4b5e19675f8b1c0b51609207702b70c9ae11466057e648253a2d66522b762aa5` |
 | `backend/app/fixtures/symptom_families.yaml` | `dd2562735dd0537356893eb7f11f1879774ec11773c203f2749b15433c8eed53` |
@@ -24,8 +24,8 @@ competing copies.
 | `backend/tests/fixtures/golden_anomalies.json` | `b7d317e95d4e68a3a306b63d4714c9075e5a1bb02f4e29dbc3db440152551bc8` |
 | `backend/tests/fixtures/golden_incident_bundle.json` | `5e13bf369ab2c1134bee61fc6c4cfc87d90198ae419fe41fd99349f1e13ff6ba` |
 | `backend/tests/fixtures/golden_expected_analysis.json` | `4a84ab7a52b764743da9aea20a05c8ed444e63116af9c11feff0fd9a0a839cb7` |
-| `backend/tests/fixtures/golden_investigation_response.json` | `6b274a60eebb84951475271d8592d14fab366b8020a7988e2c7f0a37c405632e` |
-| `backend/tests/fixtures/golden_review_examples.json` | `e43586e25df9f8d63db59294f066c5a29ebbf420adfb71a9f35e76b2a778f963` |
-| `backend/tests/fixtures/golden_audit_examples.json` | `dc8ecca349591e8dc270d04b28b724265319b31ad5223678bca53b6b965dc80d` |
+| `backend/tests/fixtures/golden_investigation_response.json` | `40d1efc716cac57fbbdc638313130dcbf8f5eba12b8a6dfa5561f0c7fb31f367` |
+| `backend/tests/fixtures/golden_review_examples.json` | `379b111cc53db5647d63d856295a2962ce11a01dc24c7c2903502bb577d9b795` |
+| `backend/tests/fixtures/golden_audit_examples.json` | `8a7eb6fd76934fceef38d349b48605edcd773240e0ee56c3764d11b35bb5d142` |
 | `frontend/src/routes.ts` | `03063934eaca8276bb85d47785d23ec2f5698f12bcb4ca824c76d674aaa15560` |
 | `frontend/src/test-fixtures/testid-manifest.ts` | `0ad08582f5a020056293369cad8e7e33bb31cd230328dcacb22c842ec26c52b3` |

@@ -5,10 +5,10 @@
     "completed_at": "2026-07-14T09:31:41.320Z",
     "created_at": "2026-07-14T09:31:41.000Z",
     "incident_id": "inc_001",
-    "input_fingerprint": "sha256:9d09d02c0ecc1a658641793e55731b5d2419f7c1c029c9f9540d7501c867c67d",
+    "input_fingerprint": "sha256:3c1b8be46e4b1ccee7b02d38009ec0a16883926bea244a8aae5ba6d59505a3b1",
     "revision": 7,
     "status": "current",
-    "trigger_event_id": "evt_0017b55d40f1c8d1a3233408"
+    "trigger_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj"
   },
   "analysis_run_id": "run_007",
   "evidence_by_hypothesis": {
@@ -22,7 +22,7 @@
         "kind": "observed",
         "reason_code": "METRIC_THRESHOLD_EXCEEDED",
         "relevance": 0.95,
-        "source_event_id": "evt_35484f91d06c7a966ca1d3ee",
+        "source_event_id": "evt_01kxfzdbqgn1a7h6y11460m5mc",
         "statement": "Gateway forwarded request rate reached 7,800 requests/s."
       },
       {
@@ -34,7 +34,7 @@
         "kind": "observed",
         "reason_code": "CONNECTION_UTILIZATION_HIGH",
         "relevance": 0.92,
-        "source_event_id": "evt_d7512779ec9e6b1d7816cd44",
+        "source_event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
         "statement": "Gateway connection utilization reached 0.92."
       },
       {
@@ -46,7 +46,7 @@
         "kind": "correlated",
         "reason_code": "PRECEDING_RELEVANT_CHANGE",
         "relevance": 0.9,
-        "source_event_id": "evt_7f20aad8c07824c11b212d21",
+        "source_event_id": "evt_01kxfzcee00ze5ctz9yw9h4fx5",
         "statement": "Gateway rate limiting was disabled 30 seconds before the first symptom."
       },
       {
@@ -58,7 +58,7 @@
         "kind": "conflicting",
         "reason_code": "ALTERNATIVE_CAUSE_SIGNAL",
         "relevance": 0.45,
-        "source_event_id": "evt_af9eac3889424a2665798d8e",
+        "source_event_id": "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
         "statement": "The gateway alert is also compatible with a traffic-surge alternative and does not prove the change caused the incident."
       },
       {
@@ -84,7 +84,7 @@
         "kind": "observed",
         "reason_code": "FORWARDED_TRAFFIC_SPIKE",
         "relevance": 0.9,
-        "source_event_id": "evt_35484f91d06c7a966ca1d3ee",
+        "source_event_id": "evt_01kxfzdbqgn1a7h6y11460m5mc",
         "statement": "Gateway forwarded request rate reached 7,800 requests/s."
       },
       {
@@ -96,7 +96,7 @@
         "kind": "correlated",
         "reason_code": "TRAFFIC_ALERT_CORRELATED",
         "relevance": 0.7,
-        "source_event_id": "evt_af9eac3889424a2665798d8e",
+        "source_event_id": "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
         "statement": "A critical gateway traffic alert fired after the metric spike."
       },
       {
@@ -108,7 +108,7 @@
         "kind": "conflicting",
         "reason_code": "STABLE_RAW_INGRESS",
         "relevance": 0.95,
-        "source_event_id": "evt_d2ebd25def796477cdec8ba8",
+        "source_event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
         "statement": "Raw ingress remained stable near 7,800 requests/s with no new source distribution."
       },
       {
@@ -134,7 +134,7 @@
         "kind": "observed",
         "reason_code": "DEPENDENCY_TIMEOUT_LOG",
         "relevance": 0.8,
-        "source_event_id": "evt_78365ca85ec827cf54fafd17",
+        "source_event_id": "evt_01kxfzeqnrgggktrp2vh8r0vee",
         "statement": "Payment API logged a timeout referencing payment-db-01."
       },
       {
@@ -146,7 +146,7 @@
         "kind": "correlated",
         "reason_code": "DEPENDENCY_PATH_LATENCY",
         "relevance": 0.6,
-        "source_event_id": "evt_9568af67025f7e38b7dcd123",
+        "source_event_id": "evt_01kxfze910bkgejygbss5jan5c",
         "statement": "Checkout latency increased on the dependency path to the payment database."
       },
       {
@@ -158,7 +158,7 @@
         "kind": "conflicting",
         "reason_code": "NORMAL_DB_UTILIZATION",
         "relevance": 0.95,
-        "source_event_id": "evt_0017b55d40f1c8d1a3233408",
+        "source_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
         "statement": "Payment database connection utilization remained normal at 0.44."
       },
       {
@@ -369,7 +369,7 @@
       "attachment_score": 0.9,
       "event": {
         "entity_id": "api-gateway-01",
-        "event_id": "evt_7f20aad8c07824c11b212d21",
+        "event_id": "evt_01kxfzcee00ze5ctz9yw9h4fx5",
         "event_type": "CONFIG_VALUE_CHANGED",
         "ingested_at": "2026-07-14T09:30:00.120Z",
         "modality": "config_change",
@@ -395,7 +395,7 @@
             ],
             "transformation_version": "scenario-builder-1.0"
           },
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "target_entity_id": "api-gateway-01"
         },
         "schema_version": "1.0",
@@ -424,7 +424,62 @@
       "attachment_score": 1.0,
       "event": {
         "entity_id": "api-gateway-01",
-        "event_id": "evt_35484f91d06c7a966ca1d3ee",
+        "event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
+        "event_type": "CONNECTION_UTILIZATION",
+        "ingested_at": "2026-07-14T09:30:30.120Z",
+        "modality": "metric",
+        "quality_flags": [
+          "SIMULATED"
+        ],
+        "raw_payload": {
+          "labels": {
+            "entity_id": "api-gateway-01",
+            "service": "api-gateway"
+          },
+          "metric": "connection_utilization",
+          "observed_at": "2026-07-14T09:30:30.000Z",
+          "provenance": {
+            "origin": "deterministic-simulator/prometheus",
+            "seed": 20260714,
+            "synthetic_fields": [
+              "entity_id",
+              "trace_or_session_id",
+              "scenario_relative_time"
+            ],
+            "transformation_version": "scenario-builder-1.0"
+          },
+          "sample_id": "prom-connection_utilization-0244",
+          "scenario_id": "scenario_gateway_rate_limit_001",
+          "unit": "ratio",
+          "value": 0.92
+        },
+        "schema_version": "1.0",
+        "severity": 0.0,
+        "signal_name": "connection_utilization",
+        "signal_value": 0.92,
+        "source": "simulator.prometheus",
+        "source_record_id": "prom-connection_utilization-0244",
+        "timestamp": "2026-07-14T09:30:30.000Z",
+        "trace_or_session_id": "scenario_gateway_rate_limit_001",
+        "unit": "ratio"
+      },
+      "hypothesis_relevance": {
+        "hyp_001": [
+          "CONNECTION_UTILIZATION_HIGH"
+        ]
+      }
+    },
+    {
+      "attachment_decision": "attached",
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "event": {
+        "entity_id": "api-gateway-01",
+        "event_id": "evt_01kxfzdbqgn1a7h6y11460m5mc",
         "event_type": "FORWARDED_REQUEST_RATE",
         "ingested_at": "2026-07-14T09:30:30.120Z",
         "modality": "metric",
@@ -449,7 +504,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "sample_id": "prom-forwarded_requests_per_second-0242",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "unit": "requests/s",
           "value": 7800.0
         },
@@ -482,7 +537,7 @@
       "attachment_score": 1.0,
       "event": {
         "entity_id": "api-gateway-01",
-        "event_id": "evt_885259a4b6d0556ea7c5de63",
+        "event_id": "evt_01kxfzdbqgwrn2emzvj99zx576",
         "event_type": "ACTIVE_CONNECTIONS",
         "ingested_at": "2026-07-14T09:30:30.120Z",
         "modality": "metric",
@@ -507,7 +562,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "sample_id": "prom-active_connections_total-0243",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "unit": "connections",
           "value": 4100.0
         },
@@ -533,7 +588,7 @@
       "attachment_score": 1.0,
       "event": {
         "entity_id": "api-gateway-01",
-        "event_id": "evt_d2ebd25def796477cdec8ba8",
+        "event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
         "event_type": "RAW_INGRESS_RATE",
         "ingested_at": "2026-07-14T09:30:30.120Z",
         "modality": "metric",
@@ -558,7 +613,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "sample_id": "prom-raw_ingress_requests_per_second-0241",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "unit": "requests/s",
           "value": 7800.0
         },
@@ -588,62 +643,7 @@
       "attachment_score": 1.0,
       "event": {
         "entity_id": "api-gateway-01",
-        "event_id": "evt_d7512779ec9e6b1d7816cd44",
-        "event_type": "CONNECTION_UTILIZATION",
-        "ingested_at": "2026-07-14T09:30:30.120Z",
-        "modality": "metric",
-        "quality_flags": [
-          "SIMULATED"
-        ],
-        "raw_payload": {
-          "labels": {
-            "entity_id": "api-gateway-01",
-            "service": "api-gateway"
-          },
-          "metric": "connection_utilization",
-          "observed_at": "2026-07-14T09:30:30.000Z",
-          "provenance": {
-            "origin": "deterministic-simulator/prometheus",
-            "seed": 20260714,
-            "synthetic_fields": [
-              "entity_id",
-              "trace_or_session_id",
-              "scenario_relative_time"
-            ],
-            "transformation_version": "scenario-builder-1.0"
-          },
-          "sample_id": "prom-connection_utilization-0244",
-          "scenario_id": "gateway_rate_limit_disabled",
-          "unit": "ratio",
-          "value": 0.92
-        },
-        "schema_version": "1.0",
-        "severity": 0.0,
-        "signal_name": "connection_utilization",
-        "signal_value": 0.92,
-        "source": "simulator.prometheus",
-        "source_record_id": "prom-connection_utilization-0244",
-        "timestamp": "2026-07-14T09:30:30.000Z",
-        "trace_or_session_id": "scenario_gateway_rate_limit_001",
-        "unit": "ratio"
-      },
-      "hypothesis_relevance": {
-        "hyp_001": [
-          "CONNECTION_UTILIZATION_HIGH"
-        ]
-      }
-    },
-    {
-      "attachment_decision": "attached",
-      "attachment_reasons": [
-        "SAME_ENTITY",
-        "SHARED_SCENARIO_TRACE",
-        "COMPATIBLE_SYMPTOM"
-      ],
-      "attachment_score": 1.0,
-      "event": {
-        "entity_id": "api-gateway-01",
-        "event_id": "evt_03c5050a56cee15ab5db71d6",
+        "event_id": "evt_01kxfzdng0djk00hf924wjkmcg",
         "event_type": "TCP_RETRANSMISSIONS",
         "ingested_at": "2026-07-14T09:30:40.120Z",
         "modality": "metric",
@@ -668,7 +668,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "sample_id": "prom-tcp_retransmissions_total-0246",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "unit": "count/10s",
           "value": 72.0
         },
@@ -694,7 +694,7 @@
       "attachment_score": 1.0,
       "event": {
         "entity_id": "api-gateway-01",
-        "event_id": "evt_e0522cc68c5745b71921ae73",
+        "event_id": "evt_01kxfzdng0g0e87j0wtk5g24d9",
         "event_type": "TCP_RESETS",
         "ingested_at": "2026-07-14T09:30:40.120Z",
         "modality": "metric",
@@ -719,7 +719,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "sample_id": "prom-tcp_resets_total-0245",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "unit": "count/10s",
           "value": 48.0
         },
@@ -745,7 +745,7 @@
       "attachment_score": 1.0,
       "event": {
         "entity_id": "api-gateway-01",
-        "event_id": "evt_af9eac3889424a2665798d8e",
+        "event_id": "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
         "event_type": "HIGH_FORWARDED_REQUEST_AND_CONNECTION_RATE",
         "ingested_at": "2026-07-14T09:30:45.120Z",
         "modality": "alert",
@@ -772,7 +772,7 @@
             ],
             "transformation_version": "scenario-builder-1.0"
           },
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "startsAt": "2026-07-14T09:30:45.000Z",
           "status": "firing"
         },
@@ -805,7 +805,7 @@
       "attachment_score": 1.0,
       "event": {
         "entity_id": "checkout-api-01",
-        "event_id": "evt_9568af67025f7e38b7dcd123",
+        "event_id": "evt_01kxfze910bkgejygbss5jan5c",
         "event_type": "CHECKOUT_P95_LATENCY",
         "ingested_at": "2026-07-14T09:31:00.120Z",
         "modality": "metric",
@@ -830,7 +830,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "sample_id": "prom-checkout_p95_latency_ms-0247",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "unit": "ms",
           "value": 1250.0
         },
@@ -860,7 +860,7 @@
       "attachment_score": 0.75,
       "event": {
         "entity_id": "payment-api-01",
-        "event_id": "evt_78365ca85ec827cf54fafd17",
+        "event_id": "evt_01kxfzeqnrgggktrp2vh8r0vee",
         "event_type": "UPSTREAM_CONNECTION_TIMEOUT",
         "ingested_at": "2026-07-14T09:31:15.120Z",
         "modality": "log",
@@ -886,7 +886,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "record_id": "log-payment-timeout-0001",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "trace_id": "scenario_gateway_rate_limit_001"
         },
         "schema_version": "1.0",
@@ -915,7 +915,7 @@
       "attachment_score": 0.9,
       "event": {
         "entity_id": "checkout-api-01",
-        "event_id": "evt_51329709a4ae6b6bdd4c825b",
+        "event_id": "evt_01kxfzf6ag7avaqjas1vfa4pxs",
         "event_type": "HIGH_CHECKOUT_ERROR_RATE",
         "ingested_at": "2026-07-14T09:31:30.120Z",
         "modality": "alert",
@@ -942,7 +942,7 @@
             ],
             "transformation_version": "scenario-builder-1.0"
           },
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "startsAt": "2026-07-14T09:31:30.000Z",
           "status": "firing"
         },
@@ -967,7 +967,7 @@
       "attachment_score": 0.4,
       "event": {
         "entity_id": "payment-db-01",
-        "event_id": "evt_0017b55d40f1c8d1a3233408",
+        "event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj",
         "event_type": "DB_CONNECTION_UTILIZATION",
         "ingested_at": "2026-07-14T09:31:40.120Z",
         "modality": "metric",
@@ -992,7 +992,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "sample_id": "prom-db_connection_utilization-0248",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "unit": "ratio",
           "value": 0.44
         },
@@ -1021,7 +1021,7 @@
       "attachment_score": -0.15,
       "event": {
         "entity_id": "auth-api-01",
-        "event_id": "evt_1d99bedd627abe8ef1dca5d6",
+        "event_id": "evt_01kxfzg3m0bt57m96k687mmwt6",
         "event_type": "CERTIFICATE_EXPIRY_WARNING",
         "ingested_at": "2026-07-14T09:32:00.120Z",
         "modality": "log",
@@ -1046,7 +1046,7 @@
             "transformation_version": "scenario-builder-1.0"
           },
           "record_id": "log-auth-certificate-0001",
-          "scenario_id": "gateway_rate_limit_disabled",
+          "scenario_id": "scenario_gateway_rate_limit_001",
           "trace_id": "maintenance_auth_001"
         },
         "schema_version": "1.0",

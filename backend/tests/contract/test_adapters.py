@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import uuid as _uuid
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 from app.contracts import CanonicalEvent
 from app.db.models import Base, CollapsedEventGroup, Event, QuarantinedEvent
 from app.ingestion.adapters import ADAPTERS
+from app.ingestion.adapters.common import event_id
 from app.ingestion.pipeline import IngestionPipeline
 from app.simulator.timeline import baseline_groups, scenario_groups
 
@@ -83,12 +85,14 @@ def test_alert_storm_collapses_and_preserves_bounds(session: Session) -> None:
     first = pipeline.ingest(source="simulator.alertmanager", raw=raw, request_id=str(_uuid.uuid4()), session=session)
     duplicate = json.loads(json.dumps(raw))
     duplicate["fingerprint"] = "alert-distinct-delivery"
+    duplicate["startsAt"] = "2026-07-14T09:30:41.000Z"
     second = pipeline.ingest(source="simulator.alertmanager", raw=duplicate, request_id=str(_uuid.uuid4()), session=session)
     group = session.scalar(select(CollapsedEventGroup))
     assert first.status == "accepted"
     assert second.status == "collapsed"
     assert group.event_count == 2
-    assert group.first_seen == group.last_seen
+    assert group.first_seen.isoformat() == "2026-07-14T09:30:41"
+    assert group.last_seen.isoformat() == "2026-07-14T09:30:45"
     assert group.representative_event_id == first.event_id
 
 
@@ -118,6 +122,44 @@ def test_recursive_redaction_marks_quality_flag(session: Session) -> None:
     assert "RAW_PAYLOAD_REDACTED" in event.quality_flags
 
 
+def test_config_adapter_redacts_before_pipeline() -> None:
+    raw = json.loads((SOURCES / "valid_config_audit.json").read_text(encoding="utf-8"))
+    raw["details"] = {"access_token": "abc", "nested": {"api_key": "key"}}
+    event = ADAPTERS["simulator.config_audit"].adapt(raw)
+    assert event.raw_payload["details"] == {
+        "access_token": "[REDACTED]",
+        "nested": {"api_key": "[REDACTED]"},
+    }
+    assert "RAW_PAYLOAD_REDACTED" in event.quality_flags
+
+
+def test_transport_scenario_maps_to_trace_and_explicit_trace_wins() -> None:
+    metric = json.loads((SOURCES / "valid_prometheus_sample.json").read_text(encoding="utf-8"))
+    envelope = {
+        "scenario_id": "scenario_custom_001",
+        "emitted_at": metric["observed_at"],
+        "provenance": {"seed": 20260714},
+        "payload": metric,
+    }
+    assert ADAPTERS["simulator.prometheus"].adapt(envelope).trace_or_session_id == "scenario_custom_001"
+
+    log = json.loads((SOURCES / "valid_syslog_record.json").read_text(encoding="utf-8"))
+    log["trace_id"] = "maintenance_decoy_001"
+    envelope["payload"] = log
+    assert ADAPTERS["simulator.syslog"].adapt(envelope).trace_or_session_id == "maintenance_decoy_001"
+
+
+def test_event_ids_are_seed_sensitive_and_source_safe() -> None:
+    timestamp = "2026-07-14T09:30:00.000Z"
+    first = event_id("simulator.prometheus", "record-1", timestamp, {"provenance": {"seed": 1}})
+    same = event_id("simulator.prometheus", "record-1", timestamp, {"provenance": {"seed": 1}})
+    other_seed = event_id("simulator.prometheus", "record-1", timestamp, {"provenance": {"seed": 2}})
+    other_source = event_id("simulator.syslog", "record-1", timestamp, {"provenance": {"seed": 1}})
+    assert first == same
+    assert len({first, other_seed, other_source}) == 3
+    assert first.startswith("evt_") and len(first.removeprefix("evt_")) == 26
+
+
 def test_batch_publishes_accepted_events_once(session: Session) -> None:
     pipeline = IngestionPipeline()
     metric = json.loads((SOURCES / "valid_prometheus_sample.json").read_text(encoding="utf-8"))
@@ -145,3 +187,26 @@ def test_raw_reference_bundle_replays_to_golden_events() -> None:
     expected = [CanonicalEvent.model_validate_json(line) for line in expected_lines]
     key = lambda event: (event.ingested_at, event.event_id)
     assert [event.model_dump() for event in sorted(actual, key=key)] == [event.model_dump() for event in sorted(expected, key=key)]
+
+
+def test_provenance_hashes_and_deterministic_ids_are_frozen() -> None:
+    root = Path(__file__).resolve().parents[3]
+    manifest_path = root / "backend/app/fixtures/scenarios/gateway_rate_limit/provenance.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["seed"] == 20260714
+    assert manifest["builder_version"] == "scenario-builder-1.0"
+    assert manifest["generated_at"] == "2026-07-14T09:00:00.000Z"
+
+    for entry in manifest["entries"]:
+        path = root / entry["path"]
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == entry["sha256"]
+        if path.suffix == ".jsonl":
+            assert len(path.read_text(encoding="utf-8").splitlines()) == entry["record_count"]
+
+    events = [
+        CanonicalEvent.model_validate_json(line)
+        for line in (FIXTURES / "golden_events.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert len({event.event_id for event in events}) == len(events)
+    assert all(event.event_id.startswith("evt_") for event in events)
+    assert all(len(event.event_id.removeprefix("evt_")) == 26 for event in events)

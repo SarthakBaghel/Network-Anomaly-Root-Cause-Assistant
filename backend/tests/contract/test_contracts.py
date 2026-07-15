@@ -134,6 +134,7 @@ def test_openapi_contains_every_frozen_endpoint() -> None:
         "/api/v1/events/batch",
         "/api/v1/events/{event_id}",
         "/api/v1/quarantine",
+        "/api/v1/anomalies",
         "/api/v1/simulator/start",
         "/api/v1/simulator/stop",
         "/api/v1/simulator/reset",

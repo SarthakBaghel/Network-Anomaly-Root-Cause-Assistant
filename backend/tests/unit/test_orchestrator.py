@@ -66,6 +66,28 @@ class TestOrchestratorInstantiation:
         orc.register_analysis_engine(mock_engine)
         assert orc.status()["analysis_engine_registered"] is True
 
+    def test_batch_defers_to_one_recompute_per_affected_incident(self) -> None:
+        from datetime import datetime, timedelta, timezone
+
+        orc = AnalysisOrchestrator()
+        session = MagicMock()
+        first = MagicMock(id="evt_first", timestamp=datetime(2026, 7, 14, 9, 30, tzinfo=timezone.utc))
+        second = MagicMock(id="evt_second", timestamp=first.timestamp + timedelta(seconds=10))
+        incident = MagicMock(id="inc_001")
+        orc._stage_detect = MagicMock(return_value=[])
+        orc._stage_incident = MagicMock(return_value=incident)
+        orc._run_rca_and_publish = MagicMock(return_value="run_001")
+
+        orc.process_batch([second, first], session)
+
+        assert orc._stage_detect.call_count == 2
+        assert orc._stage_incident.call_count == 2
+        orc._run_rca_and_publish.assert_called_once_with(
+            incident,
+            trigger_event=second,
+            session=session,
+        )
+
 
 class TestFingerprintComputation:
     def test_fingerprint_is_deterministic(self) -> None:

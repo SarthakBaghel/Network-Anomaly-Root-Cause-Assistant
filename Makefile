@@ -4,7 +4,7 @@ bootstrap:
 	./scripts/bootstrap.sh
 
 fixtures:
-	.venv/bin/python scripts/build_scenario_bundle.py
+	.venv/bin/python scripts/build_network_profile.py
 	.venv/bin/python scripts/build_handoff_fixtures.py
 
 openapi:
@@ -35,4 +35,3 @@ build:
 
 # Full CI gate: validate + test + build
 verify: validate-fixtures test build
-

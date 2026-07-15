@@ -18,9 +18,10 @@ class OrchestrationPublisher:
     def publish_batch(self, events: list[CanonicalEvent]) -> None:
         from app.db.models import Event
         from app.orchestration.orchestrator import orchestrator
-        # Process in timestamp order, then ID order
-        sorted_events = sorted(events, key=lambda e: (e.timestamp, e.event_id))
-        for event in sorted_events:
-            db_event = self.session.get(Event, event.event_id)
-            if db_event is not None:
-                orchestrator.process_event(db_event, self.session)
+        rows = [
+            row
+            for event in events
+            if (row := self.session.get(Event, event.event_id)) is not None
+        ]
+        if rows:
+            orchestrator.process_batch(rows, self.session)

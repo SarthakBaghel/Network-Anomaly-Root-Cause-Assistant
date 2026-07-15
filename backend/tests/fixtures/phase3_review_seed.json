@@ -1,11 +1,15 @@
 {
-  "incident_id": "inc_001",
   "current_analysis_run_id": "run_007",
-  "superseded_analysis_run_id": "run_006",
-  "current_hypothesis_ids": ["hyp_001", "hyp_002", "hyp_003"],
-  "superseded_hypothesis_id": "hyp_old",
+  "current_hypothesis_ids": [
+    "hyp_001",
+    "hyp_002",
+    "hyp_003"
+  ],
+  "excluded_event_id": "evt_01kxfzg3m0bt57m96k687mmwt6",
+  "incident_id": "inc_001",
+  "initial_review_ids": [],
   "missing_evidence_id": "ev_005",
   "non_missing_evidence_id": "ev_001",
-  "excluded_event_id": "evt_1d99bedd627abe8ef1dca5d6",
-  "initial_review_ids": []
+  "superseded_analysis_run_id": "run_006",
+  "superseded_hypothesis_id": "hyp_old"
 }

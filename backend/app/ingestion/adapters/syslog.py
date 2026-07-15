@@ -17,4 +17,4 @@ class SyslogAdapter:
             raise AdapterError("SYSLOG_MAPPING_ERROR", f"missing field: {exc}") from exc
         rule = log_rule(code)
         severity = float(rule["normalized_severity"]) if rule else LEVEL_SEVERITY.get(str(payload.get("level", "warning")).lower(), 0.5)
-        return CanonicalEvent(event_id=event_id(self.source_name, record_id), timestamp=timestamp, ingested_at=ingested_at(raw, timestamp), entity_id=entity, modality="log", event_type=code, severity=severity, trace_or_session_id=trace_id(raw, payload), source=self.source_name, source_record_id=record_id, schema_version="1.0", quality_flags=simulated_flags(raw), raw_payload={**payload, **metadata})
+        return CanonicalEvent(event_id=event_id(self.source_name, record_id, timestamp, raw), timestamp=timestamp, ingested_at=ingested_at(raw, timestamp), entity_id=entity, modality="log", event_type=code, severity=severity, trace_or_session_id=trace_id(raw, payload), source=self.source_name, source_record_id=record_id, schema_version="1.0", quality_flags=simulated_flags(raw), raw_payload={**payload, **metadata})

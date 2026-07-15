@@ -6,8 +6,9 @@ from pathlib import Path
 from app.simulator.emitters import AlertmanagerEmitter, ConfigAuditEmitter, PrometheusEmitter, SyslogEmitter
 
 TRIGGER_TIME = datetime(2026, 7, 14, 9, 30, tzinfo=timezone.utc)
-SCENARIO_ID = "gateway_rate_limit_disabled"
-TRACE_ID = "scenario_gateway_rate_limit_001"
+SCENARIO_KEY = "gateway_rate_limit_disabled"
+SCENARIO_ID = "scenario_gateway_rate_limit_001"
+TRACE_ID = SCENARIO_ID
 
 
 @dataclass(frozen=True)

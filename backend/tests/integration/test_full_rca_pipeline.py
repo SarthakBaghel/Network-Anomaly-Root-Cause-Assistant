@@ -95,7 +95,12 @@ def test_failed_recomputation_leaves_prior_analysis_current() -> None:
         prior = AnalysisRunRepository(session).get_current_for_incident("inc_001")
         assert prior is not None
 
-        event = session.get(models.Event, "evt_35484f91d06c7a966ca1d3ee")
+        event = session.scalar(
+            select(models.Event).where(
+                models.Event.source_record_id == "prom-forwarded_requests_per_second-0242"
+            )
+        )
+        assert event is not None
         event.raw_payload = {**event.raw_payload, "new_revision_input": True}
         session.flush()
         failing = AnalysisOrchestrator()

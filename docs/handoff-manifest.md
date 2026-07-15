@@ -16,16 +16,16 @@ competing copies.
 
 | Artifact | SHA-256 |
 |---|---|
-| `backend/openapi.json` | `ea5ce4961ff2fc89092cc87ae731ad85e84ed402d45e4aca9d8a01cd9ef8118f` |
+| `backend/openapi.json` | `5067e4a0cd297a842850d1bb4992cd4d01e741572b38bb1b6a222d96a2003a26` |
 | `backend/app/fixtures/topology.json` | `69b6523e1e6e59e3a9f470be141517a7e3cbef2097d08187d8c3ca90a15ef6a0` |
 | `backend/app/fixtures/hypotheses.yaml` | `4b5e19675f8b1c0b51609207702b70c9ae11466057e648253a2d66522b762aa5` |
 | `backend/app/fixtures/symptom_families.yaml` | `dd2562735dd0537356893eb7f11f1879774ec11773c203f2749b15433c8eed53` |
-| `backend/tests/fixtures/golden_events.jsonl` | `8cb5e335b8f063f506774bb310741e9d9172d9c62ebea0fa0003a253d08c575a` |
-| `backend/tests/fixtures/golden_anomalies.json` | `fa57ab8b3052648592ef1c48d281905cba3b38e8ff12a905168e966ff362eb8f` |
-| `backend/tests/fixtures/golden_incident_bundle.json` | `fbcb25d76bbfc52ae14c8686a36b853eca4d36a89fbd897eb0a392f635914cfe` |
+| `backend/tests/fixtures/golden_events.jsonl` | `f3bdc90833b7ccf81b0f807d4c866ba3e78adddaa3ef219052e90d1f1dfe1a47` |
+| `backend/tests/fixtures/golden_anomalies.json` | `b7d317e95d4e68a3a306b63d4714c9075e5a1bb02f4e29dbc3db440152551bc8` |
+| `backend/tests/fixtures/golden_incident_bundle.json` | `6344a5f248c9d23e1bbb10e2fef5500ea29f01fe9aadb300f5dec9b900be83fd` |
 | `backend/tests/fixtures/golden_expected_analysis.json` | `4a84ab7a52b764743da9aea20a05c8ed444e63116af9c11feff0fd9a0a839cb7` |
-| `backend/tests/fixtures/golden_investigation_response.json` | `6ca494f6b6473837342bc7b78756cb34d8f0df92d4dc78fbd1bde0ab238449d2` |
+| `backend/tests/fixtures/golden_investigation_response.json` | `71aa91951026daa4236af7cd00d8e1b77898addd99f2fd55530bd613f9da2358` |
 | `backend/tests/fixtures/golden_review_examples.json` | `e43586e25df9f8d63db59294f066c5a29ebbf420adfb71a9f35e76b2a778f963` |
-| `backend/tests/fixtures/golden_audit_examples.json` | `586294cf61944e2ebeadc0dd6e51397ffc1e4e28f65b24d3b432b467e8dbac6f` |
+| `backend/tests/fixtures/golden_audit_examples.json` | `dc8ecca349591e8dc270d04b28b724265319b31ad5223678bca53b6b965dc80d` |
 | `frontend/src/routes.ts` | `03063934eaca8276bb85d47785d23ec2f5698f12bcb4ca824c76d674aaa15560` |
-| `frontend/src/test-fixtures/testid-manifest.ts` | `a42e6f4bde9283297fb7a085c2052d440b1834f420d01332e6450c01498a2551` |
+| `frontend/src/test-fixtures/testid-manifest.ts` | `0ad08582f5a020056293369cad8e7e33bb31cd230328dcacb22c842ec26c52b3` |

@@ -1,20 +1,20 @@
 {
   "attached_event_ids": [
-    "evt_7f20aad8c07824c11b212d21",
-    "evt_d2ebd25def796477cdec8ba8",
-    "evt_35484f91d06c7a966ca1d3ee",
-    "evt_885259a4b6d0556ea7c5de63",
-    "evt_d7512779ec9e6b1d7816cd44",
-    "evt_e0522cc68c5745b71921ae73",
-    "evt_03c5050a56cee15ab5db71d6",
-    "evt_af9eac3889424a2665798d8e",
-    "evt_9568af67025f7e38b7dcd123",
-    "evt_78365ca85ec827cf54fafd17",
-    "evt_51329709a4ae6b6bdd4c825b",
-    "evt_0017b55d40f1c8d1a3233408"
+    "evt_01kxfzcee00ze5ctz9yw9h4fx5",
+    "evt_01kxfzdbqgz32a749g3hva5w4g",
+    "evt_01kxfzdbqgn1a7h6y11460m5mc",
+    "evt_01kxfzdbqgwrn2emzvj99zx576",
+    "evt_01kxfzdbqge9vt5479y2gkaqy9",
+    "evt_01kxfzdng0g0e87j0wtk5g24d9",
+    "evt_01kxfzdng0djk00hf924wjkmcg",
+    "evt_01kxfzdtc8by9kgrj2yy3tmjjd",
+    "evt_01kxfze910bkgejygbss5jan5c",
+    "evt_01kxfzeqnrgggktrp2vh8r0vee",
+    "evt_01kxfzf6ag7avaqjas1vfa4pxs",
+    "evt_01kxfzfg304d8mqb7z4xpn48aj"
   ],
   "excluded_event_ids": [
-    "evt_1d99bedd627abe8ef1dca5d6"
+    "evt_01kxfzg3m0bt57m96k687mmwt6"
   ],
   "expected_scores": [
     92.1,
@@ -25,7 +25,7 @@
     "entity_id": "api-gateway-01",
     "hypothesis_type": "configuration_regression"
   },
-  "scenario_id": "gateway_rate_limit_disabled",
+  "scenario_id": "scenario_gateway_rate_limit_001",
   "schema_version": "1.0",
   "version": "ground-truth-1.0"
 }

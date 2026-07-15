@@ -54,6 +54,26 @@ contracts only when its affected owners have reviewed it.
   `0.0`; alert/log severities come from checked-in catalogues.
 - **Affected owners:** Persons 1 and 3
 
+## P3-001 — Deterministic event identity and batch publication
+
+- **Status:** accepted
+- **Decision:** canonical event IDs are deterministic ULIDs whose time component
+  comes from the source timestamp and whose entropy is derived from
+  `SIMULATOR_SEED`, source identity, and source record ID. Batch ingestion
+  persists ordered partial-success results first, then invokes one serialized
+  batch orchestration pass; RCA publication occurs at most once per affected
+  incident after the batch.
+- **Affected owners:** Persons 1 and 3
+
+## P3-002 — Event-feed cursors
+
+- **Status:** accepted
+- **Decision:** `GET /api/v1/events` returns a generated-at envelope containing
+  `items` and `next_cursor`. The opaque base64url cursor freezes the last
+  `(timestamp, event_id)` tuple and active modality/entity filters. Malformed or
+  filter-mismatched cursors return `400 INVALID_CURSOR`.
+- **Affected owners:** Persons 2 and 3
+
 ## M0-006 — Nine anomalies and configuration context
 
 - **Status:** accepted for Milestone 0
@@ -175,3 +195,8 @@ contracts only when its affected owners have reviewed it.
   `IngestionPipeline`; feature routes do not invoke detectors, incident logic,
   or RCA modules directly.
 - **Affected owners:** Persons 1 and 3
+# Person 2 live overview contracts (2026-07-15)
+
+- Simulator mutations and status use the typed `SimulatorStatusResponse` contract. The existing `sources` counter map remains available for simulator-engine consumers; the ordered `source_health` list is the dashboard contract and always includes the four simulator adapters plus `fixture.cmdb_topology`.
+- `GET /api/v1/anomalies?limit=20` is a read-only overview endpoint. It returns detector-owned anomaly records with entity identity in a generated-at envelope; the frontend does not derive or synthesize anomalies.
+- Mock Service Worker is opt-in through `VITE_ENABLE_MSW=true`, so normal development talks to the configured backend.

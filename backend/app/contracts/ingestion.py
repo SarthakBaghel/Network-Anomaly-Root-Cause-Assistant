@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import Field
 
 from .base import UtcModel
+from .events import CanonicalEvent
 
 
 class RawIngestionRequest(UtcModel):
@@ -34,3 +35,9 @@ class BatchIngestionResponse(UtcModel):
     request_id: str = Field(min_length=1)
     generated_at: datetime
     results: list[IngestionMutationResponse]
+
+
+class EventListResponse(UtcModel):
+    generated_at: datetime
+    items: list[CanonicalEvent]
+    next_cursor: str | None = None

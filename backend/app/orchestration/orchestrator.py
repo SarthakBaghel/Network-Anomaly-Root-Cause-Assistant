@@ -258,6 +258,29 @@ class AnalysisOrchestrator:
         with self._lock:
             self._run_pipeline(event, session)
 
+    def process_batch(self, events: list[models.Event], session: Session) -> None:
+        """Process an ingestion batch while publishing at most one RCA revision per incident.
+
+        Detection and incident attachment still run in deterministic event order,
+        but RCA publication is deferred until every accepted representative has
+        been observed. This prevents a batch from publishing an intermediate
+        analysis revision for every member.
+        """
+
+        with self._lock:
+            affected: dict[str, tuple[models.Incident, models.Event]] = {}
+            for event in sorted(events, key=lambda item: (item.timestamp, item.id)):
+                anomalies = self._stage_detect(event, session)
+                incident = self._stage_incident(anomalies, event, session)
+                if incident is not None:
+                    affected[incident.id] = (incident, event)
+            for incident, trigger_event in affected.values():
+                self._run_rca_and_publish(
+                    incident,
+                    trigger_event=trigger_event,
+                    session=session,
+                )
+
     def recompute(self, incident_id: str, session: Session) -> str:
         """Trigger a forced re-analysis for an existing incident.
 

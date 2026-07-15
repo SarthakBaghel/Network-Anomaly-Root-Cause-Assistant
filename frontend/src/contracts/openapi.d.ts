@@ -577,6 +577,18 @@ export interface components {
             /** Unit */
             unit?: string | null;
         };
+        /** EventListResponse */
+        EventListResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Items */
+            items: components["schemas"]["CanonicalEvent"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /** EvidenceCoverage */
         EvidenceCoverage: {
             /** Available */
@@ -1122,6 +1134,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                cursor?: string | null;
                 modality?: string | null;
                 entity_id?: string | null;
             };
@@ -1137,7 +1150,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CanonicalEvent"][];
+                    "application/json": components["schemas"]["EventListResponse"];
                 };
             };
             /** @description Validation Error */

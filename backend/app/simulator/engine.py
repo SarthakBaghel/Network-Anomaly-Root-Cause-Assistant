@@ -1,12 +1,22 @@
 import threading
+import json
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from app.config import settings
 from app.simulator.ingestion import IngestionSink, PersistentIngestionSink
-from app.simulator.timeline import SCENARIO_ID, TRACE_ID, TRIGGER_TIME, baseline_groups, scenario_groups
+from app.simulator.timeline import SCENARIO_ID, SCENARIO_KEY, TRACE_ID, TRIGGER_TIME, baseline_groups, scenario_groups
 
 SIMULATOR_REAL_TICK_SECONDS = 0.05
+SOURCE_TYPES = {
+    "simulator.prometheus": "metrics",
+    "simulator.syslog": "logs",
+    "simulator.alertmanager": "alerts",
+    "simulator.config_audit": "config_changes",
+}
+TOPOLOGY_SOURCE = "fixture.cmdb_topology"
+TOPOLOGY_FIXTURE = Path(__file__).parents[1] / "fixtures/topology.json"
 
 
 class SimulatorStateError(RuntimeError):
@@ -27,6 +37,7 @@ class SimulatorEngine:
         self.active_scenario: str | None = None
         self.virtual_clock = TRIGGER_TIME - timedelta(minutes=5)
         self.counters = defaultdict(lambda: {"emitted": 0, "accepted": 0, "collapsed": 0, "quarantined": 0})
+        self.last_ingest_at: dict[str, str] = {}
 
     def start(self) -> dict:
         with self._lock:
@@ -73,6 +84,7 @@ class SimulatorEngine:
             self.active_scenario = None
             self.virtual_clock = TRIGGER_TIME - timedelta(minutes=5)
             self.counters.clear()
+            self.last_ingest_at.clear()
             return self.status()
 
     def reset_state(self) -> None:
@@ -99,11 +111,11 @@ class SimulatorEngine:
             return self.status()
 
     def trigger(self, scenario_id: str) -> dict:
-        if scenario_id not in {"gateway_rate_limit", SCENARIO_ID, TRACE_ID}:
+        if scenario_id not in {"gateway_rate_limit", SCENARIO_KEY, SCENARIO_ID, TRACE_ID}:
             raise KeyError(scenario_id)
         self._stop_worker()
         with self._lock:
-            self.active_scenario = SCENARIO_ID
+            self.active_scenario = SCENARIO_KEY
             self.state = "triggering"
             self.scenario_state = "triggering"
             while self._cursor < len(self._baseline):
@@ -120,7 +132,36 @@ class SimulatorEngine:
 
     def status(self) -> dict:
         with self._lock:
+            topology = json.loads(TOPOLOGY_FIXTURE.read_text(encoding="utf-8"))
+            source_health = []
+            for source_id, source_type in SOURCE_TYPES.items():
+                counts = dict(self.counters[source_id])
+                source_health.append(
+                    {
+                        "source_id": source_id,
+                        "source_type": source_type,
+                        "status": "ready",
+                        "last_ingest_at": self.last_ingest_at.get(source_id),
+                        "accepted": counts["accepted"],
+                        "collapsed": counts["collapsed"],
+                        "quarantined": counts["quarantined"],
+                        "fixture_version": None,
+                    }
+                )
+            source_health.append(
+                {
+                    "source_id": TOPOLOGY_SOURCE,
+                    "source_type": "topology",
+                    "status": "ready",
+                    "last_ingest_at": topology["generated_at"],
+                    "accepted": 1,
+                    "collapsed": 0,
+                    "quarantined": 0,
+                    "fixture_version": topology["version"],
+                }
+            )
             return {
+                "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "state": self.state,
                 "scenario_state": self.scenario_state,
                 "scenario_id": self.active_scenario,
@@ -130,6 +171,7 @@ class SimulatorEngine:
                 "baseline_ticks_emitted": self._cursor,
                 "baseline_ticks_required": len(self._baseline),
                 "sources": {source: dict(counts) for source, counts in self.counters.items()},
+                "source_health": source_health,
             }
 
     def _emit_group(self, records: tuple[tuple[str, dict], ...]) -> None:
@@ -137,6 +179,9 @@ class SimulatorEngine:
             outcome = self.ingestion.ingest(source, raw)
             self.counters[source]["emitted"] += 1
             self.counters[source][outcome.status] += 1
+            emitted_at = raw.get("emitted_at")
+            if isinstance(emitted_at, str):
+                self.last_ingest_at[source] = emitted_at
 
     def _run(self) -> None:
         while not self._stop_event.is_set():

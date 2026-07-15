@@ -151,6 +151,45 @@ def test_golden_replay_persists_fifteen_actionable_and_three_context_anomalies()
         assert not any(item.event_id.endswith("1d99bedd627abe8ef1dca5d6") for item in anomalies)
 
 
+def test_person3_detector_replay_matches_golden_anomaly_manifest_exactly() -> None:
+    from app.contracts import AnomalyRecord
+    from app.detection import AlertSeverityDetector, LogRuleDetector
+
+    events = []
+    for group in [*baseline_groups(), *scenario_groups()]:
+        for source, raw in group.records:
+            from app.ingestion.adapters import ADAPTERS
+
+            events.append(ADAPTERS[source].adapt(raw))
+    events.sort(key=lambda item: (item.timestamp, item.event_id))
+
+    detectors = (
+        RollingZscoreDetector(),
+        LogRuleDetector(),
+        AlertSeverityDetector(),
+        ConfigChangeMarker(),
+    )
+    actual = []
+    history = []
+    for event in events:
+        context = DetectionContext(history=list(history))
+        for detector in detectors:
+            actual.extend(detector.evaluate(event, context))
+        history.append(event)
+
+    manifest = json.loads(
+        (FIXTURES.parent / "golden_anomalies.json").read_text(encoding="utf-8")
+    )
+    expected = [
+        AnomalyRecord.model_validate(item)
+        for item in [*manifest["anomalies"], *manifest["context_markers"]]
+    ]
+    key = lambda item: (item.window_end, item.event_id, item.detector_id)
+    assert [item.model_dump() for item in sorted(actual, key=key)] == [
+        item.model_dump() for item in sorted(expected, key=key)
+    ]
+
+
 
 
 def test_metrics_never_collapse_and_exact_retry_is_idempotent() -> None:

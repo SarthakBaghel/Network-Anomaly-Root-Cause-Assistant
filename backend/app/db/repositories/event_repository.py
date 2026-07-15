@@ -45,11 +45,21 @@ class EventRepository:
         return row
 
     def increment_collapsed_group(self, group_id: str, last_seen: datetime) -> None:
-        """Increment event_count and update last_seen for a collapsed group."""
+        """Increment the group while preserving true first/last event bounds."""
         row = self.session.get(models.CollapsedEventGroup, group_id)
         if row:
             row.event_count += 1
-            row.last_seen = last_seen
+            candidate = last_seen
+
+            def comparable(value: datetime) -> datetime:
+                if value.tzinfo is None or value.utcoffset() is None:
+                    return value.replace(tzinfo=timezone.utc)
+                return value.astimezone(timezone.utc)
+
+            if comparable(candidate) < comparable(row.first_seen):
+                row.first_seen = candidate
+            if comparable(candidate) > comparable(row.last_seen):
+                row.last_seen = candidate
             self.session.flush()
 
     # ------------------------------------------------------------------

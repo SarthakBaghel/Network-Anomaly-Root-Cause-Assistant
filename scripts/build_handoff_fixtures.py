@@ -17,6 +17,7 @@ TOPOLOGY = ROOT / "backend" / "app" / "fixtures" / "topology.json"
 PLAYBOOKS = ROOT / "backend" / "app" / "fixtures" / "playbooks.yaml"
 FRONTEND_MOCK = ROOT / "frontend" / "src" / "test-fixtures" / "golden-investigation-response.json"
 FRONTEND_EVENTS = ROOT / "frontend" / "src" / "test-fixtures" / "golden-events.json"
+PHASE3_REVIEW_SEED = BACKEND_FIXTURES / "phase3_review_seed.json"
 RUN_ID = "run_007"
 INCIDENT_ID = "inc_001"
 
@@ -440,6 +441,8 @@ def build_outputs() -> dict[Path, str]:
             },
         ],
     }
+    phase3_review_seed = json.loads(PHASE3_REVIEW_SEED.read_text(encoding="utf-8"))
+    phase3_review_seed["excluded_event_id"] = by_source["log-auth-certificate-0001"]["event_id"]
     return {
         BACKEND_FIXTURES / "golden_expected_analysis.json": pretty(expected),
         BACKEND_FIXTURES / "golden_incident_bundle.json": pretty(incident_bundle),
@@ -448,6 +451,7 @@ def build_outputs() -> dict[Path, str]:
         BACKEND_FIXTURES / "golden_audit_examples.json": pretty(audit_examples),
         FRONTEND_MOCK: pretty(investigation),
         FRONTEND_EVENTS: pretty(events),
+        PHASE3_REVIEW_SEED: pretty(phase3_review_seed),
     }
 
 

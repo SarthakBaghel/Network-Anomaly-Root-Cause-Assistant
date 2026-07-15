@@ -44,7 +44,11 @@ function simulatorStatus() {
 }
 
 export const handlers = [
-  http.get('*/api/v1/events', () => HttpResponse.json(goldenEvents)),
+  http.get('*/api/v1/events', () => HttpResponse.json({
+    generated_at: new Date().toISOString(),
+    items: goldenEvents,
+    next_cursor: null,
+  })),
   http.get('*/api/v1/events/:eventId', ({ params }) => {
     const event = goldenEvents.find((item) => item.event_id === params.eventId)
     return event

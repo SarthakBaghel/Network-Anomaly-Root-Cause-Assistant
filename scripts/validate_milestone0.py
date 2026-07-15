@@ -123,7 +123,7 @@ def validate_runtime_firewall() -> None:
 
 
 def validate_generators() -> None:
-    subprocess.run([sys.executable, "scripts/build_scenario_bundle.py", "--check"], cwd=ROOT, check=True)
+    subprocess.run([sys.executable, "scripts/build_network_profile.py", "--check"], cwd=ROOT, check=True)
     subprocess.run([sys.executable, "scripts/build_handoff_fixtures.py", "--check"], cwd=ROOT, check=True)
 
 

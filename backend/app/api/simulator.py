@@ -2,24 +2,25 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from app.contracts import SimulatorResetResponse, SimulatorStatusResponse
 from app.simulator import simulator_engine
 from app.simulator.engine import SimulatorStateError
 
 router = APIRouter(prefix="/simulator", tags=["simulator"])
 
 
-@router.post("/start", response_model=dict[str, Any])
+@router.post("/start", response_model=SimulatorStatusResponse)
 def start() -> dict[str, Any]:
     return simulator_engine.start()
 
 
-@router.post("/stop", response_model=dict[str, Any])
+@router.post("/stop", response_model=SimulatorStatusResponse)
 def stop() -> dict[str, Any]:
     return simulator_engine.stop()
 
 
-@router.post("/reset", response_model=dict[str, Any])
-def reset() -> dict[str, Any]:
+@router.post("/reset", response_model=SimulatorResetResponse)
+def reset() -> SimulatorResetResponse:
     """Execute the full demo reset sequence (blueprint §5.2, P1-22).
 
     Stops the simulator, clears demo rows, reloads topology,
@@ -34,12 +35,13 @@ def reset() -> dict[str, Any]:
     with session_scope() as session:
         result = reset_service.execute(session)
 
-    # Merge simulator status to satisfy test expectations
-    result.update(simulator_engine.status())
-    return result
+    return SimulatorResetResponse(
+        **simulator_engine.status(),
+        reset_audit_id=result["audit_id"],
+    )
 
 
-@router.post("/scenarios/{scenario_id}/trigger", response_model=dict[str, Any])
+@router.post("/scenarios/{scenario_id}/trigger", response_model=SimulatorStatusResponse)
 def trigger(scenario_id: str) -> dict[str, Any]:
     try:
         return simulator_engine.trigger(scenario_id)
@@ -49,7 +51,6 @@ def trigger(scenario_id: str) -> dict[str, Any]:
         raise HTTPException(409, detail={"code": "SCENARIO_STATE_CONFLICT", "message": str(exc)}) from exc
 
 
-@router.get("/status", response_model=dict[str, Any])
+@router.get("/status", response_model=SimulatorStatusResponse)
 def status() -> dict[str, Any]:
     return simulator_engine.status()
-

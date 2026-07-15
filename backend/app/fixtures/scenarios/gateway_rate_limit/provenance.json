@@ -20,42 +20,42 @@
       "origin": "deterministic-simulator",
       "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/alerts.jsonl",
       "record_count": 2,
-      "sha256": "4d188a45afabc21991bd2d978100f7d5f0e8fac21cd19d8382316f9a7649cf53"
+      "sha256": "6c47e992383069b2374e594b85dc310857953892af51375450912da16dd9539c"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
       "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/config_changes.jsonl",
       "record_count": 1,
-      "sha256": "729a201d97ae27092695fe1eafd71f0d61920dfebd115343a8cf63275cefebf1"
+      "sha256": "d9120f784cbbaedfe35b7f7de6983aed3fb516e5886fca33c89d6938aaabb73b"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
       "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/logs.jsonl",
       "record_count": 3,
-      "sha256": "3368f260cc4573f5c947b6243b85d80346e9d4846eefd2052fcfcc645f736777"
+      "sha256": "8cea6fb802ba1ce976259688bc974125a09214336d69d5fb1e5cfc2e9a8689f9"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
       "path": "backend/app/fixtures/scenarios/gateway_rate_limit/inputs/metrics.jsonl",
       "record_count": 248,
-      "sha256": "3b7f9026339cec00bf8e6c0d19a71e3f9b9f1d03f54a5b8617f5a7d8bc3de774"
+      "sha256": "3e6daa4bf2d5ab0dd0ae0fc64b6614c8bf14cfbcf2f8a88623c99ef7aa370141"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
       "path": "backend/tests/fixtures/golden_anomalies.json",
       "record_count": null,
-      "sha256": "fa57ab8b3052648592ef1c48d281905cba3b38e8ff12a905168e966ff362eb8f"
+      "sha256": "b7d317e95d4e68a3a306b63d4714c9075e5a1bb02f4e29dbc3db440152551bc8"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "deterministic-simulator",
       "path": "backend/tests/fixtures/golden_events.jsonl",
       "record_count": 254,
-      "sha256": "8cb5e335b8f063f506774bb310741e9d9172d9c62ebea0fa0003a253d08c575a"
+      "sha256": "f3bdc90833b7ccf81b0f807d4c866ba3e78adddaa3ef219052e90d1f1dfe1a47"
     },
     {
       "license": "project-authored synthetic fixture",
@@ -115,7 +115,7 @@
     }
   ],
   "generated_at": "2026-07-14T09:00:00.000Z",
-  "scenario_id": "gateway_rate_limit_disabled",
+  "scenario_id": "scenario_gateway_rate_limit_001",
   "schema_version": "1.0",
   "seed": 20260714,
   "version": "scenario-provenance-1.0"

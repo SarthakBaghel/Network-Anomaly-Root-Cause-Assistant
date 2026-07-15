@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,11 +24,9 @@ from app.db import models
 from app.db.repositories import EventRepository
 from app.ingestion.adapters import ADAPTERS
 from app.ingestion.adapters.base import AdapterError
+from app.ingestion.redaction import redact_payload
 
 
-_SENSITIVE_KEY = re.compile(
-    r"password|passwd|token|secret|api_key|authorization", re.IGNORECASE
-)
 _LOG_TEMPLATE_PATH = (
     Path(__file__).resolve().parents[1]
     / "fixtures"
@@ -42,29 +39,6 @@ def _utc(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
-
-
-def _redact(value: Any) -> tuple[Any, bool]:
-    if isinstance(value, dict):
-        redacted: dict[str, Any] = {}
-        changed = False
-        for key, item in value.items():
-            if _SENSITIVE_KEY.search(str(key)):
-                redacted[key] = "[REDACTED]"
-                changed = True
-            else:
-                redacted[key], item_changed = _redact(item)
-                changed = changed or item_changed
-        return redacted, changed
-    if isinstance(value, list):
-        output: list[Any] = []
-        changed = False
-        for item in value:
-            clean, item_changed = _redact(item)
-            output.append(clean)
-            changed = changed or item_changed
-        return output, changed
-    return value, False
 
 
 def _source_record_id(raw: dict[str, Any]) -> str | None:
@@ -175,7 +149,7 @@ class IngestionPipeline:
         publish: bool = True,
     ) -> IngestionMutationResponse:
         now = datetime.now(timezone.utc)
-        clean_raw, _ = _redact(raw)
+        clean_raw, _ = redact_payload(raw)
         encoded_size = len(
             json.dumps(raw, sort_keys=True, separators=(",", ":"), default=str).encode()
         )
@@ -224,7 +198,7 @@ class IngestionPipeline:
                 session=session,
             )
 
-        clean_payload, changed = _redact(event.raw_payload)
+        clean_payload, changed = redact_payload(event.raw_payload)
         quality_flags = list(event.quality_flags)
         if changed and "RAW_PAYLOAD_REDACTED" not in quality_flags:
             quality_flags.append("RAW_PAYLOAD_REDACTED")

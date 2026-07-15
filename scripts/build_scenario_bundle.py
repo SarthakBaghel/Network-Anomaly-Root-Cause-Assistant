@@ -3,12 +3,27 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+BACKEND = ROOT / "backend"
+sys.path.insert(0, str(BACKEND))
+
+from app.contracts import AnomalyRecord, CanonicalEvent  # noqa: E402
+from app.detection import (  # noqa: E402
+    AlertSeverityDetector,
+    ConfigChangeMarker,
+    DetectionContext,
+    LogRuleDetector,
+    RollingZscoreDetector,
+)
+from app.ingestion.adapters import ADAPTERS  # noqa: E402
+
+
 FIXTURES = ROOT / "backend" / "app" / "fixtures"
 SCENARIO = FIXTURES / "scenarios" / "gateway_rate_limit"
 INPUTS = SCENARIO / "inputs"
@@ -17,8 +32,9 @@ ADAPTER_FIXTURES = TEST_FIXTURES / "source_adapters"
 PROFILE_PATH = FIXTURES / "reference_profiles" / "network_profile.json"
 T = datetime(2026, 7, 14, 9, 30, tzinfo=timezone.utc)
 SEED = 20260714
-SCENARIO_ID = "gateway_rate_limit_disabled"
-TRACE_ID = "scenario_gateway_rate_limit_001"
+SCENARIO_KEY = "gateway_rate_limit_disabled"
+SCENARIO_ID = "scenario_gateway_rate_limit_001"
+TRACE_ID = SCENARIO_ID
 GENERATED_AT = "2026-07-14T09:00:00.000Z"
 
 
@@ -36,10 +52,6 @@ def pretty(value: Any) -> str:
 
 def digest(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-
-def stable_id(prefix: str, source_record_id: str) -> str:
-    return f"{prefix}_{hashlib.sha256(source_record_id.encode()).hexdigest()[:24]}"
 
 
 def envelope(emitted_at: datetime, payload: dict[str, Any], origin: str) -> dict[str, Any]:
@@ -96,8 +108,20 @@ def build_raw_streams(profile: dict[str, Any]) -> dict[str, list[dict[str, Any]]
         timestamp = T - timedelta(seconds=300 - point * 10)
         for name, (entity, baseline) in metric_specs.items():
             sequence += 1
-            jitter = ((point % 5) - 2) * 0.002
-            value = baseline * (1 + jitter)
+            if name == "forwarded_requests_per_second" and point >= 3:
+                # The detector window at T+30 contains points 3..29. Four
+                # symmetric pairs followed by 19 mean values preserve the
+                # frozen rolling z=4.25 while allowing the later EWMA baseline
+                # to settle before the scenario spike.
+                if point <= 10:
+                    target_std = (7800.0 - baseline) / 4.25
+                    deviation = target_std * ((26 / 8) ** 0.5)
+                    value = baseline + (deviation if point % 2 else -deviation)
+                else:
+                    value = baseline
+            else:
+                jitter = ((point % 5) - 2) * 0.002
+                value = baseline * (1 + jitter)
             metrics.append(
                 metric_record(timestamp, sequence, entity, name, round(value, 4), signals[name]["unit"])
             )
@@ -214,151 +238,50 @@ def build_raw_streams(profile: dict[str, Any]) -> dict[str, list[dict[str, Any]]
     return {"metrics": metrics, "logs": logs, "alerts": alerts, "config_changes": config_changes}
 
 
-METRIC_EVENT_TYPES = {
-    "raw_ingress_requests_per_second": "RAW_INGRESS_RATE",
-    "forwarded_requests_per_second": "FORWARDED_REQUEST_RATE",
-    "active_connections_total": "ACTIVE_CONNECTIONS",
-    "connection_utilization": "CONNECTION_UTILIZATION",
-    "tcp_resets_total": "TCP_RESETS",
-    "tcp_retransmissions_total": "TCP_RETRANSMISSIONS",
-    "checkout_p95_latency_ms": "CHECKOUT_P95_LATENCY",
-    "db_connection_utilization": "DB_CONNECTION_UTILIZATION",
-}
-
-ALERT_EVENT_TYPES = {
-    "HighForwardedRequestAndConnectionRate": "HIGH_FORWARDED_REQUEST_AND_CONNECTION_RATE",
-    "HighCheckoutErrorRate": "HIGH_CHECKOUT_ERROR_RATE",
-}
-
-
-def canonical_event(source_type: str, raw: dict[str, Any]) -> dict[str, Any]:
-    payload = raw["payload"]
-    provenance = raw["provenance"]
-    if source_type == "metrics":
-        source = "simulator.prometheus"
-        source_id = payload["sample_id"]
-        timestamp = payload["observed_at"]
-        entity = payload["labels"]["entity_id"]
-        event_type = METRIC_EVENT_TYPES[payload["metric"]]
-        severity = 0.0
-        signal = (payload["metric"], payload["value"], payload["unit"])
-        trace = TRACE_ID
-    elif source_type == "logs":
-        source = "simulator.syslog"
-        source_id = payload["record_id"]
-        timestamp = payload["observed_at"]
-        entity = payload["host"]
-        event_type = payload["code"]
-        severity = {"info": 0.2, "warning": 0.35, "error": 0.88}[payload["level"]]
-        signal = (None, None, None)
-        trace = payload.get("trace_id") or TRACE_ID
-    elif source_type == "alerts":
-        source = "simulator.alertmanager"
-        source_id = payload["fingerprint"]
-        timestamp = payload["startsAt"]
-        entity = payload["labels"]["entity_id"]
-        event_type = ALERT_EVENT_TYPES[payload["labels"]["alertname"]]
-        severity = {"info": 0.25, "warning": 0.6, "critical": 0.95}[payload["labels"]["severity"]]
-        signal = (None, None, None)
-        trace = TRACE_ID
-    else:
-        source = "simulator.config_audit"
-        source_id = payload["change_id"]
-        timestamp = payload["changed_at"]
-        entity = payload["target_entity_id"]
-        event_type = "CONFIG_VALUE_CHANGED"
-        severity = 0.0
-        signal = (None, None, None)
-        trace = TRACE_ID
-
-    timestamp_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-    raw_payload = dict(payload)
-    if source_type == "config_changes":
-        raw_payload["context_only"] = True
-    raw_payload["scenario_id"] = raw["scenario_id"]
-    raw_payload["provenance"] = provenance
-    return {
-        "event_id": stable_id("evt", source_id),
-        "timestamp": timestamp,
-        "ingested_at": iso(timestamp_dt + timedelta(milliseconds=120)),
-        "entity_id": entity,
-        "modality": {
-            "metrics": "metric",
-            "logs": "log",
-            "alerts": "alert",
-            "config_changes": "config_change",
-        }[source_type],
-        "event_type": event_type,
-        "severity": severity,
-        "signal_name": signal[0],
-        "signal_value": signal[1],
-        "unit": signal[2],
-        "trace_or_session_id": trace,
-        "source": source,
-        "source_record_id": source_id,
-        "schema_version": "1.0",
-        "quality_flags": ["SIMULATED"],
-        "raw_payload": raw_payload,
-    }
+def _anomaly_json(anomaly: AnomalyRecord) -> dict[str, Any]:
+    value = anomaly.model_dump(mode="json")
+    for field in ("detected_at", "window_start", "window_end"):
+        value[field] = iso(getattr(anomaly, field))
+    return value
 
 
 def build_anomalies(events: list[dict[str, Any]]) -> dict[str, Any]:
-    by_source = {event["source_record_id"]: event for event in events}
-    definitions = [
-        ("prom-forwarded_requests_per_second-0242", "rolling_zscore_v1", "FORWARDED_TRAFFIC_SPIKE", 0.91),
-        ("prom-active_connections_total-0243", "rolling_zscore_v1", "ACTIVE_CONNECTION_SPIKE", 0.89),
-        ("prom-connection_utilization-0244", "rolling_zscore_v1", "CONNECTION_UTILIZATION_HIGH", 0.94),
-        ("prom-tcp_resets_total-0245", "rolling_zscore_v1", "TCP_RESET_SPIKE", 0.85),
-        ("prom-tcp_retransmissions_total-0246", "rolling_zscore_v1", "TCP_RETRANSMISSION_SPIKE", 0.87),
-        ("alert-gateway-forwarded-0001", "alert_severity_v1", "GATEWAY_TRAFFIC_ALERT", 0.95),
-        ("prom-checkout_p95_latency_ms-0247", "rolling_zscore_v1", "CHECKOUT_LATENCY_HIGH", 0.88),
-        ("log-payment-timeout-0001", "log_rule_v1", "UPSTREAM_TIMEOUT", 0.86),
-        ("alert-checkout-error-0001", "alert_severity_v1", "CHECKOUT_ERROR_ALERT", 0.95),
-    ]
-    anomalies = []
-    for source_id, detector_id, anomaly_type, score in definitions:
-        event = by_source[source_id]
-        at = datetime.fromisoformat(event["timestamp"].replace("Z", "+00:00"))
-        anomalies.append(
-            {
-                "anomaly_id": stable_id("ano", source_id),
-                "event_id": event["event_id"],
-                "detector_id": detector_id,
-                "detected_at": iso(at + timedelta(milliseconds=200)),
-                "anomaly_type": anomaly_type,
-                "score": score,
-                "threshold": 0.75,
-                "context_only": False,
-                "can_open_incident": True,
-                "window_start": iso(at - timedelta(seconds=300)),
-                "window_end": event["timestamp"],
-                "features": {"source_record_id": source_id},
-                "explanation": f"{anomaly_type} matched the frozen detector rule.",
-            }
+    """Generate the handoff manifest from the production Person 3 detectors."""
+
+    detectors = (
+        RollingZscoreDetector(),
+        LogRuleDetector(),
+        AlertSeverityDetector(),
+        ConfigChangeMarker(),
+    )
+    history: list[CanonicalEvent] = []
+    anomalies: list[dict[str, Any]] = []
+    markers: list[dict[str, Any]] = []
+    canonical = sorted(
+        (CanonicalEvent.model_validate(event) for event in events),
+        key=lambda event: (event.timestamp, event.event_id),
+    )
+    for event in canonical:
+        context = DetectionContext(history=list(history))
+        for detector in detectors:
+            for anomaly in detector.evaluate(event, context):
+                target = markers if anomaly.context_only else anomalies
+                target.append(_anomaly_json(anomaly))
+        history.append(event)
+
+    anomalies.sort(key=lambda item: (item["window_end"], item["event_id"], item["detector_id"]))
+    markers.sort(key=lambda item: (item["window_end"], item["event_id"], item["detector_id"]))
+    if len(anomalies) != 9 or len(markers) != 1:
+        raise ValueError(
+            f"golden detector output must remain 9 actionable + 1 context marker; got {len(anomalies)} + {len(markers)}"
         )
-    config = by_source["config-change-000001"]
-    marker = {
-        "anomaly_id": stable_id("ctx", "config-change-000001"),
-        "event_id": config["event_id"],
-        "detector_id": "config_change_marker_v1",
-        "detected_at": "2026-07-14T09:30:00.200Z",
-        "anomaly_type": "RECENT_CONFIGURATION_CHANGE",
-        "score": 0.0,
-        "threshold": 0.75,
-        "context_only": True,
-        "can_open_incident": False,
-        "window_start": "2026-07-14T09:25:00.000Z",
-        "window_end": "2026-07-14T09:30:00.000Z",
-        "features": {"change_ticket": "CHG-DEMO-001"},
-        "explanation": "Configuration changes are retained as context and cannot open an incident.",
-    }
     return {
         "schema_version": "1.0",
         "version": "golden-anomalies-1.0",
         "scenario_id": SCENARIO_ID,
         "actionable_anomaly_count": 9,
         "anomalies": anomalies,
-        "context_markers": [marker],
+        "context_markers": markers,
     }
 
 
@@ -372,11 +295,23 @@ def build_outputs() -> dict[Path, str]:
     outputs: dict[Path, str] = {
         INPUTS / f"{name}.jsonl": jsonl(records) for name, records in streams.items()
     }
-    events = [
-        canonical_event(name, record)
+    source_names = {
+        "metrics": "simulator.prometheus",
+        "logs": "simulator.syslog",
+        "alerts": "simulator.alertmanager",
+        "config_changes": "simulator.config_audit",
+    }
+    canonical_events = [
+        ADAPTERS[source_names[name]].adapt(record)
         for name in ("metrics", "logs", "alerts", "config_changes")
         for record in streams[name]
     ]
+    events = []
+    for event in canonical_events:
+        value = event.model_dump(mode="json")
+        value["timestamp"] = iso(event.timestamp)
+        value["ingested_at"] = iso(event.ingested_at)
+        events.append(value)
     events.sort(key=lambda event: (event["timestamp"], event["event_id"]))
     outputs[TEST_FIXTURES / "golden_events.jsonl"] = jsonl(events)
     anomalies = build_anomalies(events)
@@ -461,14 +396,11 @@ def build_outputs() -> dict[Path, str]:
     return outputs
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true", help="fail if checked-in outputs differ")
-    args = parser.parse_args()
+def run(*, check: bool) -> None:
     outputs = build_outputs()
     mismatches = []
     for path, content in outputs.items():
-        if args.check:
+        if check:
             if not path.exists() or path.read_text(encoding="utf-8") != content:
                 mismatches.append(str(path.relative_to(ROOT)))
         else:
@@ -476,7 +408,14 @@ def main() -> None:
             path.write_text(content, encoding="utf-8")
     if mismatches:
         raise SystemExit("scenario bundle is stale: " + ", ".join(mismatches))
-    print(f"{'validated' if args.check else 'generated'} {len(outputs)} deterministic artifacts")
+    print(f"{'validated' if check else 'generated'} {len(outputs)} deterministic artifacts")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true", help="fail if checked-in outputs differ")
+    args = parser.parse_args()
+    run(check=args.check)
 
 
 if __name__ == "__main__":

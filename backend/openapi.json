@@ -85,6 +85,29 @@
         "title": "AnalysisRunStatus",
         "type": "string"
       },
+      "AnomalyListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OverviewAnomaly"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "items"
+        ],
+        "title": "AnomalyListResponse",
+        "type": "object"
+      },
       "AuditActorType": {
         "enum": [
           "system",
@@ -322,6 +345,40 @@
           "schema_version"
         ],
         "title": "CanonicalEvent",
+        "type": "object"
+      },
+      "EventListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CanonicalEvent"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "generated_at",
+          "items"
+        ],
+        "title": "EventListResponse",
         "type": "object"
       },
       "EvidenceCoverage": {
@@ -912,6 +969,52 @@
         "title": "Modality",
         "type": "string"
       },
+      "OverviewAnomaly": {
+        "additionalProperties": false,
+        "properties": {
+          "anomaly_id": {
+            "minLength": 1,
+            "title": "Anomaly Id",
+            "type": "string"
+          },
+          "anomaly_type": {
+            "minLength": 1,
+            "title": "Anomaly Type",
+            "type": "string"
+          },
+          "detected_at": {
+            "format": "date-time",
+            "title": "Detected At",
+            "type": "string"
+          },
+          "detector_id": {
+            "minLength": 1,
+            "title": "Detector Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "anomaly_id",
+          "entity_id",
+          "anomaly_type",
+          "score",
+          "detector_id",
+          "detected_at"
+        ],
+        "title": "OverviewAnomaly",
+        "type": "object"
+      },
       "PlaybookRecommendation": {
         "additionalProperties": false,
         "properties": {
@@ -1178,6 +1281,305 @@
         "title": "ReviewRequest",
         "type": "object"
       },
+      "SimulatorResetResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_ticks_emitted": {
+            "minimum": 0.0,
+            "title": "Baseline Ticks Emitted",
+            "type": "integer"
+          },
+          "baseline_ticks_required": {
+            "minimum": 0.0,
+            "title": "Baseline Ticks Required",
+            "type": "integer"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "metric_interval_seconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Metric Interval Seconds",
+            "type": "integer"
+          },
+          "reset_audit_id": {
+            "minLength": 1,
+            "title": "Reset Audit Id",
+            "type": "string"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          },
+          "scenario_state": {
+            "minLength": 1,
+            "title": "Scenario State",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "source_health": {
+            "items": {
+              "$ref": "#/components/schemas/SourceHealth"
+            },
+            "title": "Source Health",
+            "type": "array"
+          },
+          "sources": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceCounters"
+            },
+            "title": "Sources",
+            "type": "object"
+          },
+          "state": {
+            "enum": [
+              "stopped",
+              "running",
+              "paused",
+              "ready",
+              "triggering",
+              "completed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "virtual_clock": {
+            "format": "date-time",
+            "title": "Virtual Clock",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generated_at",
+          "state",
+          "scenario_state",
+          "scenario_id",
+          "virtual_clock",
+          "seed",
+          "metric_interval_seconds",
+          "baseline_ticks_emitted",
+          "baseline_ticks_required",
+          "sources",
+          "source_health",
+          "reset_audit_id"
+        ],
+        "title": "SimulatorResetResponse",
+        "type": "object"
+      },
+      "SimulatorStatusResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_ticks_emitted": {
+            "minimum": 0.0,
+            "title": "Baseline Ticks Emitted",
+            "type": "integer"
+          },
+          "baseline_ticks_required": {
+            "minimum": 0.0,
+            "title": "Baseline Ticks Required",
+            "type": "integer"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "metric_interval_seconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Metric Interval Seconds",
+            "type": "integer"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          },
+          "scenario_state": {
+            "minLength": 1,
+            "title": "Scenario State",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "source_health": {
+            "items": {
+              "$ref": "#/components/schemas/SourceHealth"
+            },
+            "title": "Source Health",
+            "type": "array"
+          },
+          "sources": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceCounters"
+            },
+            "title": "Sources",
+            "type": "object"
+          },
+          "state": {
+            "enum": [
+              "stopped",
+              "running",
+              "paused",
+              "ready",
+              "triggering",
+              "completed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "virtual_clock": {
+            "format": "date-time",
+            "title": "Virtual Clock",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generated_at",
+          "state",
+          "scenario_state",
+          "scenario_id",
+          "virtual_clock",
+          "seed",
+          "metric_interval_seconds",
+          "baseline_ticks_emitted",
+          "baseline_ticks_required",
+          "sources",
+          "source_health"
+        ],
+        "title": "SimulatorStatusResponse",
+        "type": "object"
+      },
+      "SourceCounters": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "minimum": 0.0,
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "collapsed": {
+            "minimum": 0.0,
+            "title": "Collapsed",
+            "type": "integer"
+          },
+          "emitted": {
+            "minimum": 0.0,
+            "title": "Emitted",
+            "type": "integer"
+          },
+          "quarantined": {
+            "minimum": 0.0,
+            "title": "Quarantined",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "emitted",
+          "accepted",
+          "collapsed",
+          "quarantined"
+        ],
+        "title": "SourceCounters",
+        "type": "object"
+      },
+      "SourceHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "minimum": 0.0,
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "collapsed": {
+            "minimum": 0.0,
+            "title": "Collapsed",
+            "type": "integer"
+          },
+          "fixture_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Version"
+          },
+          "last_ingest_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ingest At"
+          },
+          "quarantined": {
+            "minimum": 0.0,
+            "title": "Quarantined",
+            "type": "integer"
+          },
+          "source_id": {
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_type": {
+            "enum": [
+              "metrics",
+              "logs",
+              "alerts",
+              "config_changes",
+              "topology"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_type",
+          "status",
+          "last_ingest_at",
+          "accepted",
+          "collapsed",
+          "quarantined"
+        ],
+        "title": "SourceHealth",
+        "type": "object"
+      },
       "TimelineItem": {
         "additionalProperties": false,
         "properties": {
@@ -1397,6 +1799,51 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/anomalies": {
+      "get": {
+        "operationId": "list_anomalies_api_v1_anomalies_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnomalyListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Anomalies",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/v1/events": {
       "get": {
         "operationId": "list_events_api_v1_events_get",
@@ -1411,6 +1858,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
             }
           },
           {
@@ -1451,11 +1914,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/CanonicalEvent"
-                  },
-                  "title": "Response List Events Api V1 Events Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/EventListResponse"
                 }
               }
             },
@@ -2249,8 +2708,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Reset Api V1 Simulator Reset Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SimulatorResetResponse"
                 }
               }
             },
@@ -2282,8 +2740,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Trigger Api V1 Simulator Scenarios  Scenario Id  Trigger Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SimulatorStatusResponse"
                 }
               }
             },
@@ -2314,8 +2771,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Start Api V1 Simulator Start Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SimulatorStatusResponse"
                 }
               }
             },
@@ -2336,8 +2792,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Status Api V1 Simulator Status Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SimulatorStatusResponse"
                 }
               }
             },
@@ -2358,8 +2813,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Stop Api V1 Simulator Stop Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SimulatorStatusResponse"
                 }
               }
             },

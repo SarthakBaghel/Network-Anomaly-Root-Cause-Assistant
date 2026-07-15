@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 PLAYBOOKS_FILE = FIXTURES_DIR / "playbooks.yaml"

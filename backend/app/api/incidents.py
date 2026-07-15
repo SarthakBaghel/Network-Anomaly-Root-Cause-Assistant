@@ -15,13 +15,17 @@ from app.db import models
 from app.db.session import get_session
 from app.db.repositories import IncidentRepository, AnalysisRunRepository, AuditRepository
 from app.contracts import (
+    AnalysisRun,
     AuditRecord,
+    CanonicalEvent,
     EvidenceItem,
     ExplanationOutput,
     Hypothesis,
     IncidentSummary,
+    IncidentStatus,
     InvestigationResponse,
     PlaybookRecommendation,
+    ReviewDecision,
     ReviewRecord,
     ReviewRequest,
     TimelineItem,

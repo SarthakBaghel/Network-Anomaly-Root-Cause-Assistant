@@ -28,6 +28,8 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
 def _startup() -> None:
     """Idempotent startup: loads topology + seeds history if not already present."""
     from app.db.session import session_scope
+    from app.incidents import incident_manager
+    from app.orchestration.orchestrator import orchestrator
     from app.orchestration.reset_service import (
         _reload_topology,
         _seed_historical_incident,
@@ -58,6 +60,7 @@ def _startup() -> None:
                 _seed_historical_incident(session)
             else:
                 logger.debug("Startup: topology already loaded, skipping")
+        orchestrator.register_incident_manager(incident_manager)
     except Exception:
         logger.exception(
             "Startup: failed to load topology or seed history. "

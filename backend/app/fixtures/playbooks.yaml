@@ -1,17 +1,139 @@
 schema_version: "1.0"
-version: playbooks-1.0
+version: playbooks-1.1
+
+# This is the sole playbook catalogue consumed by app.playbooks.engine.
+# Every action remains a recommendation: a human must approve it before it
+# can be carried out by any external system.
 steps:
-  - {step_id: inspect-config-diff, title: Inspect configuration diff, step_type: diagnostic, applicable_hypothesis_types: [configuration_regression], applicable_entity_types: [gateway, service, database], preconditions: [change_record_available], instructions: "Compare the current rate-limit configuration with the last known-good version.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
-  - {step_id: compare-pre-post-metrics, title: Compare pre/post metrics, step_type: diagnostic, applicable_hypothesis_types: [configuration_regression], applicable_entity_types: [gateway], preconditions: [metric_history_available], instructions: "Compare forwarded RPS and connection utilization before and after the change.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
-  - {step_id: propose-config-rollback, title: Propose rate-limit rollback, step_type: remediation, applicable_hypothesis_types: [configuration_regression], applicable_entity_types: [gateway], preconditions: [approved_change_ticket], instructions: "Propose re-enabling the gateway rate limiter; do not execute automatically.", risk_level: low, rollback_note: "Restore the current value if validation fails.", requires_human_approval: true}
-  - {step_id: inspect-ingress-distribution, title: Inspect ingress distribution, step_type: diagnostic, applicable_hypothesis_types: [dos_or_traffic_surge], applicable_entity_types: [gateway], preconditions: [source_metrics_available], instructions: "Compare source distribution and raw ingress with baseline.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
-  - {step_id: propose-edge-rate-limit, title: Propose edge rate limiting, step_type: remediation, applicable_hypothesis_types: [dos_or_traffic_surge], applicable_entity_types: [gateway], preconditions: [operator_approval], instructions: "Prepare a bounded edge rate-limit proposal without execution.", risk_level: medium, rollback_note: "Remove the proposed rule if approved validation fails.", requires_human_approval: true}
-  - {step_id: inspect-db-pool, title: Inspect database pool, step_type: diagnostic, applicable_hypothesis_types: [database_connection_exhaustion], applicable_entity_types: [database], preconditions: [db_metrics_available], instructions: "Inspect active connections, pool waits, and rejected leases.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
-  - {step_id: propose-db-pool-tuning, title: Propose pool tuning, step_type: remediation, applicable_hypothesis_types: [database_connection_exhaustion], applicable_entity_types: [database], preconditions: [capacity_reviewed], instructions: "Prepare a bounded pool-size change for human review.", risk_level: medium, rollback_note: "Restore the previous pool configuration.", requires_human_approval: true}
-  - {step_id: inspect-network-path, title: Inspect network path, step_type: diagnostic, applicable_hypothesis_types: [network_path_congestion], applicable_entity_types: [gateway, service], preconditions: [path_metrics_available], instructions: "Inspect loss, retransmission, and hop telemetry.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
-  - {step_id: inspect-upstream-health, title: Inspect upstream health, step_type: diagnostic, applicable_hypothesis_types: [upstream_service_failure], applicable_entity_types: [service], preconditions: [health_checks_available], instructions: "Review upstream health checks and recent error logs.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
-  - {step_id: inspect-dns-resolution, title: Inspect DNS resolution, step_type: diagnostic, applicable_hypothesis_types: [dns_resolution_failure], applicable_entity_types: [service, gateway], preconditions: [resolver_logs_available], instructions: "Review DNS failures, TTLs, and resolver health.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
-  - {step_id: inspect-certificate-state, title: Inspect certificate state, step_type: diagnostic, applicable_hypothesis_types: [certificate_or_tls_failure], applicable_entity_types: [service, gateway], preconditions: [certificate_metadata_available], instructions: "Review validity dates, trust chain, and handshake errors.", risk_level: low, rollback_note: "Read-only diagnostic.", requires_human_approval: true}
+  - step_id: inspect-config-diff
+    title: Inspect configuration diff
+    step_type: diagnostic
+    applicable_hypothesis_types: [configuration_regression]
+    applicable_entity_types: [gateway, service, database]
+    preconditions: [change_record_available]
+    instructions:
+      - Compare the current rate-limit configuration with the last known-good version.
+      - Identify changes made immediately before the incident window.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no configuration is changed.
+    requires_human_approval: true
+
+  - step_id: compare-pre-post-metrics
+    title: Compare pre/post-change metrics
+    step_type: diagnostic
+    applicable_hypothesis_types: [configuration_regression]
+    applicable_entity_types: [gateway]
+    preconditions: [metric_history_available]
+    instructions:
+      - Chart forwarded RPS and connection utilization before and after the change.
+      - Check whether raw ingress stayed stable while forwarded traffic increased.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no traffic policy is changed.
+    requires_human_approval: true
+
+  - step_id: propose-config-rollback
+    title: Propose rate-limit rollback
+    step_type: remediation
+    applicable_hypothesis_types: [configuration_regression]
+    applicable_entity_types: [gateway]
+    preconditions: [approved_change_ticket, known_good_configuration_available]
+    instructions:
+      - Prepare a change to re-enable the gateway rate limiter.
+      - Present the proposed change and validation plan for human approval; never execute it automatically.
+    risk_level: low
+    rollback_note: Restore the current configuration value if post-change validation fails.
+    requires_human_approval: true
+
+  - step_id: inspect-ingress-distribution
+    title: Inspect ingress distribution
+    step_type: diagnostic
+    applicable_hypothesis_types: [dos_or_traffic_surge]
+    applicable_entity_types: [gateway]
+    preconditions: [source_metrics_available]
+    instructions:
+      - Compare source distribution and raw ingress with the incident baseline.
+      - Identify abnormal clients, ASNs, geographies, or request paths.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no edge rule is changed.
+    requires_human_approval: true
+
+  - step_id: propose-edge-rate-limit
+    title: Propose edge rate limiting
+    step_type: remediation
+    applicable_hypothesis_types: [dos_or_traffic_surge]
+    applicable_entity_types: [gateway]
+    preconditions: [operator_approval, traffic_source_characterized]
+    instructions:
+      - Prepare a bounded edge rate-limit proposal for the offending traffic pattern.
+      - Submit the proposal for human approval without applying it automatically.
+    risk_level: medium
+    rollback_note: Remove the approved rule if it blocks valid traffic or validation fails.
+    requires_human_approval: true
+
+  - step_id: inspect-db-pool
+    title: Inspect database connection pool
+    step_type: diagnostic
+    applicable_hypothesis_types: [database_connection_exhaustion]
+    applicable_entity_types: [database]
+    preconditions: [db_metrics_available]
+    instructions:
+      - Inspect active connections, pool waits, and rejected leases.
+      - Compare connection utilization with the configured pool limit.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no database setting is changed.
+    requires_human_approval: true
+
+  - step_id: propose-db-pool-tuning
+    title: Propose database pool tuning
+    step_type: remediation
+    applicable_hypothesis_types: [database_connection_exhaustion]
+    applicable_entity_types: [database]
+    preconditions: [capacity_reviewed, operator_approval]
+    instructions:
+      - Prepare a bounded pool-size adjustment for human review.
+      - Include capacity impact and a validation plan; do not apply the setting automatically.
+    risk_level: medium
+    rollback_note: Restore the previous pool configuration if errors or saturation increase.
+    requires_human_approval: true
+
+  - step_id: inspect-network-path
+    title: Inspect network path
+    step_type: diagnostic
+    applicable_hypothesis_types: [network_path_congestion]
+    applicable_entity_types: [gateway, service]
+    preconditions: [path_metrics_available]
+    instructions:
+      - Inspect packet loss, retransmissions, and hop telemetry along the affected path.
+      - Compare the incident window with a healthy baseline.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no routing policy is changed.
+    requires_human_approval: true
+
+  - step_id: inspect-upstream-health
+    title: Inspect upstream health
+    step_type: diagnostic
+    applicable_hypothesis_types: [upstream_service_failure]
+    applicable_entity_types: [service]
+    preconditions: [health_checks_available]
+    instructions:
+      - Review upstream health checks and recent error logs.
+      - Correlate upstream failures with caller errors during the incident window.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no upstream deployment is changed.
+    requires_human_approval: true
+
+  - step_id: inspect-dns-resolution
+    title: Inspect DNS resolution
+    step_type: diagnostic
+    applicable_hypothesis_types: [dns_resolution_failure]
+    applicable_entity_types: [service, gateway]
+    preconditions: [resolver_logs_available]
+    instructions:
+      - Review DNS failures, TTLs, and resolver health.
+      - Compare resolver responses from the affected entities with the baseline.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no DNS record is changed.
+    requires_human_approval: true
 
 # Structured recommendation steps consumed by the Playbook Engine
 # (app/playbooks/engine.py -> get_recommendations).

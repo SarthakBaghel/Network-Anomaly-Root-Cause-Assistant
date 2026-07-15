@@ -7,7 +7,7 @@ class ResizeObserver {
   disconnect() {}
 }
 
-(global as any).ResizeObserver = ResizeObserver as any;
+(globalThis as any).ResizeObserver = ResizeObserver as any;
 
 // Minimal matchMedia mock
 Object.defineProperty(window, "matchMedia", {

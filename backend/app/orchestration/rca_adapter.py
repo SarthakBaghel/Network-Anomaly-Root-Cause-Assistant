@@ -265,6 +265,7 @@ class RcaAnalysisAdapter:
             evidence_rows=evidence_rows,
             recommendation_rows=recommendation_rows,
             topology_states=computed.topology_states,
+            typed_paths=computed.typed_paths,
             conflict_reason_codes=computed.conflict_reason_codes,
             evidence_requirements=computed.evidence_requirements,
             **explanation_result.as_analysis_result_kwargs(),

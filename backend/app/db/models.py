@@ -210,6 +210,18 @@ class AnalysisRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failure_reason: Mapped[str | None] = mapped_column(Text)
+    topology_states: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
+    )
+    typed_paths: Mapped[dict[str, list[str]]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
+    )
+    conflict_reason_codes: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    evidence_requirements: Mapped[dict[str, list[str]]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
+    )
 
     __table_args__ = (
         UniqueConstraint("incident_id", "revision", name="uq_analysis_incident_revision"),
@@ -338,4 +350,3 @@ class HistoricalIncident(Base):
     confirmed_cause: Mapped[str] = mapped_column(String, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     feature_vector: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-

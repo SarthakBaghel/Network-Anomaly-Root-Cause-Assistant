@@ -153,6 +153,7 @@ class AnalysisResult:
         explanation_fallback_reason: str | None = None,
         explanation_fallback_attempt_count: int = 0,
         topology_states: TopologyStates | None = None,
+        typed_paths: dict[str, tuple[str, ...]] | None = None,
         conflict_reason_codes: tuple[str, ...] = (),
         evidence_requirements: dict[str, tuple[str, ...]] | None = None,
     ) -> None:
@@ -177,6 +178,12 @@ class AnalysisResult:
         self.explanation_fallback_reason = explanation_fallback_reason
         self.explanation_fallback_attempt_count = explanation_fallback_attempt_count
         self.topology_states = topology_states or TopologyStates()
+        self.typed_paths = MappingProxyType(
+            {
+                key: tuple(path)
+                for key, path in (typed_paths or {}).items()
+            }
+        )
         self.conflict_reason_codes = tuple(conflict_reason_codes)
         self.evidence_requirements = MappingProxyType(
             {
@@ -269,8 +276,13 @@ class AnalysisOrchestrator:
 
         with self._lock:
             affected: dict[str, tuple[models.Incident, models.Event]] = {}
-            for event in sorted(events, key=lambda item: (item.timestamp, item.id)):
-                anomalies = self._stage_detect(event, session)
+            ordered_events = sorted(events, key=lambda item: (item.timestamp, item.id))
+            anomalies_by_event = {
+                event.id: self._stage_detect(event, session)
+                for event in ordered_events
+            }
+            for event in ordered_events:
+                anomalies = anomalies_by_event[event.id]
                 incident = self._stage_incident(anomalies, event, session)
                 if incident is not None:
                     affected[incident.id] = (incident, event)
@@ -459,6 +471,19 @@ class AnalysisOrchestrator:
                 reason=f"rca_publication: {type(exc).__name__}: {exc}",
                 session=session,
             )
+            # The request dependency rolls back whenever this exception leaves
+            # the route. Commit the accepted inputs plus the failed run/audit
+            # now; the nested publication savepoint has already removed every
+            # partial analysis child and pointer/status mutation.
+            try:
+                session.commit()
+            except Exception:
+                session.rollback()
+                logger.exception(
+                    "Unable to durably commit failed analysis run %s",
+                    new_run.id,
+                )
+                raise
             raise
 
         return new_run_id
@@ -486,6 +511,23 @@ class AnalysisOrchestrator:
         if analysis_result is not None:
             self._validate_analysis_result(new_run, incident, analysis_result)
             self._validate_explanation_rows(new_run, incident, analysis_result)
+
+            # Preserve the complete immutable P4 publication metadata on the
+            # analysis run. P5/API consumers must never recompute this state
+            # from a later topology or catalogue revision.
+            new_run.topology_states = analysis_result.topology_states.model_dump(
+                mode="json"
+            )
+            new_run.typed_paths = {
+                key: list(path) for key, path in analysis_result.typed_paths.items()
+            }
+            new_run.conflict_reason_codes = list(
+                analysis_result.conflict_reason_codes
+            )
+            new_run.evidence_requirements = {
+                key: list(requirements)
+                for key, requirements in analysis_result.evidence_requirements.items()
+            }
 
             # Insert hypotheses
             for hyp in analysis_result.hypotheses:
@@ -672,6 +714,12 @@ class AnalysisOrchestrator:
                 raise ValueError("topology edge state is duplicated")
             seen_edges.add(identity)
 
+        for path_name, path in analysis_result.typed_paths.items():
+            if not path_name:
+                raise ValueError("typed path names must not be empty")
+            if not path or any(entity_id not in node_ids for entity_id in path):
+                raise ValueError("typed path references an unknown topology entity")
+
     @staticmethod
     @lru_cache(maxsize=1)
     def _catalogue_conflict_reason_codes() -> set[str]:
@@ -727,35 +775,28 @@ class AnalysisOrchestrator:
     ) -> None:
         """Mark a building run as failed. Leave prior run current. Write audit."""
         run_repo = AnalysisRunRepository(session)
-        try:
-            run_repo.mark_failed(run_id, reason)
-            failed_run = run_repo.get_by_id(run_id)
-            audit_service.append(
-                AuditWrite(
-                    action="PIPELINE_STAGE_FAILED",
-                    actor_type="system",
-                    actor_id="orchestrator",
-                    object_type="incident",
-                    object_id=incident_id,
-                    incident_id=incident_id,
-                    analysis_run_id=run_id,
-                    analysis_revision=failed_run.revision if failed_run else None,
-                    request_id=f"analysis:{run_id}",
-                    reason_codes=["PIPELINE_STAGE_FAILED"],
-                    metadata={
-                        "failed_run_id": run_id,
-                        "sanitized_reason": reason[:500],
-                    },
-                ),
-                session,
-            )
-            session.flush()
-        except Exception:
-            logger.exception(
-                "Failed to persist failed-run record for run %s / incident %s",
-                run_id,
-                incident_id,
-            )
+        run_repo.mark_failed(run_id, reason)
+        failed_run = run_repo.get_by_id(run_id)
+        audit_service.append(
+            AuditWrite(
+                action="PIPELINE_STAGE_FAILED",
+                actor_type="system",
+                actor_id="orchestrator",
+                object_type="incident",
+                object_id=incident_id,
+                incident_id=incident_id,
+                analysis_run_id=run_id,
+                analysis_revision=failed_run.revision if failed_run else None,
+                request_id=f"analysis:{run_id}",
+                reason_codes=["PIPELINE_STAGE_FAILED"],
+                metadata={
+                    "failed_run_id": run_id,
+                    "sanitized_reason": reason[:500],
+                },
+            ),
+            session,
+        )
+        session.flush()
 
     # ------------------------------------------------------------------
     # Fingerprint computation (blueprint §5.2)

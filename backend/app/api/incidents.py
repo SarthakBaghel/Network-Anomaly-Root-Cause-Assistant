@@ -489,7 +489,18 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
     incident_contract = _incident_contract(incident_row)
 
     # Evidence grouped
-    stmt_ev = select(models.Evidence).where(models.Evidence.analysis_run_id == run_id)
+    stmt_ev = (
+        select(models.Evidence)
+        .where(models.Evidence.analysis_run_id == run_id)
+        .order_by(
+            models.Evidence.hypothesis_id.asc(),
+            models.Evidence.kind.asc(),
+            models.Evidence.created_at.asc(),
+            models.Evidence.reason_code.asc(),
+            models.Evidence.source_event_id.asc(),
+            models.Evidence.id.asc(),
+        )
+    )
     ev_rows = session.execute(stmt_ev).scalars().all()
     evidence_by_hyp = {}
     for r in ev_rows:
@@ -515,7 +526,15 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
     hyps_contract = [hyp_to_contract(r) for r in hyp_rows]
         
     # Recommendations grouped
-    stmt_rec = select(models.PlaybookRecommendation).where(models.PlaybookRecommendation.analysis_run_id == run_id)
+    stmt_rec = (
+        select(models.PlaybookRecommendation)
+        .where(models.PlaybookRecommendation.analysis_run_id == run_id)
+        .order_by(
+            models.PlaybookRecommendation.hypothesis_id.asc(),
+            models.PlaybookRecommendation.step_id.asc(),
+            models.PlaybookRecommendation.id.asc(),
+        )
+    )
     rec_rows = session.execute(stmt_rec).scalars().all()
     recs_by_hyp = {}
     steps = load_playbook_steps()
@@ -582,7 +601,7 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
         completed_at=_utc(run_row.completed_at)
     )
     
-    return InvestigationResponse(
+    response = InvestigationResponse(
         generated_at=datetime.now(tz=timezone.utc),
         analysis_run_id=run_id,
         analysis_run=ar_contract,
@@ -595,3 +614,5 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
         explanation=explanation_contract,
         reviews=reviews_contract
     )
+    response.assert_consistent_run()
+    return response

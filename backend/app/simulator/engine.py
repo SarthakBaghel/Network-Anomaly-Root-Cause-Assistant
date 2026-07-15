@@ -175,8 +175,15 @@ class SimulatorEngine:
             }
 
     def _emit_group(self, records: tuple[tuple[str, dict], ...]) -> None:
-        for source, raw in records:
-            outcome = self.ingestion.ingest(source, raw)
+        ingest_group = getattr(self.ingestion, "ingest_group", None)
+        outcomes = (
+            ingest_group(records)
+            if callable(ingest_group)
+            else [self.ingestion.ingest(source, raw) for source, raw in records]
+        )
+        if len(outcomes) != len(records):
+            raise RuntimeError("ingestion group returned the wrong number of outcomes")
+        for (source, raw), outcome in zip(records, outcomes, strict=True):
             self.counters[source]["emitted"] += 1
             self.counters[source][outcome.status] += 1
             emitted_at = raw.get("emitted_at")

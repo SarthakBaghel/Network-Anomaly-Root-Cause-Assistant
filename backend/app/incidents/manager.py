@@ -314,7 +314,7 @@ class IncidentManager:
             # The frozen fixture names temporal proximity specifically for the
             # preceding lookback association. Live-event scores still receive
             # the point and are capped at 1.0.
-            if lookback:
+            if lookback and event_time < context.opening_symptom_at:
                 reasons.append("WITHIN_60_SECONDS")
 
         evidence_rules = self.catalogue.evidence_rule_matches(
@@ -416,7 +416,7 @@ class IncidentManager:
         lookback_events = EventRepository(session).list_accepted_in_window(
             lookback_start,
             _utc(event.timestamp),
-            end_inclusive=False,
+            end_inclusive=True,
         )
         anomaly_repo = AnomalyRepository(session)
         anomaly_or_context: list[tuple[models.Event, list[models.Anomaly]]] = []
@@ -425,6 +425,8 @@ class IncidentManager:
             tuple[models.Event, list[models.Anomaly], EvidenceRuleMatch],
         ] = {}
         for prior_event in lookback_events:
+            if prior_event.id == event.id:
+                continue
             prior_anomalies = anomaly_repo.list_by_event(prior_event.id)
             evidence_rules = self.catalogue.evidence_rule_matches(
                 prior_event, context.symptom_family, context.opening_symptom_at

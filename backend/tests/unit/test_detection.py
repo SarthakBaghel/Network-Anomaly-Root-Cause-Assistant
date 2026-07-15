@@ -107,23 +107,8 @@ def _seed_topology(session: Session) -> None:
     session.flush()
 
 
-def test_golden_replay_persists_fifteen_actionable_and_three_context_anomalies() -> None:
-    """Golden scenario replay — production-wired counts.
-
-    After EWMA + topology context injection:
-      - EWMA detector fires on 6 of the 9 metric spike events (needs >5 warmup samples)
-        producing 6 additional actionable anomalies alongside the z-score anomalies
-      - TopologyCascadeDetector now fires context_only signals on downstream events
-        consistent with upstream gateway anomalies (2 cascade signals + 1 config marker)
-
-    Previous counts (pre-wiring):
-      - 9 actionable (rolling_zscore + log_rule + alert_severity)
-      - 1 context_only (config_change marker)
-
-    Current counts (production-wired):
-      - 15 actionable (rolling_zscore×9 + ewma×6)
-      - 3 context_only (config_change marker + 2 topology_cascade)
-    """
+def test_production_golden_replay_persists_nine_actionable_and_one_context_anomaly() -> None:
+    """The production registry is the frozen 9 + 1 P3→P4 handoff."""
     from app.detection.service import DetectionPublisher
     from app.db.models import Event as EventModel
     from app.ingestion.pipeline import event_to_contract
@@ -146,8 +131,8 @@ def test_golden_replay_persists_fifteen_actionable_and_three_context_anomalies()
                     publisher.publish(event_to_contract(event_row))
         session.flush()
         anomalies = list(session.scalars(select(Anomaly).order_by(Anomaly.window_end, Anomaly.id)))
-        assert len([item for item in anomalies if item.can_open_incident]) == 15
-        assert len([item for item in anomalies if item.context_only]) == 3
+        assert len([item for item in anomalies if item.can_open_incident]) == 9
+        assert len([item for item in anomalies if item.context_only]) == 1
         assert not any(item.event_id.endswith("1d99bedd627abe8ef1dca5d6") for item in anomalies)
 
 

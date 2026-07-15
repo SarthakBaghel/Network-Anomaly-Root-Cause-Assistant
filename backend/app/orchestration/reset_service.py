@@ -75,12 +75,10 @@ class ResetService:
         Called by POST /api/v1/simulator/reset.
         Returns a summary dict with a DEMO_RESET audit ID.
         """
-        # Step 1 — Stop emitters (P3 owns; non-blocking for us if hook absent)
+        # Step 1 — Stop emitters. A broken hook makes the cross-domain reset
+        # incomplete, so propagate the error and let the request roll back.
         if self._simulator_hook is not None:
-            try:
-                self._simulator_hook.stop()
-            except Exception:
-                logger.exception("Simulator stop hook raised; proceeding with reset")
+            self._simulator_hook.stop()
 
         # Step 2 — Acquire the analysis lock (same lock the orchestrator uses)
         with self._orchestrator._lock:
@@ -90,6 +88,9 @@ class ResetService:
         """All DB work happens inside the analysis lock."""
         # Step 3 — Clear demo-generated rows in FK-safe order
         _clear_demo_rows(session)
+        from app.detection.ewma_store import ewma_store
+
+        ewma_store.reset()
 
         # Step 4 — Reload topology fixture into DB (entities + edges)
         _reload_topology(session)
@@ -122,10 +123,7 @@ class ResetService:
 
         # Step 6 — Reset simulator state (after DB is clean)
         if self._simulator_hook is not None:
-            try:
-                self._simulator_hook.reset_state()
-            except Exception:
-                logger.exception("Simulator reset_state hook raised; DB reset succeeded")
+            self._simulator_hook.reset_state()
 
         logger.info("Demo reset complete — audit entry %s written", audit_id)
         return {"status": "reset", "audit_id": audit_id}

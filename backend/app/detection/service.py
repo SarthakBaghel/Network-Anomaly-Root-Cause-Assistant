@@ -30,11 +30,9 @@ from app.db.models import Anomaly, Event
 from app.detection.alert_severity import AlertSeverityDetector
 from app.detection.config_change import ConfigChangeMarker
 from app.detection.detector import DetectionContext, Detector
-from app.detection.ewma_detector import EwmaDetector
 from app.detection.ewma_store import ewma_store
 from app.detection.log_rule import LogRuleDetector
 from app.detection.rolling_zscore import RollingZscoreDetector
-from app.detection.topology_cascade import TopologyCascadeDetector
 from app.detection.topology_view import TopologyView
 
 # Number of recent actionable anomalies to load for cascade correlation
@@ -43,11 +41,9 @@ RECENT_ANOMALY_WINDOW_SECONDS = settings.detector_window_seconds * 2
 
 DETECTORS: tuple[Detector, ...] = (
     RollingZscoreDetector(),
-    EwmaDetector(),
     LogRuleDetector(),
     AlertSeverityDetector(),
     ConfigChangeMarker(),
-    TopologyCascadeDetector(),
 )
 
 
@@ -140,17 +136,9 @@ def _extract_entity_id(anomaly_row: Anomaly, session: Session) -> str | None:
     return event_row.entity_id if event_row is not None else None
 
 
-def _persist_anomaly(session: Session, anomaly: AnomalyRecord) -> Anomaly | None:
-    """Persist a single AnomalyRecord. Returns None if already exists (idempotent)."""
-    exists = session.scalar(
-        select(Anomaly.id).where(
-            Anomaly.event_id == anomaly.event_id,
-            Anomaly.detector_id == anomaly.detector_id,
-        )
-    )
-    if exists is not None:
-        return None
-    row = Anomaly(
+def _anomaly_row(anomaly: AnomalyRecord) -> Anomaly:
+    """Map the P3 detector contract to an uncommitted P1-owned ORM row."""
+    return Anomaly(
         id=anomaly.anomaly_id,
         event_id=anomaly.event_id,
         detector_id=anomaly.detector_id,
@@ -165,6 +153,19 @@ def _persist_anomaly(session: Session, anomaly: AnomalyRecord) -> Anomaly | None
         features=anomaly.features,
         explanation=anomaly.explanation,
     )
+
+
+def _persist_anomaly(session: Session, anomaly: AnomalyRecord) -> Anomaly | None:
+    """Legacy standalone publisher persistence; the orchestrator does not use it."""
+    exists = session.scalar(
+        select(Anomaly.id).where(
+            Anomaly.event_id == anomaly.event_id,
+            Anomaly.detector_id == anomaly.detector_id,
+        )
+    )
+    if exists is not None:
+        return None
+    row = _anomaly_row(anomaly)
     session.add(row)
     return row
 
@@ -250,9 +251,7 @@ class DetectorService:
         records: list[Anomaly] = []
         for detector in self.detectors:
             for anomaly in detector.evaluate(contract_event, ctx):
-                row = _persist_anomaly(session, anomaly)
-                if row is not None:
-                    records.append(row)
+                records.append(_anomaly_row(anomaly))
 
         _flush_ewma_updates(ctx, session)
         ewma_store.flush(session)

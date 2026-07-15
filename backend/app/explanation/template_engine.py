@@ -104,6 +104,8 @@ def generate_template_explanation(
         key=lambda item: (
             _KIND_ORDER[item.kind.value],
             item.created_at,
+            item.reason_code,
+            item.source_event_id or "",
             item.evidence_id,
         ),
     )

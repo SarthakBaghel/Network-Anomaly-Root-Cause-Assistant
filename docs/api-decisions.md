@@ -200,3 +200,38 @@ contracts only when its affected owners have reviewed it.
 - Simulator mutations and status use the typed `SimulatorStatusResponse` contract. The existing `sources` counter map remains available for simulator-engine consumers; the ordered `source_health` list is the dashboard contract and always includes the four simulator adapters plus `fixture.cmdb_topology`.
 - `GET /api/v1/anomalies?limit=20` is a read-only overview endpoint. It returns detector-owned anomaly records with entity identity in a generated-at envelope; the frontend does not derive or synthesize anomalies.
 - Mock Service Worker is opt-in through `VITE_ENABLE_MSW=true`, so normal development talks to the configured backend.
+
+## M0-015 — Production pipeline dependency contract
+
+- **Status:** accepted for the P0 production integration
+- **Detector registry:** production uses the same four-detector set that owns
+  the frozen handoff: rolling Z-score, log rule, alert severity, and the
+  non-opening configuration marker. The approved output remains nine
+  actionable anomalies plus one context marker. EWMA and topology-cascade
+  implementations are retained as later-scope features but are not registered
+  in the P0 production pipeline.
+- **Timestamp groups:** simulator records sharing a timestamp are persisted as
+  one ordered batch. Detection completes for the group before incident
+  attachment, and RCA publishes at most once per affected incident. This makes
+  same-timestamp stable raw ingress available as attached conflict evidence.
+- **Persistence ownership:** Person 3 returns uncommitted anomaly rows; Person
+  1 persists and audits them exactly once. Persons 4 and 5 continue returning
+  uncommitted analysis output to Person 1's atomic publisher.
+- **Affected owners:** Persons 1, 3, and 4
+
+## M0-016 — Durable immutable analysis publication metadata
+
+- **Status:** accepted for the P0 production integration; supersedes the
+  no-column metadata clause in M0-010
+- **Decision:** every analysis run stores Person 4's topology states, typed
+  paths, conflict reason codes, and evidence requirements. Person 5 and API
+  assembly read that immutable run snapshot rather than reconstructing it from
+  a later topology/catalogue state.
+- **Failure durability:** a failed publication rolls back its nested child
+  writes and pointer mutations, then durably commits the failed run and
+  `PIPELINE_STAGE_FAILED` audit before returning the sanitized failure. The
+  prior current run remains current.
+- **Reset:** required simulator stop/reset hooks are part of the reset contract;
+  hook failure fails the request rather than reporting a partial reset as
+  successful.
+- **Affected owners:** Persons 1, 3, 4, and 5

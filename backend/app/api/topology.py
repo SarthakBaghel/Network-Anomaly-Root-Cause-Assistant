@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.contracts import TopologyRelation, TopologySnapshot
-from app.db.models import Hypothesis, Incident
+from app.db.models import AnalysisRun, Hypothesis, Incident
 from app.db.session import SessionLocal, get_session
 from app.topology.graph import (
     EdgeIdentity,
@@ -82,6 +82,35 @@ def _incident_annotation_impl(
                 "details": [],
             },
         )
+    run_id = analysis_run_id or getattr(incident, "current_analysis_run_id", None)
+    if run_id is not None:
+        run = session.get(AnalysisRun, run_id)
+        if run is not None and run.incident_id == incident_id:
+            stored = run.topology_states or {}
+            stored_nodes = stored.get("nodes")
+            stored_edges = stored.get("edges")
+            if isinstance(stored_nodes, list) and isinstance(stored_edges, list):
+                node_states = {
+                    str(item["entity_id"]): item["state"]
+                    for item in stored_nodes
+                    if isinstance(item, dict)
+                    and item.get("entity_id")
+                    and item.get("state")
+                }
+                edge_states = {
+                    (
+                        str(item["source"]),
+                        str(item["target"]),
+                        str(item["relation_type"]),
+                    ): item["state"]
+                    for item in stored_edges
+                    if isinstance(item, dict)
+                    and item.get("source")
+                    and item.get("target")
+                    and item.get("relation_type")
+                    and item.get("state")
+                }
+                return node_states, edge_states
     if analysis_run_id is not None:
         top_hypothesis = session.scalar(
             select(Hypothesis)

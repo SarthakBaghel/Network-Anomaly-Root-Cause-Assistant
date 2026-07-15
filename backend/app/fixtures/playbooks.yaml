@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: playbooks-1.2
+version: playbooks-1.3
 
 # This is the sole playbook catalogue consumed by app.playbooks.engine.
 # Every action remains a recommendation: a human must approve it before it
@@ -242,7 +242,7 @@ steps:
   - step_id: inspect-scan-pattern
     title: Inspect reconnaissance pattern
     step_type: diagnostic
-    applicable_hypothesis_types: [external_probe]
+    applicable_hypothesis_types: [external_probe, authorized_security_scanner]
     applicable_entity_types: [gateway]
     preconditions: [connection_telemetry_available]
     instructions:
@@ -263,6 +263,19 @@ steps:
       - Confirm that the pattern is not an approved internal scanner.
     risk_level: low
     rollback_note: Read-only diagnostic; no access policy is changed.
+    requires_human_approval: true
+
+  - step_id: verify-scanner-authorization
+    title: Verify scanner authorization
+    step_type: diagnostic
+    applicable_hypothesis_types: [authorized_security_scanner]
+    applicable_entity_types: [gateway]
+    preconditions: [source_fingerprint_available]
+    instructions:
+      - Match the observed source fingerprint against the approved scanner allow-list.
+      - Verify the change ticket and scheduled scan window before classifying the activity as authorized.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no scanner or gateway policy is changed.
     requires_human_approval: true
 
   - step_id: propose-source-block

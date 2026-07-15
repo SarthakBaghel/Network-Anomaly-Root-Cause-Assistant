@@ -96,6 +96,11 @@ REQUIREMENT_MATCHERS: dict[str, EventMatcher] = {
     )
     or _contains(event.event_type, "port_scan"),
     "scanner_source": lambda event: _payload_contains(event, "source_fingerprint"),
+    "scanner_authorization": lambda event: event.event_type == "SCANNER_ALLOWLIST_MATCH"
+    and any(event.raw_payload.get(key) is True for key in ("scanner_authorized", "allowlisted")),
+    "change_ticket": lambda event: _payload_contains(
+        event, "change_ticket", "authorization_ticket", "approved_scan_ticket"
+    ),
     "connection_rejections": lambda event: _contains(event.signal_name, "rejected_connection_rate"),
     "datanode_health": lambda event: _contains(event.signal_name, "datanode_io_error")
     or _contains(event.event_type, "hdfs_datanode_failure"),
@@ -137,6 +142,8 @@ REASON_CODES = {
     "resource_log": "RESOURCE_SATURATION_LOG_OBSERVED",
     "scan_pattern": "SCAN_PATTERN_OBSERVED",
     "scanner_source": "SCANNER_SOURCE_OBSERVED",
+    "scanner_authorization": "SCANNER_AUTHORIZATION_OBSERVED",
+    "change_ticket": "APPROVED_SCAN_TICKET_OBSERVED",
     "connection_rejections": "CONNECTION_REJECTIONS_OBSERVED",
     "datanode_health": "DATANODE_HEALTH_OBSERVED",
     "replication_state": "REPLICATION_STATE_OBSERVED",
@@ -316,6 +323,8 @@ _CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
         "resource_log",
         "scan_pattern",
         "scanner_source",
+        "scanner_authorization",
+        "change_ticket",
         "connection_rejections",
         "datanode_health",
         "replication_state",
@@ -386,6 +395,8 @@ def _conflict_source(pattern_id: str, events: list[CanonicalEvent]) -> Canonical
             key=lambda event: (event.timestamp, event.event_id),
             default=None,
         )
+    if pattern_id == "AUTHORIZED_SCANNER_MATCH":
+        return _latest_match("scanner_authorization", events)
     return None
 
 
@@ -400,6 +411,8 @@ def _conflict_statement(pattern_id: str, event: CanonicalEvent) -> str:
             "Payment database connection utilization remained normal at "
             f"{_format_value(event.signal_value)}."
         )
+    if pattern_id == "AUTHORIZED_SCANNER_MATCH":
+        return "The observed scanner fingerprint is allow-listed for an approved security scan."
     return (
         f"{_friendly_entity(event.entity_id)} recorded evidence conflicting with this hypothesis."
     )

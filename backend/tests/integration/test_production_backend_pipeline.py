@@ -263,6 +263,31 @@ def test_additional_catalogue_scenarios_publish_matching_rca(
             min(payload["hypotheses"], key=lambda item: item["rank"])["hypothesis_type"]
             == expected_hypothesis_type
         )
+        if scenario_id == "port_scan_reconnaissance":
+            assert [item["hypothesis_type"] for item in payload["hypotheses"]] == [
+                "external_probe",
+                "authorized_security_scanner",
+                "dos_or_traffic_surge",
+            ]
+            by_type = {item["hypothesis_type"]: item for item in payload["hypotheses"]}
+            assert (
+                by_type["external_probe"]["evidence_score"]
+                > by_type["authorized_security_scanner"]["evidence_score"]
+                > by_type["dos_or_traffic_surge"]["evidence_score"]
+            )
+            evidence_by_type = {
+                item["hypothesis_type"]: payload["evidence_by_hypothesis"][item["hypothesis_id"]]
+                for item in payload["hypotheses"]
+            }
+            authorized_missing = {
+                item["reason_code"]
+                for item in evidence_by_type["authorized_security_scanner"]
+                if item["kind"] == "missing"
+            }
+            assert authorized_missing == {
+                "MISSING_CHANGE_TICKET",
+                "MISSING_SCANNER_AUTHORIZATION",
+            }
 
         with _session_factory() as session:
             assert session.scalar(select(func.count()).select_from(models.QuarantinedEvent)) == 0

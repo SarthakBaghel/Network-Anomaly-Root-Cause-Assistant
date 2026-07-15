@@ -79,9 +79,21 @@ golden scenario. The post-blueprint additions are:
 - scenario provenance fields in the API and generated frontend contract.
 
 The versioned catalogues are `detector-rules-1.2`,
-`symptom-families-1.2`, `hypotheses-1.3`, and `playbooks-1.2`.
+`symptom-families-1.2`, `hypotheses-1.4`, and `playbooks-1.3`.
 Recommendations remain suggestions only; every catalogue playbook requires
 human approval and the prototype never executes remediation automatically.
+
+### Port-scan competing hypotheses
+
+Reconnaissance incidents intentionally expose multiple plausible candidates
+instead of padding every incident to a fixed count. The normal port-scan
+fixture ranks `external_probe` first, followed by
+`authorized_security_scanner` and `dos_or_traffic_surge`. The authorized
+scanner candidate reports missing allow-list and change-ticket evidence, while
+the traffic-surge candidate reports missing volume, SYN, and source-distribution
+signals. If a source fingerprint is explicitly allow-listed with an approved
+scan ticket, `authorized_security_scanner` rises and that same record becomes
+conflicting evidence against `external_probe`.
 
 ## Data-leakage boundary
 
@@ -155,10 +167,9 @@ tests that assert the expected top RCA type and zero quarantined records.
 
 ## Verification record
 
-The 2026-07-16 release gate completed two full passes, including production
+The latest 2026-07-16 release gate completed two full passes, including production
 artifact reproduction, backend tests, frontend tests and build, generated API
 contract checks, secret and runtime-firewall checks, and MSW-disabled live
 Playwright. Both passes produced the same semantic snapshot digest:
 
-`sha256:196ff3c123a4e9ca73a3aa7934f03696b2de7e38539de06295a23ea42fff9419`
-
+`sha256:9a404aa2a00ad103bf4a421c3b54ff5421fe45c154fa84ee1d0c30c01a3651aa`

@@ -1,7 +1,4 @@
-from pathlib import Path
-
 import pytest
-import yaml
 
 from app.playbooks import engine
 from app.playbooks.engine import (
@@ -36,6 +33,15 @@ def test_db_and_dos_lookups_return_expected_steps():
     dos = {r.step_id for r in get_recommendations("dos_or_traffic_surge", "load_balancer")}
     assert {"inspect-ingress-patterns", "validate-source-distribution"} <= dos
 
+    authorized_scanner = {
+        recommendation.step_id
+        for recommendation in get_recommendations("authorized_security_scanner", "gateway")
+    }
+    assert authorized_scanner == {
+        "inspect-scan-pattern",
+        "verify-scanner-authorization",
+    }
+
 
 def test_unknown_hypothesis_returns_empty_list():
     assert get_recommendations("totally_unknown_type", "service") == []
@@ -57,8 +63,7 @@ def test_remediation_steps_require_human_approval():
 
 def test_every_catalogue_step_requires_human_approval():
     assert all(
-        recommendation.requires_human_approval
-        for recommendation in engine.load_recommendations()
+        recommendation.requires_human_approval for recommendation in engine.load_recommendations()
     )
 
 

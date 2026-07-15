@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: hypotheses-1.3
+version: hypotheses-1.4
 pattern_definitions:
   symptoms:
     forwarded_traffic_spike:
@@ -34,6 +34,9 @@ pattern_definitions:
       anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, RECONNAISSANCE_ACTIVITY]
     rejected_connections:
       anomaly_types: [REJECTED_CONNECTION_SPIKE]
+    scanner_authorized:
+      event_types: [SCANNER_ALLOWLIST_MATCH]
+      raw_payload_true_keys: [scanner_authorized, allowlisted]
     datanode_failure:
       anomaly_types: [DATANODE_IO_ERRORS, DISTRIBUTED_SYSTEM_FAILURE]
     trace_latency:
@@ -104,7 +107,7 @@ hypotheses:
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
     generation:
       candidate_selector: primary_entity
-      any_anomaly_types: [FORWARDED_TRAFFIC_SPIKE, GATEWAY_TRAFFIC_ALERT, RAW_INGRESS_TRAFFIC_SPIKE, SYN_ERROR_RATE_HIGH, SOURCE_DISTRIBUTION_CHANGE]
+      any_anomaly_types: [FORWARDED_TRAFFIC_SPIKE, GATEWAY_TRAFFIC_ALERT, RAW_INGRESS_TRAFFIC_SPIKE, SYN_ERROR_RATE_HIGH, SOURCE_DISTRIBUTION_CHANGE, PORT_FANOUT_HIGH]
     change_based: false
     metric_anomaly_types: [FORWARDED_TRAFFIC_SPIKE, RAW_INGRESS_TRAFFIC_SPIKE, SYN_ERROR_RATE_HIGH, SOURCE_DISTRIBUTION_CHANGE]
     required_symptoms: [forwarded_traffic_spike, changed_source_distribution]
@@ -202,10 +205,38 @@ hypotheses:
       scan_pattern: "Obtain port and destination fanout telemetry."
       scanner_source: "Obtain the observed scanner source fingerprint."
       connection_rejections: "Obtain rejected-connection telemetry."
-    conflict_patterns: []
+    conflict_patterns:
+      - pattern_id: AUTHORIZED_SCANNER_MATCH
+        factor: symptom_compatibility
+        operation: cap
+        value: 0.25
+        match:
+          event_types: [SCANNER_ALLOWLIST_MATCH]
+          raw_payload_true_keys: [scanner_authorized, allowlisted]
+        statement: "The observed scanner fingerprint is allow-listed for an approved security scan."
     summary: "A reconnaissance probe may explain the unusual port fanout and rejected connections."
     diagnostic_step_ids: [inspect-scan-pattern, validate-scanner-source]
     remediation_step_ids: [propose-source-block]
+  - hypothesis_type: authorized_security_scanner
+    entity_types: [gateway]
+    traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 1}
+    generation:
+      candidate_selector: primary_entity
+      any_anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE, RECONNAISSANCE_ACTIVITY]
+      any_log_event_types: [PORT_SCAN_DETECTED]
+    change_based: false
+    metric_anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE]
+    required_symptoms: [reconnaissance_fanout, scanner_authorized]
+    expected_propagation: [scan_activity]
+    expected_evidence:
+      scan_pattern: "Obtain port and destination fanout telemetry."
+      scanner_source: "Obtain the observed scanner source fingerprint."
+      scanner_authorization: "Verify the scanner fingerprint against the approved scanner allow-list."
+      change_ticket: "Obtain the approved security-scan ticket and scheduled execution window."
+    conflict_patterns: []
+    summary: "An approved internal security scanner may explain the reconnaissance pattern if its identity and change ticket can be verified."
+    diagnostic_step_ids: [inspect-scan-pattern, verify-scanner-authorization]
+    remediation_step_ids: []
   - hypothesis_type: distributed_storage_node_failure
     entity_types: [storage_node]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}

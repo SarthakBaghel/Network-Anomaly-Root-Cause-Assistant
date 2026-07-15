@@ -301,3 +301,28 @@ contracts only when its affected owners have reviewed it.
   digest
   `sha256:196ff3c123a4e9ca73a3aa7934f03696b2de7e38539de06295a23ea42fff9419`.
 - **Affected owners:** all implementation owners
+
+## EXT-002 — Evidence-backed reconnaissance alternatives
+
+- **Status:** accepted and implemented on 2026-07-16
+- **Decision:** reconnaissance incidents may generate `external_probe`,
+  `authorized_security_scanner`, and `dos_or_traffic_surge` candidates when
+  their catalogue signal gates match. The system does not synthesize a fixed
+  candidate count for other incidents.
+- **Ranking:** the reference port-scan fixture keeps `external_probe` first.
+  Missing allow-list and change-ticket evidence weakens
+  `authorized_security_scanner`; absent traffic-volume, SYN-failure, and
+  source-distribution evidence weakens `dos_or_traffic_surge`.
+- **Authorization evidence:** an accepted `SCANNER_ALLOWLIST_MATCH` record must
+  identify the scanner as authorized. It raises the authorized-scanner
+  symptom score and is published as `AUTHORIZED_SCANNER_MATCH` conflicting
+  evidence against an external probe. A change ticket remains a distinct
+  evidence requirement.
+- **Safety:** authorized-scanner recommendations are read-only diagnostics,
+  all catalogue steps remain human-approved, and unrelated anomaly families
+  must not generate reconnaissance alternatives.
+- **Verification:** focused ranking, allow-list, missing-evidence, playbook, and
+  adversarial-isolation tests pass. The complete two-pass release gate produced
+  identical semantic digest
+  `sha256:9a404aa2a00ad103bf4a421c3b54ff5421fe45c154fa84ee1d0c30c01a3651aa`.
+- **Affected owners:** Persons 3, 4, and 5

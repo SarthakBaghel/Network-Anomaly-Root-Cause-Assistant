@@ -428,6 +428,8 @@ _CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
         "resource_log",
         "scan_pattern",
         "scanner_source",
+        "scanner_authorization",
+        "change_ticket",
         "connection_rejections",
         "datanode_health",
         "replication_state",
@@ -484,6 +486,13 @@ def _available_requirement(
             event, "unique_destination_ports", "destination_fanout", "port_scan"
         ),
         "scanner_source": lambda event: contains(event, "source_fingerprint"),
+        "scanner_authorization": lambda event: event.event_type == "SCANNER_ALLOWLIST_MATCH"
+        and any(
+            event.raw_payload.get(key) is True for key in ("scanner_authorized", "allowlisted")
+        ),
+        "change_ticket": lambda event: contains(
+            event, "change_ticket", "authorization_ticket", "approved_scan_ticket"
+        ),
         "connection_rejections": lambda event: contains(event, "rejected_connection_rate"),
         "datanode_health": lambda event: contains(
             event, "datanode_io_error", "hdfs_datanode_failure"

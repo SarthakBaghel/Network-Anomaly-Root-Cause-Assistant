@@ -9,7 +9,11 @@ from .audit_repository import AUDIT_ACTION_CODES, AuditRepository
 from .event_repository import EventRepository
 from .historical_incident_repository import HistoricalIncidentRepository
 from .hypothesis_repository import EvidenceRepository, HypothesisRepository
-from .incident_repository import AnalysisRunRepository, IncidentRepository
+from .incident_repository import (
+    AnalysisRunRepository,
+    HistoricalIncidentRepository,
+    IncidentRepository,
+)
 from .review_repository import ReviewRepository
 
 __all__ = [

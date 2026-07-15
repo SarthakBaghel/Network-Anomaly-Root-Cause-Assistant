@@ -5,7 +5,7 @@
     "completed_at": "2026-07-14T09:31:41.320Z",
     "created_at": "2026-07-14T09:31:41.000Z",
     "incident_id": "inc_001",
-    "input_fingerprint": "sha256:1268784939f34977be1c76db0b7063f37f04606f3f3c601ac8d7788cd201e2c1",
+    "input_fingerprint": "sha256:9d09d02c0ecc1a658641793e55731b5d2419f7c1c029c9f9540d7501c867c67d",
     "revision": 7,
     "status": "current",
     "trigger_event_id": "evt_0017b55d40f1c8d1a3233408"
@@ -382,6 +382,7 @@
           "change_ticket": "CHG-DEMO-001",
           "changed_at": "2026-07-14T09:30:00.000Z",
           "config_key": "rate_limit.enabled",
+          "context_only": true,
           "new_value": false,
           "old_value": true,
           "provenance": {
@@ -889,7 +890,7 @@
           "trace_id": "scenario_gateway_rate_limit_001"
         },
         "schema_version": "1.0",
-        "severity": 0.8,
+        "severity": 0.88,
         "signal_name": null,
         "signal_value": null,
         "source": "simulator.syslog",

@@ -1,5 +1,7 @@
 from __future__ import annotations
-
+import uuid
+from datetime import datetime, timezone
+from typing import Any, Literal, Annotated
 import base64
 import binascii
 import json
@@ -9,10 +11,15 @@ from datetime import datetime, timezone
 from itertools import pairwise
 from typing import Annotated, Any, Never
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 
+from app.config import settings
+from app.db import models
+from app.db.session import get_session
+from app.db.repositories import IncidentRepository, AnalysisRunRepository, AuditRepository
 from app.contracts import (
     AnalysisRun,
     AuditRecord,
@@ -28,8 +35,10 @@ from app.contracts import (
     ReviewRecord,
     ReviewRequest,
     TimelineItem,
-    TopologyRelation,
     TopologySnapshot,
+    AnalysisRun,
+    ExplanationClaim,
+    EvidenceCoverage,
 )
 from app.db import models
 from app.db.repositories import (
@@ -76,35 +85,20 @@ def _utc(value: datetime) -> datetime:
 def _incident_contract(row: models.Incident) -> IncidentSummary:
     return IncidentSummary(
         incident_id=row.id,
-        current_analysis_run_id=row.current_analysis_run_id,
         title=row.title,
         status=row.status,
         severity=row.severity,
-        started_at=_utc(row.started_at),
-        last_event_at=_utc(row.last_event_at),
+        started_at=_to_utc(row.started_at),
+        last_event_at=_to_utc(row.last_event_at),
         primary_entity_id=row.primary_entity_id,
-        affected_entity_ids=list(row.affected_entity_ids or []),
+        affected_entity_ids=row.affected_entity_ids,
         anomaly_count=row.anomaly_count,
+        current_analysis_run_id=row.current_analysis_run_id,
         top_hypothesis_id=row.top_hypothesis_id,
         confirmed_hypothesis_id=row.confirmed_hypothesis_id,
     )
 
-
-def _run_contract(row: models.AnalysisRun) -> AnalysisRun:
-    return AnalysisRun(
-        analysis_run_id=row.id,
-        incident_id=row.incident_id,
-        revision=row.revision,
-        status=row.status,
-        trigger_event_id=row.trigger_event_id,
-        input_fingerprint=row.input_fingerprint,
-        created_at=_utc(row.created_at),
-        completed_at=_utc(row.completed_at) if row.completed_at else None,
-        algorithm_version=row.algorithm_version,
-    )
-
-
-def _hypothesis_contract(row: models.Hypothesis) -> Hypothesis:
+def hyp_to_contract(row: models.Hypothesis) -> Hypothesis:
     return Hypothesis(
         hypothesis_id=row.id,
         analysis_run_id=row.analysis_run_id,
@@ -113,13 +107,15 @@ def _hypothesis_contract(row: models.Hypothesis) -> Hypothesis:
         candidate_entity_id=row.candidate_entity_id,
         rank=row.rank,
         evidence_score=row.evidence_score,
-        evidence_coverage=row.coverage,
-        factor_scores=row.factor_scores,
-        summary=row.summary,
+        evidence_coverage=EvidenceCoverage(
+            available=row.coverage["available"],
+            expected=row.coverage["expected"]
+        ),
+        factor_scores=dict(row.factor_scores),
+        summary=row.summary
     )
 
-
-def _evidence_contract(row: models.Evidence) -> EvidenceItem:
+def ev_to_contract(row: models.Evidence) -> EvidenceItem:
     return EvidenceItem(
         evidence_id=row.id,
         analysis_run_id=row.analysis_run_id,
@@ -130,7 +126,7 @@ def _evidence_contract(row: models.Evidence) -> EvidenceItem:
         statement=row.statement,
         relevance=row.relevance,
         reason_code=row.reason_code,
-        created_at=_utc(row.created_at),
+        created_at=_to_utc(row.created_at)
     )
 
 
@@ -204,7 +200,7 @@ def _current_context(
 def _encode_cursor(row: models.Incident, filters: dict[str, Any]) -> str:
     payload = json.dumps(
         {
-            "started_at": _utc(row.started_at).isoformat(),
+            "started_at": _to_utc(row.started_at).isoformat(),
             "incident_id": row.id,
             "filters": filters,
         },
@@ -228,7 +224,7 @@ def _decode_cursor(
         incident_id = str(payload["incident_id"])
         if not incident_id:
             raise ValueError("empty incident id")
-        return _utc(started_at), incident_id
+        return _to_utc(started_at), incident_id
     except (
         binascii.Error,
         KeyError,
@@ -237,269 +233,23 @@ def _decode_cursor(
         ValueError,
         json.JSONDecodeError,
     ):
-        _api_error(
-            http_status.HTTP_400_BAD_REQUEST,
-            "INVALID_CURSOR",
-            "Incident cursor is malformed or does not match the active filters",
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_CURSOR",
+                "message": "Incident cursor is malformed or does not match the active filters",
+                "details": []
+            }
         )
-
-
-def _timeline(
-    session: Session,
-    incident_id: str,
-    evidence_rows: list[models.Evidence],
-) -> list[TimelineItem]:
-    incident_repo = IncidentRepository(session)
-    attached = {
-        row.event_id: row for row in incident_repo.get_attached_events(incident_id)
-    }
-    evaluations = {
-        row.event_id: row for row in incident_repo.get_all_evaluations(incident_id)
-    }
-    event_ids = set(attached) | set(evaluations)
-    event_rows = EventRepository(session).get_events_by_ids(list(event_ids))
-    events_by_id = {row.id: row for row in event_rows}
-    if set(events_by_id) != event_ids:
-        _api_error(
-            http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "INTERNAL_ERROR",
-            "Incident timeline contains an unresolved event reference",
-        )
-
-    relevance: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
-    for evidence in evidence_rows:
-        if evidence.source_event_id in attached:
-            relevance[evidence.source_event_id][evidence.hypothesis_id].append(
-                evidence.reason_code
-            )
-
-    result: list[TimelineItem] = []
-    for event_id, event in events_by_id.items():
-        if event_id in attached:
-            association = attached[event_id]
-            decision = "attached"
-        else:
-            association = evaluations[event_id]
-            decision = "excluded"
-        result.append(
-            TimelineItem(
-                event=_event_contract(event),
-                attachment_decision=decision,
-                attachment_score=association.attachment_score,
-                attachment_reasons=list(association.attachment_reasons or []),
-                hypothesis_relevance={
-                    hypothesis_id: sorted(set(reason_codes))
-                    for hypothesis_id, reason_codes in relevance[event_id].items()
-                }
-                if decision == "attached"
-                else {},
-            )
-        )
-    return sorted(result, key=lambda item: (item.event.timestamp, item.event.event_id))
-
-
-def _topology(
-    incident: models.Incident, hypotheses: list[Hypothesis]
-) -> TopologySnapshot:
-    graph = get_topology_graph()
-    top = min(hypotheses, key=lambda item: item.rank, default=None)
-    suspected_root = top.candidate_entity_id if top else incident.primary_entity_id
-    node_states = {
-        entity_id: "impact_path" for entity_id in incident.affected_entity_ids or []
-    }
-    node_states[incident.primary_entity_id] = "primary_affected"
-    node_states[suspected_root] = "suspected_root"
-    edge_states: dict[tuple[str, str, str], str] = {}
-    for affected_entity_id in incident.affected_entity_ids or []:
-        if affected_entity_id == suspected_root:
-            continue
-        try:
-            path = graph.get_traffic_impact_path(suspected_root, affected_entity_id)
-        except TopologyPathNotFoundError:
-            continue
-        for source, target in pairwise(path):
-            edge_states[(source, target, TopologyRelation.SENDS_TRAFFIC_TO.value)] = (
-                "impact_path"
-            )
-    return TopologySnapshot.model_validate(
-        graph.snapshot(node_states=node_states, edge_states=edge_states)
-    )
-
-
-def _recommendations(
-    session: Session, run_id: str, hypothesis_ids: set[str]
-) -> dict[str, list[PlaybookRecommendation]]:
-    rows = list(
-        session.execute(
-            select(models.PlaybookRecommendation)
-            .where(models.PlaybookRecommendation.analysis_run_id == run_id)
-            .order_by(models.PlaybookRecommendation.id.asc())
-        ).scalars()
-    )
-    grouped: dict[str, list[PlaybookRecommendation]] = {
-        hypothesis_id: [] for hypothesis_id in hypothesis_ids
-    }
-    for row in rows:
-        if row.hypothesis_id not in hypothesis_ids:
-            _api_error(
-                http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "INTERNAL_ERROR",
-                "Recommendation references a hypothesis outside its analysis run",
-            )
-        step = get_step(row.step_id)
-        if step is None:
-            _api_error(
-                http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "INTERNAL_ERROR",
-                f"Recommendation references unknown playbook step {row.step_id}",
-            )
-        grouped[row.hypothesis_id].append(
-            PlaybookRecommendation(
-                recommendation_id=row.id,
-                analysis_run_id=row.analysis_run_id,
-                incident_id=row.incident_id,
-                hypothesis_id=row.hypothesis_id,
-                step_id=row.step_id,
-                title=step["title"],
-                step_type=step["step_type"],
-                risk_level=step["risk_level"],
-                requires_human_approval=step["requires_human_approval"],
-                instructions="\n".join(step["instructions"]),
-                rationale=row.rationale,
-            )
-        )
-    return grouped
-
-
-def _explanation(
-    session: Session,
-    run_id: str,
-    incident_id: str,
-    top_hypothesis_id: str | None,
-) -> ExplanationOutput:
-    rows = list(
-        session.execute(
-            select(models.Explanation).where(
-                models.Explanation.analysis_run_id == run_id,
-                models.Explanation.incident_id == incident_id,
-                models.Explanation.validated.is_(True),
-            )
-        ).scalars()
-    )
-    if not rows:
-        _api_error(
-            http_status.HTTP_404_NOT_FOUND,
-            "NOT_FOUND",
-            f"No validated explanation exists for analysis run {run_id}",
-        )
-    preferred = max(
-        rows,
-        key=lambda row: (row.generator == "llm", _utc(row.created_at), row.id),
-    )
-    payload = dict(preferred.payload or {})
-    payload.setdefault("analysis_run_id", run_id)
-    payload.setdefault("incident_id", incident_id)
-    payload.setdefault("hypothesis_id", top_hypothesis_id)
-    payload.setdefault("generator", preferred.generator)
-    try:
-        return ExplanationOutput.model_validate(payload)
-    except ValueError as exc:
-        _api_error(
-            http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "INTERNAL_ERROR",
-            f"Stored explanation does not satisfy the API contract: {exc}",
-        )
-
-
-def _snapshot(session: Session, incident_id: str) -> InvestigationResponse:
-    incident, analysis_run, run_id = _current_context(session, incident_id)
-    hypothesis_rows = HypothesisRepository(session).list_for_run(run_id)
-    hypotheses = [_hypothesis_contract(row) for row in hypothesis_rows]
-    hypothesis_ids = {item.hypothesis_id for item in hypotheses}
-    evidence_rows = EvidenceRepository(session).list_for_run(run_id)
-    evidence_by_hypothesis: dict[str, list[EvidenceItem]] = {
-        hypothesis_id: [] for hypothesis_id in hypothesis_ids
-    }
-    for row in evidence_rows:
-        if row.hypothesis_id not in hypothesis_ids:
-            _api_error(
-                http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "INTERNAL_ERROR",
-                "Evidence references a hypothesis outside its analysis run",
-            )
-        evidence_by_hypothesis[row.hypothesis_id].append(_evidence_contract(row))
-
-    timeline = _timeline(session, incident_id, evidence_rows)
-    attached_event_ids = {
-        item.event.event_id
-        for item in timeline
-        if item.attachment_decision == "attached"
-    }
-    if any(
-        item.source_event_id is not None and item.source_event_id not in attached_event_ids
-        for items in evidence_by_hypothesis.values()
-        for item in items
-    ):
-        _api_error(
-            http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "INTERNAL_ERROR",
-            "Excluded event was referenced as incident evidence",
-        )
-
-    recommendations = _recommendations(session, run_id, hypothesis_ids)
-    explanation = _explanation(session, run_id, incident_id, incident.top_hypothesis_id)
-    evidence_ids = {
-        item.evidence_id
-        for items in evidence_by_hypothesis.values()
-        for item in items
-    }
-    if any(
-        evidence_id not in evidence_ids
-        for claim in explanation.claims
-        for evidence_id in claim.evidence_ids
-    ):
-        _api_error(
-            http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "INTERNAL_ERROR",
-            "Explanation references evidence outside its analysis snapshot",
-        )
-
-    reviews = [
-        _review_contract(row)
-        for row in ReviewRepository(session).list_for_incident(incident_id)
-        if row.analysis_run_id == run_id
-    ]
-    response = InvestigationResponse(
-        generated_at=datetime.now(timezone.utc),
-        analysis_run_id=run_id,
-        analysis_run=_run_contract(analysis_run),
-        incident=_incident_contract(incident),
-        timeline=timeline,
-        topology=_topology(incident, hypotheses),
-        hypotheses=hypotheses,
-        evidence_by_hypothesis=evidence_by_hypothesis,
-        recommendations_by_hypothesis=recommendations,
-        explanation=explanation,
-        reviews=reviews,
-    )
-    response.assert_consistent_run()
-    if any(review.analysis_run_id != run_id for review in response.reviews):
-        _api_error(
-            http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "INTERNAL_ERROR",
-            "Review outside the current analysis run entered the snapshot",
-        )
-    return response
-
 
 @router.get("", response_model=dict[str, Any])
 def list_incidents(
-    session: DatabaseSession,
     status_filter: Annotated[IncidentStatus | None, Query(alias="status")] = None,
     primary_entity_id: Annotated[str | None, Query(min_length=1)] = None,
     min_severity: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     cursor: str | None = None,
+    session: Session = Depends(get_session),
 ) -> dict[str, Any]:
     filters = {
         "status": status_filter.value if status_filter else None,
@@ -507,7 +257,8 @@ def list_incidents(
         "min_severity": min_severity,
     }
     before_started_at, before_incident_id = _decode_cursor(cursor, filters)
-    rows = IncidentRepository(session).list_page(
+    repo = IncidentRepository(session)
+    rows = repo.list_page(
         status=filters["status"],
         primary_entity_id=primary_entity_id,
         min_severity=min_severity,
@@ -517,94 +268,165 @@ def list_incidents(
     )
     page = rows[:limit]
     return {
-        "generated_at": datetime.now(timezone.utc),
-        "items": [_incident_contract(row) for row in page],
+        "items": [incident_to_summary(row) for row in page],
         "next_cursor": _encode_cursor(page[-1], filters) if len(rows) > limit else None,
     }
 
+@router.get("/{incident_id}", response_model=IncidentSummary)
+def incident_summary(incident_id: str, session: Session = Depends(get_session)) -> IncidentSummary:
+    repo = IncidentRepository(session)
+    row = repo.get_by_id(incident_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
+        )
+    return incident_to_summary(row)
 
-@router.get("/{incident_id}/investigation", response_model=InvestigationResponse)
-def investigation(incident_id: str, session: DatabaseSession) -> InvestigationResponse:
-    return _snapshot(session, incident_id)
-
-
-@router.get("/{incident_id}/timeline", response_model=list[TimelineItem])
-def timeline(incident_id: str, session: DatabaseSession) -> list[TimelineItem]:
-    _, _, run_id = _current_context(session, incident_id)
-    evidence = EvidenceRepository(session).list_for_run(run_id)
-    return _timeline(session, incident_id, evidence)
-
+@router.get("/{incident_id}/timeline", response_model=dict[str, Any])
+def timeline(incident_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
+    repo = IncidentRepository(session)
+    row = repo.get_by_id(incident_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
+        )
+    evals = repo.get_all_evaluations(incident_id)
+    
+    items = []
+    for ev_eval in evals:
+        evt_row = session.get(models.Event, ev_eval.event_id)
+        if evt_row is not None:
+            items.append(TimelineItem(
+                event=event_to_contract(evt_row),
+                attachment_decision=ev_eval.decision,
+                attachment_score=ev_eval.attachment_score,
+                attachment_reasons=ev_eval.attachment_reasons,
+                hypothesis_relevance={}
+            ))
+    # Sort timeline items chronologically
+    items = sorted(items, key=lambda it: (it.event.timestamp, it.event.event_id))
+    return {"items": items}
 
 @router.get("/{incident_id}/hypotheses", response_model=list[Hypothesis])
-def hypotheses(incident_id: str, session: DatabaseSession) -> list[Hypothesis]:
-    _, _, run_id = _current_context(session, incident_id)
-    return [
-        _hypothesis_contract(row)
-        for row in HypothesisRepository(session).list_for_run(run_id)
-    ]
-
+def hypotheses(incident_id: str, session: Session = Depends(get_session)) -> list[Hypothesis]:
+    repo = IncidentRepository(session)
+    row = repo.get_by_id(incident_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
+        )
+    if not row.current_analysis_run_id:
+        return []
+    stmt = select(models.Hypothesis).where(models.Hypothesis.analysis_run_id == row.current_analysis_run_id).order_by(models.Hypothesis.rank.asc())
+    rows = session.execute(stmt).scalars().all()
+    return [hyp_to_contract(r) for r in rows]
 
 @router.get("/{incident_id}/evidence", response_model=dict[str, list[EvidenceItem]])
-def evidence(
-    incident_id: str, session: DatabaseSession
-) -> dict[str, list[EvidenceItem]]:
-    _, _, run_id = _current_context(session, incident_id)
-    hypothesis_ids = {
-        row.id for row in HypothesisRepository(session).list_for_run(run_id)
-    }
-    grouped = {hypothesis_id: [] for hypothesis_id in hypothesis_ids}
-    for row in EvidenceRepository(session).list_for_run(run_id):
-        if row.hypothesis_id not in grouped:
-            _api_error(
-                http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "INTERNAL_ERROR",
-                "Evidence references a hypothesis outside its analysis run",
-            )
-        grouped[row.hypothesis_id].append(_evidence_contract(row))
-    return grouped
+def evidence(incident_id: str, session: Session = Depends(get_session)) -> dict[str, list[EvidenceItem]]:
+    repo = IncidentRepository(session)
+    row = repo.get_by_id(incident_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
+        )
+    if not row.current_analysis_run_id:
+        return {}
+    stmt = select(models.Evidence).where(models.Evidence.analysis_run_id == row.current_analysis_run_id)
+    rows = session.execute(stmt).scalars().all()
+    
+    result = {}
+    for r in rows:
+        result.setdefault(r.hypothesis_id, []).append(ev_to_contract(r))
+    return result
 
-
-@router.get(
-    "/{incident_id}/recommendations",
-    response_model=dict[str, list[PlaybookRecommendation]],
-)
-def recommendations(
-    incident_id: str, session: DatabaseSession
-) -> dict[str, list[PlaybookRecommendation]]:
-    _, _, run_id = _current_context(session, incident_id)
-    hypothesis_ids = {
-        row.id for row in HypothesisRepository(session).list_for_run(run_id)
-    }
-    return _recommendations(session, run_id, hypothesis_ids)
-
+@router.get("/{incident_id}/recommendations", response_model=dict[str, list[PlaybookRecommendation]])
+def recommendations(incident_id: str, session: Session = Depends(get_session)) -> dict[str, list[PlaybookRecommendation]]:
+    repo = IncidentRepository(session)
+    row = repo.get_by_id(incident_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
+        )
+    if not row.current_analysis_run_id:
+        return {}
+        
+    stmt = select(models.PlaybookRecommendation).where(models.PlaybookRecommendation.analysis_run_id == row.current_analysis_run_id)
+    rows = session.execute(stmt).scalars().all()
+    
+    steps = load_playbook_steps()
+    result = {}
+    for r in rows:
+        step_meta = steps.get(r.step_id, {})
+        result.setdefault(r.hypothesis_id, []).append(PlaybookRecommendation(
+            recommendation_id=r.id,
+            analysis_run_id=r.analysis_run_id,
+            incident_id=r.incident_id,
+            hypothesis_id=r.hypothesis_id,
+            step_id=r.step_id,
+            title=step_meta.get("title", r.step_id),
+            step_type=step_meta.get("step_type", "diagnostic"),
+            risk_level=step_meta.get("risk_level", "low"),
+            requires_human_approval=step_meta.get("requires_human_approval", True),
+            instructions="\n".join(insts) if isinstance(insts := step_meta.get("instructions", ""), list) else insts,
+            rationale=r.rationale
+        ))
+    return result
 
 @router.get("/{incident_id}/explanation", response_model=ExplanationOutput)
-def explanation(incident_id: str, session: DatabaseSession) -> ExplanationOutput:
-    incident, _, run_id = _current_context(session, incident_id)
-    return _explanation(session, run_id, incident_id, incident.top_hypothesis_id)
-
-
-@router.post("/{incident_id}/recompute", response_model=dict[str, Any])
-def recompute(incident_id: str, session: DatabaseSession) -> dict[str, Any]:
-    incident = IncidentRepository(session).get_by_id(incident_id)
-    if incident is None:
-        _api_error(http_status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Incident not found")
-    if not orchestrator.status()["analysis_engine_registered"]:
-        _api_error(
-            http_status.HTTP_503_SERVICE_UNAVAILABLE,
-            "ANALYSIS_NOT_READY",
-            "The RCA analysis engine is not registered",
+def explanation(incident_id: str, session: Session = Depends(get_session)) -> ExplanationOutput:
+    repo = IncidentRepository(session)
+    row = repo.get_by_id(incident_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
         )
-    prior_run_id = incident.current_analysis_run_id
-    orchestrator.recompute(incident_id, session)
-    session.refresh(incident)
-    return {
-        "request_id": f"req_{uuid.uuid4().hex}",
-        "generated_at": datetime.now(timezone.utc),
-        "analysis_run_id": incident.current_analysis_run_id,
-        "changed": incident.current_analysis_run_id != prior_run_id,
-    }
-
+    if not row.current_analysis_run_id:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": "No current analysis run found for incident", "details": []}
+        )
+        
+    explanation_row = session.scalar(
+        select(models.Explanation).where(models.Explanation.analysis_run_id == row.current_analysis_run_id)
+    )
+    if explanation_row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": "Explanation not found", "details": []}
+        )
+        
+    top_hyp = session.scalar(
+        select(models.Hypothesis).where(models.Hypothesis.analysis_run_id == row.current_analysis_run_id).order_by(models.Hypothesis.rank.asc())
+    )
+    if top_hyp is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": "No hypotheses found", "details": []}
+        )
+        
+    payload = explanation_row.payload
+    hyp_payload = next((h for h in payload.get("hypotheses", []) if h["hypothesis_id"] == top_hyp.id), None)
+    if hyp_payload is None:
+        # Fallback to the first payload entry
+        hyp_payload = payload.get("hypotheses", [{}])[0]
+        
+    claims = [ExplanationClaim(claim=c.get("text", c.get("claim", "")), evidence_ids=c.get("evidence_ids", [])) for c in hyp_payload.get("claims", [])]
+    return ExplanationOutput(
+        analysis_run_id=row.current_analysis_run_id,
+        incident_id=incident_id,
+        hypothesis_id=top_hyp.id,
+        generator=explanation_row.generator,
+        summary=hyp_payload.get("summary", explanation_row.payload.get("incident_summary", "Summary not available")),
+        claims=claims,
+        diagnostic_step_ids=hyp_payload.get("diagnostic_step_ids", []),
+        remediation_step_ids=hyp_payload.get("remediation_step_ids", [])
+    )
 
 @router.get("/{incident_id}/audit", response_model=list[AuditRecord])
 def audit(incident_id: str, session: DatabaseSession) -> list[AuditRecord]:
@@ -612,6 +434,23 @@ def audit(incident_id: str, session: DatabaseSession) -> list[AuditRecord]:
         _api_error(http_status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Incident not found")
     return audit_service.list_for_incident(incident_id, session)
 
+@router.post("/{incident_id}/recompute", response_model=dict[str, Any])
+def recompute(incident_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
+    repo = IncidentRepository(session)
+    row = repo.get_by_id(incident_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
+        )
+    from app.orchestration.orchestrator import orchestrator
+    if orchestrator._analysis_engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "ANALYSIS_NOT_READY", "message": "Analysis engine is not registered", "details": []}
+        )
+    run_id = orchestrator._run_rca_and_publish(row, trigger_event=None, session=session)
+    return {"analysis_run_id": run_id}
 
 @router.post("/{incident_id}/review", response_model=ReviewMutationResponse)
 def review(
@@ -625,13 +464,140 @@ def review(
         _api_error(exc.status_code, exc.code, exc.message, **exc.details)
 
 
-@router.get("/{incident_id}", response_model=IncidentSummary)
-def incident_summary(incident_id: str, session: DatabaseSession) -> IncidentSummary:
-    row = IncidentRepository(session).get_by_id(incident_id)
-    if row is None:
-        _api_error(
-            http_status.HTTP_404_NOT_FOUND,
-            "NOT_FOUND",
-            f"Incident not found: {incident_id}",
+@router.get("/{incident_id}/investigation", response_model=InvestigationResponse)
+def investigation(incident_id: str, session: Session = Depends(get_session)) -> InvestigationResponse:
+    repo = IncidentRepository(session)
+    incident_row = repo.get_by_id(incident_id)
+    if incident_row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
         )
-    return _incident_contract(row)
+        
+    run_id = incident_row.current_analysis_run_id
+    if not run_id:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": "No current analysis run found", "details": []}
+        )
+        
+    run_repo = AnalysisRunRepository(session)
+    run_row = run_repo.get_by_id(run_id)
+    if run_row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Analysis run not found: {run_id}", "details": []}
+        )
+        
+    # Evidence grouped
+    stmt_ev = select(models.Evidence).where(models.Evidence.analysis_run_id == run_id)
+    ev_rows = session.execute(stmt_ev).scalars().all()
+    evidence_by_hyp = {}
+    for r in ev_rows:
+        evidence_by_hyp.setdefault(r.hypothesis_id, []).append(ev_to_contract(r))
+
+    from collections import defaultdict
+    relevance = defaultdict(lambda: defaultdict(list))
+    for r in ev_rows:
+        if r.source_event_id:
+            relevance[r.source_event_id][r.hypothesis_id].append(r.reason_code)
+
+    # Build timeline
+    evals = repo.get_all_evaluations(incident_id)
+    timeline_items = []
+    for ev_eval in evals:
+        evt_row = session.get(models.Event, ev_eval.event_id)
+        if evt_row is not None:
+            timeline_items.append(TimelineItem(
+                event=event_to_contract(evt_row),
+                attachment_decision=ev_eval.decision,
+                attachment_score=ev_eval.attachment_score,
+                attachment_reasons=ev_eval.attachment_reasons,
+                hypothesis_relevance={
+                    hyp_id: sorted(list(set(reason_codes)))
+                    for hyp_id, reason_codes in relevance[ev_eval.event_id].items()
+                } if ev_eval.decision == "attached" else {}
+            ))
+    # Sort chronologically
+    timeline_items = sorted(timeline_items, key=lambda it: (it.event.timestamp, it.event.event_id))
+    
+    # Topology annotated snapshot
+    graph = get_topology_graph()
+    node_states, edge_states = _incident_annotation(graph, incident_id, session=session)
+    topology_snap = TopologySnapshot.model_validate(
+        graph.snapshot(node_states=node_states, edge_states=edge_states)
+    )
+    
+    # Hypotheses
+    stmt_hyps = select(models.Hypothesis).where(models.Hypothesis.analysis_run_id == run_id).order_by(models.Hypothesis.rank.asc())
+    hyp_rows = session.execute(stmt_hyps).scalars().all()
+    hyps_contract = [hyp_to_contract(r) for r in hyp_rows]
+        
+    # Recommendations grouped
+    stmt_rec = select(models.PlaybookRecommendation).where(models.PlaybookRecommendation.analysis_run_id == run_id)
+    rec_rows = session.execute(stmt_rec).scalars().all()
+    recs_by_hyp = {}
+    steps = load_playbook_steps()
+    for r in rec_rows:
+        step_meta = steps.get(r.step_id, {})
+        recs_by_hyp.setdefault(r.hypothesis_id, []).append(PlaybookRecommendation(
+            recommendation_id=r.id,
+            analysis_run_id=r.analysis_run_id,
+            incident_id=r.incident_id,
+            hypothesis_id=r.hypothesis_id,
+            step_id=r.step_id,
+            title=step_meta.get("title", r.step_id),
+            step_type=step_meta.get("step_type", "diagnostic"),
+            risk_level=step_meta.get("risk_level", "low"),
+            requires_human_approval=step_meta.get("requires_human_approval", True),
+            instructions="\n".join(insts) if isinstance(insts := step_meta.get("instructions", ""), list) else insts,
+            rationale=r.rationale
+        ))
+        
+    # Explanation
+    explanation_contract = explanation(incident_id, session)
+    
+    # Reviews
+    stmt_rev = select(models.Review).where(models.Review.analysis_run_id == run_id).order_by(models.Review.created_at.asc())
+    rev_rows = session.execute(stmt_rev).scalars().all()
+    reviews_contract = [
+        ReviewRecord(
+            review_id=r.id,
+            incident_id=r.incident_id,
+            analysis_run_id=r.analysis_run_id,
+            hypothesis_id=r.hypothesis_id,
+            decision=r.decision,
+            client_action_id=r.client_action_id,
+            requested_evidence_id=r.requested_evidence_id,
+            reviewer=r.reviewer,
+            comment=r.comment,
+            created_at=_to_utc(r.created_at)
+        ) for r in rev_rows
+    ]
+    
+    # AnalysisRun
+    ar_contract = AnalysisRun(
+        analysis_run_id=run_row.id,
+        incident_id=run_row.incident_id,
+        revision=run_row.revision,
+        status=run_row.status,
+        trigger_event_id=run_row.trigger_event_id,
+        input_fingerprint=run_row.input_fingerprint,
+        algorithm_version=run_row.algorithm_version,
+        created_at=_to_utc(run_row.created_at),
+        completed_at=_to_utc(run_row.completed_at)
+    )
+    
+    return InvestigationResponse(
+        generated_at=datetime.now(tz=timezone.utc),
+        analysis_run_id=run_id,
+        analysis_run=ar_contract,
+        incident=incident_to_summary(incident_row),
+        timeline=timeline_items,
+        topology=topology_snap,
+        hypotheses=hyps_contract,
+        evidence_by_hypothesis=evidence_by_hyp,
+        recommendations_by_hypothesis=recs_by_hyp,
+        explanation=explanation_contract,
+        reviews=reviews_contract
+    )

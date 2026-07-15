@@ -135,15 +135,131 @@ steps:
     rollback_note: Read-only diagnostic; no DNS record is changed.
     requires_human_approval: true
 
-  - step_id: inspect-certificate-state
-    title: Inspect certificate state
+# Structured recommendation steps consumed by the Playbook Engine
+# (app/playbooks/engine.py -> get_recommendations).
+recommendations:
+  # --- configuration_regression ---
+  - step_id: inspect-config-diff
+    title: Inspect configuration diff
     step_type: diagnostic
-    applicable_hypothesis_types: [certificate_or_tls_failure]
-    applicable_entity_types: [service, gateway]
-    preconditions: [certificate_metadata_available]
+    applicable_hypothesis_types:
+      - configuration_regression
+    applicable_entity_types:
+      - service
+      - router
+    preconditions:
+      - A recent configuration change is suspected within the incident window
     instructions:
-      - Review validity dates, trust-chain state, and TLS handshake errors.
-      - Identify whether the failure is localized to a certificate, client, or endpoint.
+      - Retrieve the configuration revision history for the affected entity.
+      - Diff the current running config against the last known-good revision.
+      - Highlight any parameters that changed immediately before the incident.
     risk_level: low
-    rollback_note: Read-only diagnostic; no certificate is changed.
+    rollback_note: null
+    requires_human_approval: false
+
+  - step_id: compare-pre-post-metrics
+    title: Compare pre/post-change metrics
+    step_type: diagnostic
+    applicable_hypothesis_types:
+      - configuration_regression
+    applicable_entity_types:
+      - service
+      - router
+    preconditions:
+      - The timestamp of the suspected configuration change is known
+    instructions:
+      - Plot key golden-signal metrics (latency, error rate, saturation) for a window spanning before and after the configuration change.
+      - Confirm the regression correlates with the change.
+    risk_level: low
+    rollback_note: null
+    requires_human_approval: false
+
+  - step_id: propose-config-rollback
+    title: Propose configuration rollback
+    step_type: remediation
+    applicable_hypothesis_types:
+      - configuration_regression
+    applicable_entity_types:
+      - service
+      - router
+    preconditions:
+      - The offending configuration change has been identified via diff
+      - A last known-good revision is available
+    instructions:
+      - Prepare a rollback to the last known-good configuration revision for the affected entity.
+      - Stage the change for review and apply only after human approval.
+      - Verify metrics recover post-rollback.
+    risk_level: high
+    rollback_note: >-
+      Re-applying the reverted change restores the prior state; capture the
+      current revision id before rollback so it can be reinstated if needed.
     requires_human_approval: true
+
+  # --- dos_or_traffic_surge ---
+  - step_id: inspect-ingress-patterns
+    title: Inspect ingress traffic patterns
+    step_type: diagnostic
+    applicable_hypothesis_types:
+      - dos_or_traffic_surge
+    applicable_entity_types:
+      - service
+      - load_balancer
+    preconditions:
+      - Ingress/edge telemetry is available for the incident window
+    instructions:
+      - Examine request volume, connection rate, and bandwidth at the ingress for the affected entity.
+      - Identify abnormal spikes and the endpoints or paths receiving the surge.
+    risk_level: low
+    rollback_note: null
+    requires_human_approval: false
+
+  - step_id: validate-source-distribution
+    title: Validate source IP distribution
+    step_type: diagnostic
+    applicable_hypothesis_types:
+      - dos_or_traffic_surge
+    applicable_entity_types:
+      - service
+      - load_balancer
+    preconditions:
+      - Access logs with client source addresses are available
+    instructions:
+      - Aggregate traffic by source IP, ASN, and geography.
+      - Distinguish a distributed attack from a legitimate organic surge or a single misbehaving client.
+    risk_level: low
+    rollback_note: null
+    requires_human_approval: false
+
+  # --- database_connection_exhaustion ---
+  - step_id: inspect-db-connections
+    title: Inspect database connection pool
+    step_type: diagnostic
+    applicable_hypothesis_types:
+      - database_connection_exhaustion
+    applicable_entity_types:
+      - database
+    preconditions:
+      - Database connection metrics are available for the incident window
+    instructions:
+      - Review active vs. maximum connections, connection wait time, and pool saturation on the affected database node.
+      - Confirm connection pool exhaustion.
+    risk_level: low
+    rollback_note: null
+    requires_human_approval: false
+
+  - step_id: review-query-latency
+    title: Review query latency and slow queries
+    step_type: diagnostic
+    applicable_hypothesis_types:
+      - database_connection_exhaustion
+    applicable_entity_types:
+      - database
+    preconditions:
+      - Slow-query logging or query telemetry is available
+    instructions:
+      - Identify long-running or high-frequency queries that hold connections.
+      - Correlate them with the onset of pool exhaustion.
+    risk_level: low
+    rollback_note: null
+    requires_human_approval: false
+

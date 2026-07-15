@@ -16,7 +16,10 @@ competing copies.
 
 | Artifact | SHA-256 |
 |---|---|
-| `backend/openapi.json` | `a0eb1cdb7d3f413fca55b2792cd75e801041bc5bb52474a7c2e2f3744d216d0c` |
+| `backend/openapi.json` | `1c30a14f220f0c5826797ad778ed8ea84150defa80685da82ae6743f7347ae58` |
+| `backend/app/fixtures/topology.json` | `69b6523e1e6e59e3a9f470be141517a7e3cbef2097d08187d8c3ca90a15ef6a0` |
+| `backend/app/fixtures/hypotheses.yaml` | `4b5e19675f8b1c0b51609207702b70c9ae11466057e648253a2d66522b762aa5` |
+| `backend/app/fixtures/symptom_families.yaml` | `dd2562735dd0537356893eb7f11f1879774ec11773c203f2749b15433c8eed53` |
 | `backend/tests/fixtures/golden_events.jsonl` | `06612568cea892f214b245d95f2ebff0c04d659d1c931c2b74e26df82f60659a` |
 | `backend/tests/fixtures/golden_anomalies.json` | `fa57ab8b3052648592ef1c48d281905cba3b38e8ff12a905168e966ff362eb8f` |
 | `backend/tests/fixtures/golden_incident_bundle.json` | `fbcb25d76bbfc52ae14c8686a36b853eca4d36a89fbd897eb0a392f635914cfe` |

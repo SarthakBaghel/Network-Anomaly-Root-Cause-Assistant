@@ -9894,6 +9894,7 @@
       "change_ticket": "CHG-DEMO-001",
       "changed_at": "2026-07-14T09:30:00.000Z",
       "config_key": "rate_limit.enabled",
+      "context_only": true,
       "new_value": false,
       "old_value": true,
       "provenance": {
@@ -10281,7 +10282,7 @@
       "trace_id": "scenario_gateway_rate_limit_001"
     },
     "schema_version": "1.0",
-    "severity": 0.8,
+    "severity": 0.88,
     "signal_name": null,
     "signal_value": null,
     "source": "simulator.syslog",

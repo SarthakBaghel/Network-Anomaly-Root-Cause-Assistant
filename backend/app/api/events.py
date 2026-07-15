@@ -95,6 +95,13 @@ def ingest_batch(
         results=results,
     )
 
+def _result(result: IngestionResult) -> dict[str, Any]:
+    return {
+        "status": result.status,
+        "event_id": result.event_id,
+        "reason_codes": result.reason_codes,
+        "collapsed_group_id": result.collapsed_group_id,
+    }
 
 @router.get("/events", response_model=list[CanonicalEvent])
 def list_events(

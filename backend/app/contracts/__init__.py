@@ -3,6 +3,7 @@ from .anomalies import AnomalyRecord
 from .api import (
     AuditRecord,
     ErrorEnvelope,
+    ExplanationClaim,
     ExplanationOutput,
     InvestigationResponse,
     PlaybookRecommendation,
@@ -43,6 +44,7 @@ __all__ = [
     "EvidenceCoverage",
     "EvidenceItem",
     "EvidenceKind",
+    "ExplanationClaim",
     "ExplanationOutput",
     "Hypothesis",
     "IncidentStatus",

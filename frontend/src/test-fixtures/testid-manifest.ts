@@ -22,4 +22,10 @@ export const incidentRowTestId = (incidentId: string) =>
   `incident-row-${incidentId}`;
 export const hypothesisRowTestId = (hypothesisId: string) =>
   `hypothesis-row-${hypothesisId}`;
+export const hypothesisConfirmTestId = (hypothesisId: string) =>
+  `${TEST_IDS.hypothesisConfirm}-${hypothesisId}`;
+export const hypothesisRejectTestId = (hypothesisId: string) =>
+  `${TEST_IDS.hypothesisReject}-${hypothesisId}`;
+export const evidenceRequestTestId = (hypothesisId: string) =>
+  `${TEST_IDS.evidenceRequest}-${hypothesisId}`;
 export const sourceHealthTestId = (source: string) => `source-health-${source}`;

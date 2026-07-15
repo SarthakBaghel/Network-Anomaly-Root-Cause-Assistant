@@ -14,9 +14,9 @@ from app.contracts import (
     RawIngestionRequest,
 )
 from app.config import settings
-from app.db import models
 from app.db.repositories import EventRepository
 from app.ingestion import ingestion_pipeline
+from app.ingestion.pipeline import event_to_contract
 
 from .dependencies import get_session
 
@@ -27,27 +27,6 @@ DatabaseSession = Annotated[Session, Depends(get_session)]
 
 def _request_id(value: str | None) -> str:
     return value or f"req_{uuid.uuid4().hex}"
-
-
-def _event_contract(row: models.Event) -> CanonicalEvent:
-    return CanonicalEvent(
-        event_id=row.id,
-        timestamp=row.timestamp.replace(tzinfo=row.timestamp.tzinfo or timezone.utc),
-        ingested_at=row.ingested_at.replace(tzinfo=row.ingested_at.tzinfo or timezone.utc),
-        entity_id=row.entity_id,
-        modality=row.modality,
-        event_type=row.event_type,
-        severity=row.severity,
-        signal_name=row.signal_name,
-        signal_value=row.signal_value,
-        unit=row.unit,
-        trace_or_session_id=row.trace_or_session_id,
-        source=row.source,
-        source_record_id=row.source_record_id,
-        schema_version=row.schema_version,
-        quality_flags=list(row.quality_flags or []),
-        raw_payload=dict(row.raw_payload or {}),
-    )
 
 
 @router.post("/events", response_model=IngestionMutationResponse)
@@ -95,14 +74,6 @@ def ingest_batch(
         results=results,
     )
 
-def _result(result: IngestionResult) -> dict[str, Any]:
-    return {
-        "status": result.status,
-        "event_id": result.event_id,
-        "reason_codes": result.reason_codes,
-        "collapsed_group_id": result.collapsed_group_id,
-    }
-
 @router.get("/events", response_model=list[CanonicalEvent])
 def list_events(
     session: DatabaseSession,
@@ -111,7 +82,7 @@ def list_events(
     entity_id: str | None = None,
 ) -> list[CanonicalEvent]:
     return [
-        _event_contract(row)
+        event_to_contract(row)
         for row in EventRepository(session).list_events(
             limit=limit, modality=modality, entity_id=entity_id
         )
@@ -123,7 +94,7 @@ def get_event(event_id: str, session: DatabaseSession) -> CanonicalEvent:
     row = EventRepository(session).get_by_id(event_id)
     if row is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
-    return _event_contract(row)
+    return event_to_contract(row)
 
 
 @router.get("/quarantine", response_model=dict[str, Any])

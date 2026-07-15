@@ -6,14 +6,14 @@
       "origin": "checked-in-profile",
       "path": "backend/app/fixtures/reference_profiles/log_templates.yaml",
       "record_count": null,
-      "sha256": "4508414fa6393e82104c522fb0e546218e04846214b9c6c5947eb8fd2f42682e"
+      "sha256": "cf4073ee410418c36315e260ca1c3620fd1c0775b0c7d683ad33913067a9f7ac"
     },
     {
       "license": "project-authored synthetic fixture",
       "origin": "checked-in-profile",
       "path": "backend/app/fixtures/reference_profiles/network_profile.json",
       "record_count": null,
-      "sha256": "6f7ca4b2e7ec44ece9d7e7f44075157e5415f9f8cd73e474b943e36e67a8eb90"
+      "sha256": "fdd5f5015478b960406f3d97fff9ad0eeb0e6ffaeeb0efe7117eb9fbc66af5fe"
     },
     {
       "license": "project-authored synthetic fixture",

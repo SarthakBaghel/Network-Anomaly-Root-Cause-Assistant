@@ -55,6 +55,13 @@ def test_remediation_steps_require_human_approval():
         assert rec.requires_human_approval is True
 
 
+def test_every_catalogue_step_requires_human_approval():
+    assert all(
+        recommendation.requires_human_approval
+        for recommendation in engine.load_recommendations()
+    )
+
+
 def test_instructions_are_lists():
     for rec in engine.load_recommendations():
         assert isinstance(rec.instructions, list)

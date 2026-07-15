@@ -163,3 +163,15 @@ contracts only when its affected owners have reviewed it.
   addressed to their event but are retrieved for an incident through their
   sanitized `payload.incident_id` reference.
 - **Affected owners:** all backend producers; Persons 1 and 5 own the boundary
+
+## M0-014 — Accepted-event orchestration handoff
+
+- **Status:** accepted for the Person 1 recovery integration
+- **Decision:** a newly accepted representative is published exactly once to
+  `OrchestrationPublisher` after persistence. Idempotent retries, collapsed
+  duplicates, and quarantined records are not republished. The ingestion
+  response reports `analysis_state="processed"` after that synchronous handoff.
+- **Runtime path:** API ingestion and simulator ingestion both use the shared
+  `IngestionPipeline`; feature routes do not invoke detectors, incident logic,
+  or RCA modules directly.
+- **Affected owners:** Persons 1 and 3

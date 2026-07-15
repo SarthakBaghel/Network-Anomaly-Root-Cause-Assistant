@@ -1,25 +1,17 @@
 from __future__ import annotations
-import uuid
-from datetime import datetime, timezone
-from typing import Any, Literal, Annotated
+
 import base64
 import binascii
 import json
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from itertools import pairwise
 from typing import Annotated, Any, Never
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from fastapi.responses import JSONResponse
-from sqlalchemy import select, and_
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.db import models
-from app.db.session import get_session
-from app.db.repositories import IncidentRepository, AnalysisRunRepository, AuditRepository
 from app.contracts import (
     AnalysisRun,
     AuditRecord,
@@ -36,7 +28,6 @@ from app.contracts import (
     ReviewRequest,
     TimelineItem,
     TopologySnapshot,
-    AnalysisRun,
     ExplanationClaim,
     EvidenceCoverage,
 )
@@ -44,16 +35,15 @@ from app.db import models
 from app.db.repositories import (
     AnalysisRunRepository,
     EvidenceRepository,
-    EventRepository,
     HypothesisRepository,
     IncidentRepository,
-    ReviewRepository,
 )
+from app.ingestion.pipeline import event_to_contract
 from app.orchestration.orchestrator import orchestrator
 from app.playbooks.engine import get_step
 from app.audit.service import audit_service
 from app.reviews.service import ReviewServiceError, review_service
-from app.topology.graph import TopologyPathNotFoundError, get_topology_graph
+from app.topology.graph import get_topology_graph
 
 from .dependencies import get_session
 from .topology import _incident_annotation
@@ -100,34 +90,6 @@ def _incident_contract(row: models.Incident) -> IncidentSummary:
     )
 
 
-# Aliases used throughout the new P4/P5 rewrite of incidents.py
-_to_utc = _utc
-incident_to_summary = _incident_contract
-
-
-def event_to_contract(row: models.Event) -> CanonicalEvent:
-    """Convert a persisted Event ORM row to a CanonicalEvent contract."""
-    from app.contracts import Modality
-    return CanonicalEvent(
-        event_id=row.id,
-        timestamp=_utc(row.timestamp),
-        ingested_at=_utc(row.ingested_at),
-        entity_id=row.entity_id,
-        modality=Modality(row.modality),
-        event_type=row.event_type,
-        severity=row.severity or 0.0,
-        signal_name=row.signal_name,
-        signal_value=row.signal_value,
-        unit=row.unit,
-        trace_or_session_id=row.trace_or_session_id,
-        source=row.source,
-        source_record_id=row.source_record_id,
-        schema_version=row.schema_version or "1.0",
-        quality_flags=list(row.quality_flags or []),
-        raw_payload=dict(row.raw_payload or {}),
-    )
-
-
 def load_playbook_steps() -> dict:
     """Load playbook step metadata keyed by step_id from the playbooks engine."""
     from app.playbooks.engine import load_recommendations
@@ -162,28 +124,7 @@ def ev_to_contract(row: models.Evidence) -> EvidenceItem:
         statement=row.statement,
         relevance=row.relevance,
         reason_code=row.reason_code,
-        created_at=_to_utc(row.created_at)
-    )
-
-
-def _event_contract(row: models.Event) -> CanonicalEvent:
-    return CanonicalEvent(
-        event_id=row.id,
-        timestamp=_utc(row.timestamp),
-        ingested_at=_utc(row.ingested_at),
-        entity_id=row.entity_id,
-        modality=row.modality,
-        event_type=row.event_type,
-        severity=row.severity,
-        signal_name=row.signal_name,
-        signal_value=row.signal_value,
-        unit=row.unit,
-        trace_or_session_id=row.trace_or_session_id,
-        source=row.source,
-        source_record_id=row.source_record_id,
-        schema_version=row.schema_version,
-        quality_flags=list(row.quality_flags or []),
-        raw_payload=dict(row.raw_payload or {}),
+        created_at=_utc(row.created_at)
     )
 
 
@@ -236,7 +177,7 @@ def _current_context(
 def _encode_cursor(row: models.Incident, filters: dict[str, Any]) -> str:
     payload = json.dumps(
         {
-            "started_at": _to_utc(row.started_at).isoformat(),
+            "started_at": _utc(row.started_at).isoformat(),
             "incident_id": row.id,
             "filters": filters,
         },
@@ -260,7 +201,7 @@ def _decode_cursor(
         incident_id = str(payload["incident_id"])
         if not incident_id:
             raise ValueError("empty incident id")
-        return _to_utc(started_at), incident_id
+        return _utc(started_at), incident_id
     except (
         binascii.Error,
         KeyError,
@@ -304,7 +245,7 @@ def list_incidents(
     )
     page = rows[:limit]
     return {
-        "items": [incident_to_summary(row) for row in page],
+        "items": [_incident_contract(row) for row in page],
         "next_cursor": _encode_cursor(page[-1], filters) if len(rows) > limit else None,
     }
 
@@ -317,7 +258,7 @@ def incident_summary(incident_id: str, session: Session = Depends(get_session)) 
             status_code=404,
             detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
         )
-    return incident_to_summary(row)
+    return _incident_contract(row)
 
 @router.get("/{incident_id}/timeline", response_model=dict[str, Any])
 def timeline(incident_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
@@ -467,7 +408,7 @@ def explanation(incident_id: str, session: Session = Depends(get_session)) -> Ex
 @router.get("/{incident_id}/audit", response_model=list[AuditRecord])
 def audit(incident_id: str, session: DatabaseSession) -> list[AuditRecord]:
     if IncidentRepository(session).get_by_id(incident_id) is None:
-        _api_error(http_status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Incident not found")
+        _api_error(status.HTTP_404_NOT_FOUND, "NOT_FOUND", "Incident not found")
     return audit_service.list_for_incident(incident_id, session)
 
 @router.post("/{incident_id}/recompute", response_model=dict[str, Any])
@@ -479,13 +420,16 @@ def recompute(incident_id: str, session: Session = Depends(get_session)) -> dict
             status_code=404,
             detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
         )
-    from app.orchestration.orchestrator import orchestrator
-    if orchestrator._analysis_engine is None:
+    if not orchestrator.status()["analysis_engine_registered"]:
         raise HTTPException(
-            status_code=503,
-            detail={"code": "ANALYSIS_NOT_READY", "message": "Analysis engine is not registered", "details": []}
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "ANALYSIS_NOT_READY",
+                "message": "Analysis engine is not registered",
+                "details": [],
+            },
         )
-    run_id = orchestrator._run_rca_and_publish(row, trigger_event=None, session=session)
+    run_id = orchestrator.recompute(incident_id, session)
     return {"analysis_run_id": run_id}
 
 @router.post("/{incident_id}/review", response_model=ReviewMutationResponse)
@@ -607,7 +551,7 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
             requested_evidence_id=r.requested_evidence_id,
             reviewer=r.reviewer,
             comment=r.comment,
-            created_at=_to_utc(r.created_at)
+            created_at=_utc(r.created_at)
         ) for r in rev_rows
     ]
     
@@ -620,15 +564,15 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
         trigger_event_id=run_row.trigger_event_id,
         input_fingerprint=run_row.input_fingerprint,
         algorithm_version=run_row.algorithm_version,
-        created_at=_to_utc(run_row.created_at),
-        completed_at=_to_utc(run_row.completed_at)
+        created_at=_utc(run_row.created_at),
+        completed_at=_utc(run_row.completed_at)
     )
     
     return InvestigationResponse(
         generated_at=datetime.now(tz=timezone.utc),
         analysis_run_id=run_id,
         analysis_run=ar_contract,
-        incident=incident_to_summary(incident_row),
+        incident=_incident_contract(incident_row),
         timeline=timeline_items,
         topology=topology_snap,
         hypotheses=hyps_contract,

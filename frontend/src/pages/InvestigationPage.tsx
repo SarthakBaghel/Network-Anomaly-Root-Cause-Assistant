@@ -22,6 +22,9 @@ import { apiClient } from "../api/client";
 import investigationFixture from "../test-fixtures/golden-investigation-response.json";
 import {
   TEST_IDS,
+  evidenceRequestTestId,
+  hypothesisConfirmTestId,
+  hypothesisRejectTestId,
   hypothesisRowTestId,
 } from "../test-fixtures/testid-manifest";
 import { Card } from "../components/ui/Card";
@@ -693,7 +696,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     <div className="mt-4 flex flex-wrap gap-3">
                       <Button
                         variant="success"
-                        data-testid={TEST_IDS.hypothesisConfirm}
+                        data-testid={hypothesisConfirmTestId(hypothesis.hypothesis_id)}
                         aria-label="Confirm hypothesis"
                         icon={<CheckIcon className="h-4 w-4" />}
                         loading={busy}
@@ -706,7 +709,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       </Button>
                       <Button
                         variant="danger"
-                        data-testid={TEST_IDS.hypothesisReject}
+                        data-testid={hypothesisRejectTestId(hypothesis.hypothesis_id)}
                         aria-label="Reject hypothesis"
                         icon={<XIcon className="h-4 w-4" />}
                         loading={busy}
@@ -719,7 +722,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       </Button>
                       <Button
                         variant="warning"
-                        data-testid={TEST_IDS.evidenceRequest}
+                        data-testid={evidenceRequestTestId(hypothesis.hypothesis_id)}
                         aria-label="Request evidence"
                         icon={<HelpCircleIcon className="h-4 w-4" />}
                         loading={busy}

@@ -12,6 +12,9 @@ import { OverviewPage } from '../src/pages/OverviewPage'
 import { goldenEvents, goldenInvestigationResponse } from '../src/test-fixtures/fixture-validation'
 import {
   TEST_IDS,
+  evidenceRequestTestId,
+  hypothesisConfirmTestId,
+  hypothesisRejectTestId,
   hypothesisRowTestId,
   incidentRowTestId,
   sourceHealthTestId,
@@ -20,6 +23,7 @@ import {
 vi.mock('@xyflow/react', () => ({
   ReactFlow: ({ children }: { children: ReactNode }) => <div data-testid="react-flow-canvas">{children}</div>,
   Background: () => null,
+  Controls: () => null,
 }))
 
 describe('Person 2 Phase 0', () => {
@@ -46,9 +50,9 @@ describe('Person 2 Phase 0', () => {
     expect(screen.getByTestId(TEST_IDS.topologyGraph)).toBeInTheDocument()
     expect(screen.getByTestId(TEST_IDS.auditTrailPanel)).toBeInTheDocument()
     expect(screen.getByTestId(hypothesisRowTestId('hyp_001'))).toHaveTextContent('92.1')
-    expect(screen.getByTestId(TEST_IDS.hypothesisConfirm)).toBeInTheDocument()
-    expect(screen.getByTestId(TEST_IDS.hypothesisReject)).toBeInTheDocument()
-    expect(screen.getByTestId(TEST_IDS.evidenceRequest)).toBeInTheDocument()
+    expect(screen.getByTestId(hypothesisConfirmTestId('hyp_001'))).toBeInTheDocument()
+    expect(screen.getByTestId(hypothesisRejectTestId('hyp_001'))).toBeInTheDocument()
+    expect(screen.getByTestId(evidenceRequestTestId('hyp_001'))).toBeInTheDocument()
   })
 
   it('provides stable test IDs for every Phase 0 control', () => {

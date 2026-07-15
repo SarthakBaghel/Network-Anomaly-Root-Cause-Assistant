@@ -21,7 +21,10 @@ vi.mock("../src/hooks/usePolling", () => ({
 import { InvestigationPage } from "../src/pages/InvestigationPage";
 import { apiClient } from "../src/api/client";
 import investigationFixture from "../src/test-fixtures/golden-investigation-response.json";
-import { TEST_IDS } from "../src/test-fixtures/testid-manifest";
+import {
+  TEST_IDS,
+  hypothesisConfirmTestId,
+} from "../src/test-fixtures/testid-manifest";
 
 describe("InvestigationPage", () => {
   afterEach(() => {
@@ -77,7 +80,7 @@ describe("InvestigationPage", () => {
     );
     const hypothesisRow = hypothesisRows[0];
     const confirmButton = within(hypothesisRow).getByTestId(
-      "hypothesis-confirm-btn",
+      hypothesisConfirmTestId("hyp_001"),
     );
     fireEvent.click(confirmButton);
 

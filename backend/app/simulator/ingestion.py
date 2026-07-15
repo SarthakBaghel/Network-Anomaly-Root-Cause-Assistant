@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import hashlib
+import json
 from typing import Literal, Protocol
 
 from app.contracts import CanonicalEvent
@@ -42,8 +44,16 @@ class PersistentIngestionSink:
     """Runtime sink: simulator records traverse the same pipeline as API records."""
 
     def ingest(self, source: str, raw: dict) -> IngestionOutcome:
-        import uuid as _uuid
-        request_id = str(_uuid.uuid4())
+        request_material = json.dumps(
+            {"source": source, "raw": raw},
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        request_id = (
+            "simulator:"
+            + hashlib.sha256(request_material.encode("utf-8")).hexdigest()[:24]
+        )
         with session_scope() as session:
             pipeline = IngestionPipeline()
             result = pipeline.ingest(source=source, raw=raw, request_id=request_id, session=session)
@@ -54,4 +64,3 @@ class PersistentIngestionSink:
                 return IngestionOutcome("collapsed")
             row = session.get(Event, result.event_id) if result.event_id else None
             return IngestionOutcome("accepted", event=event_to_contract(row) if row else None)
-

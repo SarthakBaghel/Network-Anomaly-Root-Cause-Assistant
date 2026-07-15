@@ -1,20 +1,9 @@
-from __future__ import annotations
+"""Shared FastAPI dependencies.
 
-from collections.abc import Iterator
-from sqlalchemy.orm import Session
+The session dependency is re-exported rather than reimplemented so tests and
+all routers override the same callable identity.
+"""
 
-from app.db.session import SessionLocal
+from app.db.session import get_session
 
-
-def get_session() -> Iterator[Session]:
-    """One transaction per API request."""
-
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+__all__ = ["get_session"]

@@ -172,6 +172,7 @@ class IngestionPipeline:
         raw: dict[str, Any],
         request_id: str,
         session: Session,
+        publish: bool = True,
     ) -> IngestionMutationResponse:
         now = datetime.now(timezone.utc)
         clean_raw, _ = _redact(raw)
@@ -292,13 +293,20 @@ class IngestionPipeline:
                     representative_event_id=event.event_id,
                 )
             )
+        if publish:
+            # Accepted representatives enter the single serialized runtime
+            # orchestrator. Import lazily to keep ingestion contracts usable
+            # without pulling the full analysis graph into adapter-only tests.
+            from app.orchestration.publisher import OrchestrationPublisher
+
+            OrchestrationPublisher(session).publish(event)
         return IngestionMutationResponse(
             status="accepted",
             request_id=request_id,
             generated_at=now,
             event_id=event.event_id,
             source_record_id=event.source_record_id,
-            analysis_state="not_started",
+            analysis_state="processed" if publish else "not_started",
         )
 
     def _quarantine(

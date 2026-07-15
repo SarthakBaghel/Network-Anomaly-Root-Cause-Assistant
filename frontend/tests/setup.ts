@@ -1,4 +1,16 @@
 import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import React from "react";
+
+import { server } from "../src/mocks/server";
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => {
+  cleanup();
+  server.resetHandlers();
+});
+afterAll(() => server.close());
 
 // Provide ResizeObserver mock for components that rely on it
 class ResizeObserver {
@@ -25,9 +37,6 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // Mock recharts to avoid ResponsiveContainer measuring issues in JSDOM
-import { vi } from "vitest";
-import React from "react";
-
 vi.mock("recharts", () => {
   return {
     ResponsiveContainer: ({ children }: any) =>

@@ -2172,11 +2172,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TimelineItem"
-                  },
                   "title": "Response Timeline Api V1 Incidents  Incident Id  Timeline Get",
-                  "type": "array"
+                  "type": "object"
                 }
               }
             },

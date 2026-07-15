@@ -145,7 +145,7 @@
   - P1 owns loader interfaces, validation, startup wiring, and cross-catalogue referential-integrity tests.
 
 - [x] **P1-09**: Publish the handoff contract pack (not the feature-owned fixture content): OpenAPI JSON, JSON Schemas, fixed IDs, common error envelope examples, `analysis_run_id` consistency example, and `make validate-fixtures`. Validate fixture content supplied by P3/P4/P5 without taking over ownership.
-  ✅ `openapi.json`, `docs/handoff-manifest.md`, `docs/api-decisions.md` (M0-001 through M0-008) committed. Milestone 0 validator: 16 deterministic + 6 handoff artifacts validated.
+  ✅ `openapi.json`, `docs/handoff-manifest.md`, and `docs/api-decisions.md` are synchronized. Milestone 0 validator: 16 deterministic + 7 handoff artifacts validated.
 
 - [x] **P1-10**: Seed `historical_incidents` as P0 with one gateway-rate-limit incident per §20.2 (this resolution preserves the frozen `92.1` score):
   - Same confirmed cause as the golden scenario, half (not all) of the fingerprint features
@@ -154,7 +154,7 @@
   ✅ `hist_gateway_rate_limit_001` seeded via `seed_demo.py`; re-seeded automatically on reset and startup.
 
 - [x] **P1-11**: Write `backend/tests/contract/test_contracts.py` — validates all fixture JSON against Pydantic models. This is the gate: if this test breaks, the PR is blocked.
-  ✅ 7/7 contract + ground-truth-firewall tests green.
+  ✅ 27/27 contract tests and 2/2 dedicated ground-truth-firewall tests green.
 
 - [x] **P1-12**: Create `scripts/bootstrap.sh` (idempotent), `scripts/dev.sh`, `scripts/seed_demo.py`, `scripts/verify_demo.py` as described in §6.1.
   ✅ All scripts present. `bootstrap.sh` idempotent.
@@ -166,12 +166,12 @@
   - Idempotent no-op if fingerprint matches current run
   - Build candidate/evidence/recommendation/explanation outputs against one run ID; validate them; then mark the prior run `superseded` and switch `incident.current_analysis_run_id` in one transaction
   - On failure: persist `status=failed` with sanitized reason + `PIPELINE_STAGE_FAILED`; leave the prior run current
-  ✅ `orchestration/orchestrator.py` + `reset_service.py` implemented. Protocol interfaces defined for P3/P4/P5. 13/13 unit tests green.
+  ✅ `orchestration/orchestrator.py` + `reset_service.py` implemented. Protocol interfaces defined for P3/P4/P5; accepted-event runtime handoff and atomic publication tests are green.
 
 ### Phase 1 — Integration Gating (Ongoing throughout day)
 
 - [x] **P1-14 — Gate: Milestone 0** (~Hour 2): All contracts validate, both apps boot, health/ready endpoints respond, and each fixture owner has a passing producer/consumer contract test. Feature work already in progress may continue after sign-off.
-  ✅ **SIGNED OFF.** 25/25 backend tests pass. `validate_milestone0.py` green (16 deterministic + 6 handoff artifacts). Health + ready endpoints respond. Milestone 0 gate cleared.
+  ✅ **SIGNED OFF.** `validate_milestone0.py` is green (16 deterministic + 7 handoff artifacts). Health + ready endpoints respond with all components ready.
 
 - [x] **P1-15 — Gate: Milestone 1** (~Hour 6): Person 3's pipeline produces events; quarantine and collapse work; per-source counters visible. Sign off.
   ✅ **SIGNED OFF.** Ingestion adapters, alarm collapsing, and rolling Z-score detectors are fully integrated and verified (all 74/74 unit/integration tests green).
@@ -186,12 +186,12 @@
   ✅ **SIGNED OFF.** Investigation details, playbooks, audits, and reviews are fully wired and functional through `/incidents/{id}/investigation` and `/incidents/{id}/review` endpoints.
 
 - [x] **P1-19 — Gate: Milestone 5** (~Hour 22): `make verify` green twice after reset/replay. Demo rehearsal done. Tag commit as demo candidate.
-  ✅ **SIGNED OFF.** All 76 unit, contract, and integration tests passed cleanly in the `.venv` context. Verified multiple reset-replay cycles.
+  ✅ **SIGNED OFF.** Recovery rehearsal completed between two green `make verify` runs. Final gate: 27 contract tests, 2 firewall tests, 197 backend tests passed (34 optional external-dataset skips), 14 frontend tests, and a production frontend build.
 
 ### Phase 2 — Docs / Demo
 
 - [x] **P1-20**: Write `docs/api-decisions.md` — document any contract decisions made during the build.
-  ✅ M0-001 through M0-008 recorded in `docs/api-decisions.md`.
+  ✅ M0-001 through M0-014 recorded in `docs/api-decisions.md`.
 - [x] **P1-21**: Write `docs/demo-script.md` based on blueprint §27 — step-by-step talking points with fallback paths for each failure mode.
   ✅ Done. Contains step-by-step presentation script, talking points, and failure fallbacks.
 - [x] **P1-22**: Implement `ResetService` and `POST /api/v1/simulator/reset` orchestration (§5.2): stop via P3's simulator hook, acquire the analysis lock, clear demo rows in FK-safe order, reload topology + seeded history, call P3's deterministic clock/state reset hook, and write one `DEMO_RESET` audit entry. P3 owns emitter state; P1 owns the cross-domain transaction and API wiring.

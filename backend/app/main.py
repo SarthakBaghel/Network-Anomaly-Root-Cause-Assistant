@@ -28,8 +28,6 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
 def _startup() -> None:
     """Idempotent startup: loads topology + seeds history if not already present."""
     from app.db.session import session_scope
-    from app.incidents import incident_manager
-    from app.orchestration.orchestrator import orchestrator
     from app.orchestration.reset_service import (
         _reload_topology,
         _seed_historical_incident,
@@ -37,15 +35,16 @@ def _startup() -> None:
     from app.db import models
     from sqlalchemy import select
 
-    # Register components on the orchestrator
+    # Register production components through the frozen orchestration boundaries.
     from app.orchestration.orchestrator import orchestrator
     from app.detection.service import DetectorService
-    from app.incidents import IncidentManager
-    from app.rca.engine import AnalysisEngine
+    from app.incidents import incident_manager
+    from app.orchestration.rca_adapter import RcaAnalysisAdapter
+    from app.rca.analysis_engine import AnalysisEngine
 
     orchestrator.register_detector(DetectorService())
-    orchestrator.register_incident_manager(IncidentManager())
-    orchestrator.register_analysis_engine(AnalysisEngine())
+    orchestrator.register_incident_manager(incident_manager)
+    orchestrator.register_analysis_engine(RcaAnalysisAdapter(AnalysisEngine()))
 
     try:
         with session_scope() as session:
@@ -60,7 +59,6 @@ def _startup() -> None:
                 _seed_historical_incident(session)
             else:
                 logger.debug("Startup: topology already loaded, skipping")
-        orchestrator.register_incident_manager(incident_manager)
     except Exception:
         logger.exception(
             "Startup: failed to load topology or seed history. "

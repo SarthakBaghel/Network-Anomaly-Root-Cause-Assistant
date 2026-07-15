@@ -258,7 +258,7 @@ class AnalysisOrchestrator:
         with self._lock:
             self._run_pipeline(event, session)
 
-    def recompute(self, incident_id: str, session: Session) -> None:
+    def recompute(self, incident_id: str, session: Session) -> str:
         """Trigger a forced re-analysis for an existing incident.
 
         Used by POST /incidents/{id}/recompute. Idempotent if the
@@ -269,7 +269,9 @@ class AnalysisOrchestrator:
             incident = incident_repo.get_by_id(incident_id)
             if incident is None:
                 raise ValueError(f"Incident not found: {incident_id}")
-            self._run_rca_and_publish(incident, trigger_event=None, session=session)
+            return self._run_rca_and_publish(
+                incident, trigger_event=None, session=session
+            )
 
     # ------------------------------------------------------------------
     # Pipeline stages (private)

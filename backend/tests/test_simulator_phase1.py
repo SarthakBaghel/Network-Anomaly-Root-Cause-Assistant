@@ -1,6 +1,7 @@
 import inspect
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -10,6 +11,9 @@ from app.contracts import CanonicalEvent
 from app.simulator.emitters import AlertmanagerEmitter, ConfigAuditEmitter, PrometheusEmitter, SyslogEmitter
 from app.simulator.engine import SimulatorEngine
 from app.simulator.ingestion import AdapterValidationSink
+
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def test_four_emitters_have_distinct_sources_shapes_and_common_envelope():
@@ -66,7 +70,12 @@ def test_trigger_emits_complete_golden_stream_only_through_ingestion():
     }
     events = sorted(sink.accepted_events, key=lambda event: (event.ingested_at, event.event_id))
     expected = sorted(
-        [CanonicalEvent.model_validate(json.loads(line)) for line in open("tests/fixtures/golden_events.jsonl", encoding="utf-8")],
+        [
+            CanonicalEvent.model_validate(json.loads(line))
+            for line in (FIXTURES / "golden_events.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ],
         key=lambda event: (event.ingested_at, event.event_id),
     )
     assert [event.model_dump() for event in events] == [event.model_dump() for event in expected]

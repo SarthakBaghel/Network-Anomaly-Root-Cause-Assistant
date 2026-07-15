@@ -332,28 +332,3 @@ class AnalysisRunRepository:
             .order_by(models.AnalysisRun.revision.asc())
         )
         return list(self.session.execute(stmt).scalars())
-
-
-class HistoricalIncidentRepository:
-    """HistoricalIncident repository for similarity matching (blueprint §20.2)."""
-
-    def __init__(self, session: Session) -> None:
-        self.session = session
-
-    def create(self, row: models.HistoricalIncident) -> models.HistoricalIncident:
-        self.session.add(row)
-        self.session.flush()
-        return row
-
-    def get_by_id(self, historical_id: str) -> models.HistoricalIncident | None:
-        return self.session.get(models.HistoricalIncident, historical_id)
-
-    def get_by_fingerprint(self, fingerprint: str) -> models.HistoricalIncident | None:
-        stmt = select(models.HistoricalIncident).where(
-            models.HistoricalIncident.fingerprint == fingerprint
-        )
-        return self.session.execute(stmt).scalar_one_or_none()
-
-    def list_all(self) -> list[models.HistoricalIncident]:
-        stmt = select(models.HistoricalIncident)
-        return list(self.session.execute(stmt).scalars())

@@ -47,7 +47,7 @@ def test_historical_incident_repository_queries() -> None:
 
 class BrokenAnalysisEngine(AnalysisEngineProtocol):
     """An engine that throws an exception during analysis to test failed run persistence."""
-    def analyse(self, incident: models.Incident, session) -> AnalysisResult:
+    def analyse(self, incident: models.Incident, session, context) -> AnalysisResult:
         raise RuntimeError("simulated engine crash")
 
 

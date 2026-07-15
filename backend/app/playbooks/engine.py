@@ -55,9 +55,15 @@ def find_playbook_for_entity(candidate_entity: str) -> dict | None:
 
 
 def get_step(playbook_step_id: str) -> dict | None:
-    for playbook in load_playbooks():
-        for step in playbook["steps"]:
-            if step["step_id"] == playbook_step_id:
+    raw = _load_raw()
+    # New P5 format: top-level `steps` list
+    for step in raw.get("steps", []):
+        if step.get("step_id") == playbook_step_id:
+            return step
+    # Legacy format: nested inside playbooks[].steps
+    for playbook in raw.get("playbooks", []):
+        for step in playbook.get("steps", []):
+            if step.get("step_id") == playbook_step_id:
                 return step
     return None
 

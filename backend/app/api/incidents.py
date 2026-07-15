@@ -56,6 +56,7 @@ from app.reviews.service import ReviewServiceError, review_service
 from app.topology.graph import TopologyPathNotFoundError, get_topology_graph
 
 from .dependencies import get_session
+from .topology import _incident_annotation
 
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -88,8 +89,8 @@ def _incident_contract(row: models.Incident) -> IncidentSummary:
         title=row.title,
         status=row.status,
         severity=row.severity,
-        started_at=_to_utc(row.started_at),
-        last_event_at=_to_utc(row.last_event_at),
+        started_at=_utc(row.started_at),
+        last_event_at=_utc(row.last_event_at),
         primary_entity_id=row.primary_entity_id,
         affected_entity_ids=row.affected_entity_ids,
         anomaly_count=row.anomaly_count,
@@ -97,6 +98,41 @@ def _incident_contract(row: models.Incident) -> IncidentSummary:
         top_hypothesis_id=row.top_hypothesis_id,
         confirmed_hypothesis_id=row.confirmed_hypothesis_id,
     )
+
+
+# Aliases used throughout the new P4/P5 rewrite of incidents.py
+_to_utc = _utc
+incident_to_summary = _incident_contract
+
+
+def event_to_contract(row: models.Event) -> CanonicalEvent:
+    """Convert a persisted Event ORM row to a CanonicalEvent contract."""
+    from app.contracts import Modality
+    return CanonicalEvent(
+        event_id=row.id,
+        timestamp=_utc(row.timestamp),
+        ingested_at=_utc(row.ingested_at),
+        entity_id=row.entity_id,
+        modality=Modality(row.modality),
+        event_type=row.event_type,
+        severity=row.severity or 0.0,
+        signal_name=row.signal_name,
+        signal_value=row.signal_value,
+        unit=row.unit,
+        trace_or_session_id=row.trace_or_session_id,
+        source=row.source,
+        source_record_id=row.source_record_id,
+        schema_version=row.schema_version or "1.0",
+        quality_flags=list(row.quality_flags or []),
+        raw_payload=dict(row.raw_payload or {}),
+    )
+
+
+def load_playbook_steps() -> dict:
+    """Load playbook step metadata keyed by step_id from the playbooks engine."""
+    from app.playbooks.engine import load_recommendations
+    return {rec.step_id: rec.model_dump() for rec in load_recommendations()}
+
 
 def hyp_to_contract(row: models.Hypothesis) -> Hypothesis:
     return Hypothesis(

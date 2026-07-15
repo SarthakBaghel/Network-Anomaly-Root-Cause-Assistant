@@ -8,7 +8,10 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from app.explanation.service import ExplanationService
 
 import yaml
 from sqlalchemy.orm import Session
@@ -21,7 +24,6 @@ from app.contracts import (
 )
 from app.db import models
 from app.evidence.collector import calculate_evidence_coverage, collect_evidence
-from app.explanation.service import ExplanationService, explanation_service
 from app.playbooks.engine import get_recommendations
 from app.rca.contracts import IncidentAnalysisBundle, RcaComputationResult
 
@@ -73,8 +75,13 @@ class RcaAnalysisAdapter:
         engine: PureRcaEngine,
         *,
         bundle_builder: Callable[..., IncidentAnalysisBundle] = build_incident_analysis_bundle,
-        explanations: ExplanationService = explanation_service,
+        explanations: "ExplanationService | None" = None,
     ) -> None:
+        # Deferred import to avoid the orchestration.__init__ → rca_adapter →
+        # explanation.service → orchestration.orchestrator circular load.
+        if explanations is None:
+            from app.explanation.service import explanation_service
+            explanations = explanation_service
         self.engine = engine
         self.bundle_builder = bundle_builder
         self.explanations = explanations

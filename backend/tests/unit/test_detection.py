@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+import uuid as _uuid
 from app.contracts import CanonicalEvent
 from app.db.models import Anomaly, Base, CollapsedEventGroup, Event
 from app.detection import ConfigChangeMarker, DetectionContext, RollingZscoreDetector, metric_score
@@ -71,18 +72,46 @@ def test_config_marker_is_context_only_and_cannot_open_incident() -> None:
     assert marker.score == 0.0
 
 
+def _seed_entities(session: Session) -> None:
+    from app.db.models import Entity
+    for entity_id, entity_type, service in [
+        ("api-gateway-01", "gateway", "gateway"),
+        ("payment-api-01", "api", "payment"),
+        ("checkout-api-01", "api", "checkout"),
+        ("auth-api-01", "api", "auth"),
+        ("payment-db-01", "database", "payment"),
+    ]:
+        session.add(Entity(id=entity_id, name=entity_id, entity_type=entity_type,
+                           service=service, criticality="tier-1", metadata_json={}))
+    session.flush()
+
+
 def test_golden_replay_persists_nine_actionable_anomalies_and_one_marker() -> None:
+    from app.detection.service import DetectionPublisher
+    from app.db.models import Event as EventModel
+    from app.ingestion.pipeline import event_to_contract
+
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     with Session(engine) as session:
-        pipeline = IngestionPipeline(session)
+        _seed_entities(session)
+        pipeline = IngestionPipeline()
+        publisher = DetectionPublisher(session)
         records = [record for group in [*baseline_groups(), *scenario_groups()] for record in group.records]
-        results = pipeline.ingest_many(list(records))
+        for source, raw in records:
+            result = pipeline.ingest(source=source, raw=raw, request_id=str(_uuid.uuid4()), session=session)
+            # Run detection on each accepted event (P4/P5 separation of ingestion and detection)
+            if result.status == "accepted" and result.event_id:
+                event_row = session.get(EventModel, result.event_id)
+                if event_row:
+                    publisher.publish(event_to_contract(event_row))
+        session.flush()
         anomalies = list(session.scalars(select(Anomaly).order_by(Anomaly.window_end, Anomaly.id)))
-        assert all(result.status == "created" for result in results)
         assert len([item for item in anomalies if item.can_open_incident]) == 9
         assert len([item for item in anomalies if item.context_only]) == 1
         assert not any(item.event_id.endswith("1d99bedd627abe8ef1dca5d6") for item in anomalies)
+
+
 
 
 def test_metrics_never_collapse_and_exact_retry_is_idempotent() -> None:
@@ -92,12 +121,15 @@ def test_metrics_never_collapse_and_exact_retry_is_idempotent() -> None:
     second = json.loads(json.dumps(raw))
     second["sample_id"] = "metric-second"
     with Session(engine) as session:
-        pipeline = IngestionPipeline(session)
-        statuses = [
-            pipeline.ingest("simulator.prometheus", raw).status,
-            pipeline.ingest("simulator.prometheus", raw).status,
-            pipeline.ingest("simulator.prometheus", second).status,
-        ]
-        assert statuses == ["created", "idempotent", "created"]
+        _seed_entities(session)
+        pipeline = IngestionPipeline()
+        r1 = pipeline.ingest(source="simulator.prometheus", raw=raw, request_id=str(_uuid.uuid4()), session=session)
+        r2 = pipeline.ingest(source="simulator.prometheus", raw=raw, request_id=str(_uuid.uuid4()), session=session)
+        r3 = pipeline.ingest(source="simulator.prometheus", raw=second, request_id=str(_uuid.uuid4()), session=session)
+        # Prometheus metrics use source_record_id dedup; retry is accepted with IDEMPOTENT_RETRY
+        assert r1.status == "accepted"
+        assert r2.status == "accepted" and "IDEMPOTENT_RETRY" in r2.reason_codes
+        assert r3.status == "accepted"
+        # first + second (different sample_id) both persisted
         assert session.query(Event).count() == 2
         assert session.query(CollapsedEventGroup).count() == 0

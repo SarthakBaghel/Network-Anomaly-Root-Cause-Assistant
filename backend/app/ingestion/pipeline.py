@@ -134,6 +134,34 @@ def _event_row(event: CanonicalEvent) -> models.Event:
     )
 
 
+def event_to_contract(row: models.Event) -> CanonicalEvent:
+    """Convert a persisted Event ORM row back to a CanonicalEvent contract.
+
+    Required by simulator/ingestion.py PersistentIngestionSink so it can
+    return the accepted CanonicalEvent after pipeline persistence.
+    """
+    from app.contracts import Modality  # local to avoid circulars at module level
+
+    return CanonicalEvent(
+        event_id=row.id,
+        timestamp=row.timestamp if row.timestamp.tzinfo else row.timestamp.replace(tzinfo=timezone.utc),
+        ingested_at=row.ingested_at if row.ingested_at.tzinfo else row.ingested_at.replace(tzinfo=timezone.utc),
+        entity_id=row.entity_id,
+        modality=Modality(row.modality),
+        event_type=row.event_type,
+        severity=row.severity or 0.0,
+        signal_name=row.signal_name,
+        signal_value=row.signal_value,
+        unit=row.unit,
+        trace_or_session_id=row.trace_or_session_id,
+        source=row.source,
+        source_record_id=row.source_record_id,
+        schema_version=row.schema_version or "1.0",
+        quality_flags=list(row.quality_flags or []),
+        raw_payload=dict(row.raw_payload or {}),
+    )
+
+
 class IngestionPipeline:
     """Adapt, validate and persist one source-specific record without committing."""
 

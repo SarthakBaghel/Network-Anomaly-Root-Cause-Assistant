@@ -42,11 +42,16 @@ class PersistentIngestionSink:
     """Runtime sink: simulator records traverse the same pipeline as API records."""
 
     def ingest(self, source: str, raw: dict) -> IngestionOutcome:
+        import uuid as _uuid
+        request_id = str(_uuid.uuid4())
         with session_scope() as session:
-            result = IngestionPipeline(session).ingest(source, raw)
+            pipeline = IngestionPipeline()
+            result = pipeline.ingest(source=source, raw=raw, request_id=request_id, session=session)
             if result.status == "quarantined":
-                return IngestionOutcome("quarantined", reason_code=result.reason_codes[0])
+                reason = result.reason_codes[0] if result.reason_codes else "UNKNOWN"
+                return IngestionOutcome("quarantined", reason_code=reason)
             if result.status == "collapsed":
                 return IngestionOutcome("collapsed")
             row = session.get(Event, result.event_id) if result.event_id else None
             return IngestionOutcome("accepted", event=event_to_contract(row) if row else None)
+

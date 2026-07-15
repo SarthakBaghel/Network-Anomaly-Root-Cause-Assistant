@@ -8,7 +8,7 @@ from typing import Any, Protocol
 
 from app.config import settings
 from app.contracts import AnalysisRun, AnalysisRunStatus, EvidenceItem, Hypothesis
-from app.orchestration import ExplanationDraft
+from app.orchestration.orchestrator import ExplanationDraft
 
 from .template_engine import (
     RecommendationLike,

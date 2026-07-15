@@ -21,6 +21,24 @@ class HistoricalIncidentRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def create(self, row: models.HistoricalIncident) -> None:
+        """Persist a new historical incident record."""
+        self.session.add(row)
+        self.session.flush()
+
+    def get_by_id(self, incident_id: str) -> models.HistoricalIncident | None:
+        """Retrieve a historical incident by its primary key."""
+        return self.session.get(models.HistoricalIncident, incident_id)
+
+    def get_by_fingerprint(self, fingerprint: str) -> models.HistoricalIncident | None:
+        """Retrieve the first historical incident matching the given fingerprint."""
+        stmt = (
+            select(models.HistoricalIncident)
+            .where(models.HistoricalIncident.fingerprint == fingerprint)
+            .limit(1)
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
     def list_all(self) -> list[models.HistoricalIncident]:
         stmt = select(models.HistoricalIncident).order_by(models.HistoricalIncident.id)
         return list(self.session.execute(stmt).scalars())

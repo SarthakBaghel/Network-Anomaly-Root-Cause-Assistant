@@ -1,7 +1,10 @@
 from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Literal
+from typing import Any, Literal, Annotated
+import base64
+import binascii
+import json
 import yaml
 from pathlib import Path
 
@@ -40,6 +43,11 @@ from app.api.topology import _incident_annotation
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
+def _to_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
 def load_playbook_steps() -> dict[str, dict[str, Any]]:
     yaml_path = Path(__file__).resolve().parents[1] / "fixtures" / "playbooks.yaml"
     with open(yaml_path, "r", encoding="utf-8") as f:
@@ -55,8 +63,8 @@ def incident_to_summary(row: models.Incident) -> IncidentSummary:
         title=row.title,
         status=row.status,
         severity=row.severity,
-        started_at=row.started_at,
-        last_event_at=row.last_event_at,
+        started_at=_to_utc(row.started_at),
+        last_event_at=_to_utc(row.last_event_at),
         primary_entity_id=row.primary_entity_id,
         affected_entity_ids=row.affected_entity_ids,
         anomaly_count=row.anomaly_count,
@@ -93,19 +101,83 @@ def ev_to_contract(row: models.Evidence) -> EvidenceItem:
         statement=row.statement,
         relevance=row.relevance,
         reason_code=row.reason_code,
-        created_at=row.created_at
+        created_at=_to_utc(row.created_at)
     )
+
+def _encode_cursor(row: models.Incident, filters: dict[str, Any]) -> str:
+    payload = json.dumps(
+        {
+            "started_at": _to_utc(row.started_at).isoformat(),
+            "incident_id": row.id,
+            "filters": filters,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_cursor(
+    cursor: str | None, filters: dict[str, Any]
+) -> tuple[datetime | None, str | None]:
+    if cursor is None:
+        return None, None
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+        if payload.get("filters") != filters:
+            raise ValueError("cursor filters changed")
+        started_at = datetime.fromisoformat(payload["started_at"])
+        incident_id = str(payload["incident_id"])
+        if not incident_id:
+            raise ValueError("empty incident id")
+        return _to_utc(started_at), incident_id
+    except (
+        binascii.Error,
+        KeyError,
+        TypeError,
+        UnicodeDecodeError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_CURSOR",
+                "message": "Incident cursor is malformed or does not match the active filters",
+                "details": []
+            }
+        )
 
 @router.get("", response_model=dict[str, Any])
 def list_incidents(
-    status: str | None = None,
-    limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    session: Session = Depends(get_session)
+    status_filter: Annotated[IncidentStatus | None, Query(alias="status")] = None,
+    primary_entity_id: Annotated[str | None, Query(min_length=1)] = None,
+    min_severity: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    cursor: str | None = None,
+    session: Session = Depends(get_session),
 ) -> dict[str, Any]:
+    filters = {
+        "status": status_filter.value if status_filter else None,
+        "primary_entity_id": primary_entity_id,
+        "min_severity": min_severity,
+    }
+    before_started_at, before_incident_id = _decode_cursor(cursor, filters)
     repo = IncidentRepository(session)
-    rows = repo.list_all(status=status, limit=limit, offset=offset)
-    return {"items": [incident_to_summary(row) for row in rows]}
+    rows = repo.list_page(
+        status=filters["status"],
+        primary_entity_id=primary_entity_id,
+        min_severity=min_severity,
+        before_started_at=before_started_at,
+        before_incident_id=before_incident_id,
+        limit=limit + 1,
+    )
+    page = rows[:limit]
+    return {
+        "items": [incident_to_summary(row) for row in page],
+        "next_cursor": _encode_cursor(page[-1], filters) if len(rows) > limit else None,
+    }
 
 @router.get("/{incident_id}", response_model=IncidentSummary)
 def incident_summary(incident_id: str, session: Session = Depends(get_session)) -> IncidentSummary:
@@ -207,7 +279,7 @@ def recommendations(incident_id: str, session: Session = Depends(get_session)) -
             step_type=step_meta.get("step_type", "diagnostic"),
             risk_level=step_meta.get("risk_level", "low"),
             requires_human_approval=step_meta.get("requires_human_approval", True),
-            instructions=step_meta.get("instructions", ""),
+            instructions="\n".join(insts) if isinstance(insts := step_meta.get("instructions", ""), list) else insts,
             rationale=r.rationale
         ))
     return result
@@ -272,24 +344,32 @@ def audit(incident_id: str, session: Session = Depends(get_session)) -> list[Aud
             status_code=404,
             detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
         )
-    stmt = select(models.AuditLog).where(
-        models.AuditLog.object_type == "incident",
-        models.AuditLog.object_id == incident_id
-    ).order_by(models.AuditLog.timestamp.desc())
-    rows = session.execute(stmt).scalars().all()
+    stmt = select(models.AuditLog)
+    all_rows = session.execute(stmt).scalars().all()
+    rows = []
+    for r in all_rows:
+        payload = dict(r.payload or {})
+        is_match = (
+            (r.object_type == "incident" and r.object_id == incident_id) or
+            (payload.get("incident_id") == incident_id)
+        )
+        if is_match:
+            rows.append(r)
+    # Sort descending by timestamp
+    rows.sort(key=lambda x: (x.timestamp, x.id), reverse=True)
     
     return [
         AuditRecord(
             audit_id=r.id,
-            timestamp=r.timestamp,
+            timestamp=_to_utc(r.timestamp),
             actor_type=r.actor_type,
             actor_id=r.actor_id,
             action=r.action,
             object_type=r.object_type,
             object_id=r.object_id,
-            request_id=r.payload.get("request_id", ""),
-            analysis_run_id=r.payload.get("analysis_run_id"),
-            payload=dict(r.payload)
+            request_id=str(r.payload.get("request_id") if r.payload and r.payload.get("request_id") is not None else r.id),
+            analysis_run_id=r.payload.get("analysis_run_id") if r.payload else None,
+            payload=dict(r.payload) if r.payload else {}
         ) for r in rows
     ]
 
@@ -303,6 +383,11 @@ def recompute(incident_id: str, session: Session = Depends(get_session)) -> dict
             detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
         )
     from app.orchestration.orchestrator import orchestrator
+    if orchestrator._analysis_engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "ANALYSIS_NOT_READY", "message": "Analysis engine is not registered", "details": []}
+        )
     run_id = orchestrator._run_rca_and_publish(row, trigger_event=None, session=session)
     return {"analysis_run_id": run_id}
 
@@ -311,15 +396,15 @@ def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_
     repo = IncidentRepository(session)
     incident = repo.get_by_id(incident_id)
     if incident is None:
-        return JSONResponse(
+        raise HTTPException(
             status_code=404,
-            content={"error": {"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}}
+            detail={"code": "NOT_FOUND", "message": f"Incident not found: {incident_id}", "details": []}
         )
         
     if incident.status in ("resolved", "rejected"):
-        return JSONResponse(
+        raise HTTPException(
             status_code=409,
-            content={"error": {"code": "INCIDENT_CLOSED", "message": "Incident is already closed", "details": []}}
+            detail={"code": "INCIDENT_CLOSED", "message": "Incident is already closed", "details": []}
         )
 
     # Check idempotency
@@ -339,14 +424,14 @@ def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_
             requested_evidence_id=existing.requested_evidence_id,
             reviewer=existing.reviewer,
             comment=existing.comment,
-            created_at=existing.created_at
+            created_at=_to_utc(existing.created_at)
         )
 
     # Check if hypothesis belongs to the current analysis run
-    if not incident.current_analysis_run_id:
-        return JSONResponse(
+    if not incident.current_analysis_run_id or req.analysis_run_id != incident.current_analysis_run_id:
+        raise HTTPException(
             status_code=409,
-            content={"error": {"code": "STALE_ANALYSIS", "message": "No current analysis run", "details": []}}
+            detail={"code": "STALE_ANALYSIS", "message": "Stale analysis run", "details": []}
         )
         
     hyp = session.scalar(
@@ -356,20 +441,37 @@ def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_
         )
     )
     if hyp is None:
-        return JSONResponse(
+        raise HTTPException(
             status_code=409,
-            content={
-                "error": {
-                    "code": "STALE_ANALYSIS",
-                    "message": "Stale analysis run",
-                    "details": [{"field": "hypothesis_id", "reason_code": "STALE_RUN_ID", "analysis_run_id": incident.current_analysis_run_id}]
-                }
+            detail={
+                "code": "STALE_ANALYSIS",
+                "message": "Stale analysis run",
+                "details": [{"field": "hypothesis_id", "reason_code": "STALE_RUN_ID", "analysis_run_id": incident.current_analysis_run_id}]
             }
         )
 
+    # Validate evidence requested
+    if req.decision.value == "evidence_requested":
+        if not req.requested_evidence_id:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "VALIDATION_ERROR", "message": "requested_evidence_id is required", "details": []}
+            )
+        evidence_row = session.scalar(
+            select(models.Evidence).where(
+                models.Evidence.analysis_run_id == incident.current_analysis_run_id,
+                models.Evidence.id == req.requested_evidence_id
+            )
+        )
+        if evidence_row is None or evidence_row.kind != "missing":
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "VALIDATION_ERROR", "message": "Can only request evidence for missing evidence items", "details": []}
+            )
+
     # Check for conflict in terminal decision
     # (Resolved/rejected was already checked above, but let's be double sure if there's any concurrent reviews)
-    if req.decision in ("confirm", "reject"):
+    if req.decision in (ReviewDecision.CONFIRMED, ReviewDecision.REJECTED):
         pass
 
     # Save the review
@@ -393,7 +495,7 @@ def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_
     audit_repo = AuditRepository(session)
     
     old_status = incident.status
-    if req.decision.value == "confirm":
+    if req.decision == ReviewDecision.CONFIRMED:
         incident.confirmed_hypothesis_id = req.hypothesis_id
         incident.status = "resolved"
         
@@ -415,7 +517,7 @@ def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_
             object_id=incident_id,
             payload={"previous_status": old_status, "new_status": "resolved"}
         )
-    elif req.decision.value == "reject":
+    elif req.decision == ReviewDecision.REJECTED:
         audit_repo.append(
             audit_id=f"aud_{uuid.uuid4().hex}",
             actor_type="user",
@@ -432,7 +534,7 @@ def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_
         
         stmt_rejected_reviews = select(models.Review).where(
             models.Review.analysis_run_id == incident.current_analysis_run_id,
-            models.Review.decision == "reject"
+            models.Review.decision == ReviewDecision.REJECTED.value
         )
         rejected_hyp_ids = {r.hypothesis_id for r in session.execute(stmt_rejected_reviews).scalars().all()}
         # Add the one currently being rejected
@@ -449,7 +551,7 @@ def review(incident_id: str, req: ReviewRequest, session: Session = Depends(get_
                 object_id=incident_id,
                 payload={"previous_status": old_status, "new_status": "rejected"}
             )
-    elif req.decision.value == "request_evidence":
+    elif req.decision == ReviewDecision.EVIDENCE_REQUESTED:
         audit_repo.append(
             audit_id=f"aud_{uuid.uuid4().hex}",
             actor_type="user",
@@ -499,6 +601,19 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
             detail={"code": "NOT_FOUND", "message": f"Analysis run not found: {run_id}", "details": []}
         )
         
+    # Evidence grouped
+    stmt_ev = select(models.Evidence).where(models.Evidence.analysis_run_id == run_id)
+    ev_rows = session.execute(stmt_ev).scalars().all()
+    evidence_by_hyp = {}
+    for r in ev_rows:
+        evidence_by_hyp.setdefault(r.hypothesis_id, []).append(ev_to_contract(r))
+
+    from collections import defaultdict
+    relevance = defaultdict(lambda: defaultdict(list))
+    for r in ev_rows:
+        if r.source_event_id:
+            relevance[r.source_event_id][r.hypothesis_id].append(r.reason_code)
+
     # Build timeline
     evals = repo.get_all_evaluations(incident_id)
     timeline_items = []
@@ -510,14 +625,17 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
                 attachment_decision=ev_eval.decision,
                 attachment_score=ev_eval.attachment_score,
                 attachment_reasons=ev_eval.attachment_reasons,
-                hypothesis_relevance={}
+                hypothesis_relevance={
+                    hyp_id: sorted(list(set(reason_codes)))
+                    for hyp_id, reason_codes in relevance[ev_eval.event_id].items()
+                } if ev_eval.decision == "attached" else {}
             ))
     # Sort chronologically
     timeline_items = sorted(timeline_items, key=lambda it: (it.event.timestamp, it.event.event_id))
     
     # Topology annotated snapshot
     graph = get_topology_graph()
-    node_states, edge_states = _incident_annotation(graph, incident_id)
+    node_states, edge_states = _incident_annotation(graph, incident_id, session=session)
     topology_snap = TopologySnapshot.model_validate(
         graph.snapshot(node_states=node_states, edge_states=edge_states)
     )
@@ -526,13 +644,6 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
     stmt_hyps = select(models.Hypothesis).where(models.Hypothesis.analysis_run_id == run_id).order_by(models.Hypothesis.rank.asc())
     hyp_rows = session.execute(stmt_hyps).scalars().all()
     hyps_contract = [hyp_to_contract(r) for r in hyp_rows]
-    
-    # Evidence grouped
-    stmt_ev = select(models.Evidence).where(models.Evidence.analysis_run_id == run_id)
-    ev_rows = session.execute(stmt_ev).scalars().all()
-    evidence_by_hyp = {}
-    for r in ev_rows:
-        evidence_by_hyp.setdefault(r.hypothesis_id, []).append(ev_to_contract(r))
         
     # Recommendations grouped
     stmt_rec = select(models.PlaybookRecommendation).where(models.PlaybookRecommendation.analysis_run_id == run_id)
@@ -551,7 +662,7 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
             step_type=step_meta.get("step_type", "diagnostic"),
             risk_level=step_meta.get("risk_level", "low"),
             requires_human_approval=step_meta.get("requires_human_approval", True),
-            instructions=step_meta.get("instructions", ""),
+            instructions="\n".join(insts) if isinstance(insts := step_meta.get("instructions", ""), list) else insts,
             rationale=r.rationale
         ))
         
@@ -572,7 +683,7 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
             requested_evidence_id=r.requested_evidence_id,
             reviewer=r.reviewer,
             comment=r.comment,
-            created_at=r.created_at
+            created_at=_to_utc(r.created_at)
         ) for r in rev_rows
     ]
     
@@ -585,9 +696,8 @@ def investigation(incident_id: str, session: Session = Depends(get_session)) -> 
         trigger_event_id=run_row.trigger_event_id,
         input_fingerprint=run_row.input_fingerprint,
         algorithm_version=run_row.algorithm_version,
-        created_at=run_row.created_at,
-        completed_at=run_row.completed_at,
-        failure_reason=run_row.failure_reason
+        created_at=_to_utc(run_row.created_at),
+        completed_at=_to_utc(run_row.completed_at)
     )
     
     return InvestigationResponse(

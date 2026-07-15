@@ -48,7 +48,9 @@ class IncidentRepository:
 
     def update_started_at_if_earlier(self, incident_id: str, ts: datetime) -> None:
         row = self._get_or_raise(incident_id)
-        if ts < row.started_at:
+        ts_naive = ts.replace(tzinfo=None) if ts.tzinfo is not None else ts
+        start_naive = row.started_at.replace(tzinfo=None) if row.started_at.tzinfo is not None else row.started_at
+        if ts_naive < start_naive:
             row.started_at = ts
             self.session.flush()
 

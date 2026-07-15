@@ -3,12 +3,13 @@ from __future__ import annotations
 from itertools import pairwise
 from typing import Annotated, Any, Literal, Never
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.contracts import TopologyRelation, TopologySnapshot
 from app.db.models import Hypothesis, Incident
-from app.db.session import SessionLocal
+from app.db.session import SessionLocal, get_session
 from app.topology.graph import (
     EdgeIdentity,
     EdgeState,
@@ -41,26 +42,35 @@ def _raise_api_error(exc: TopologyError) -> Never:
 
 
 def _incident_annotation(
-    graph: TopologyGraph, incident_id: str
+    graph: TopologyGraph, incident_id: str, session: Session | None = None
 ) -> tuple[dict[str, NodeState], dict[EdgeIdentity, EdgeState]]:
-    with SessionLocal() as session:
-        incident = session.get(Incident, incident_id)
-        if incident is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "code": "INCIDENT_NOT_FOUND",
-                    "message": f"incident not found: {incident_id}",
-                    "details": [],
-                },
-            )
-        top_hypothesis = (
-            session.get(Hypothesis, incident.top_hypothesis_id)
-            if incident.top_hypothesis_id
-            else None
+    if session is None:
+        with SessionLocal() as s:
+            return _incident_annotation_impl(graph, incident_id, s)
+    else:
+        return _incident_annotation_impl(graph, incident_id, session)
+
+
+def _incident_annotation_impl(
+    graph: TopologyGraph, incident_id: str, session: Session
+) -> tuple[dict[str, NodeState], dict[EdgeIdentity, EdgeState]]:
+    incident = session.get(Incident, incident_id)
+    if incident is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "INCIDENT_NOT_FOUND",
+                "message": f"incident not found: {incident_id}",
+                "details": [],
+            },
         )
-        affected_entity_ids = list(incident.affected_entity_ids)
-        primary_entity_id = incident.primary_entity_id
+    top_hypothesis = (
+        session.get(Hypothesis, incident.top_hypothesis_id)
+        if incident.top_hypothesis_id
+        else None
+    )
+    affected_entity_ids = list(incident.affected_entity_ids)
+    primary_entity_id = incident.primary_entity_id
 
     suspected_root = (
         top_hypothesis.candidate_entity_id if top_hypothesis is not None else primary_entity_id

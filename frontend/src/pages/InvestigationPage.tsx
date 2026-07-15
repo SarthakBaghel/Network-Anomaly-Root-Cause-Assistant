@@ -12,7 +12,7 @@ import {
   ComposedChart,
   ResponsiveContainer,
   Scatter,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -24,6 +24,26 @@ import {
   TEST_IDS,
   hypothesisRowTestId,
 } from "../test-fixtures/testid-manifest";
+import { Card } from "../components/ui/Card";
+import { Badge, type BadgeVariant } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { EvidenceScoreBar } from "../components/ui/EvidenceScoreBar";
+import { EmptyState } from "../components/ui/EmptyState";
+import { Tooltip as UiTooltip } from "../components/ui/Tooltip";
+import { PageSkeleton } from "../components/ui/Skeleton";
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  ClipboardListIcon,
+  ClockIcon,
+  HelpCircleIcon,
+  InfoIcon,
+  LinkIcon,
+  NetworkIcon,
+  SearchIcon,
+  SparklesIcon,
+  XIcon,
+} from "../components/icons";
 
 type InvestigationResponse = components["schemas"]["InvestigationResponse"];
 
@@ -54,11 +74,34 @@ const laneLabels: Record<components["schemas"]["Modality"], string> = {
   config_change: "Config Change",
 };
 const laneColor: Record<components["schemas"]["Modality"], string> = {
-  metric: "#0ea5e9",
-  log: "#22c55e",
-  alert: "#f97316",
-  config_change: "#8b5cf6",
+  metric: "#22d3ee",
+  log: "#34d399",
+  alert: "#fbbf24",
+  config_change: "#a78bfa",
 };
+
+const CHART_COLORS = {
+  gridStroke: "rgba(148, 163, 184, 0.14)",
+  axisTick: "#94a3b8",
+  excludedDot: "#475569",
+};
+
+const EDGE_LABEL_STYLE = { fill: "#e2e8f0", stroke: "#1e293b" };
+
+const NODE_BASE_CLASS =
+  "w-[180px] rounded-2xl border-2 px-3 py-2.5 text-center text-sm font-semibold text-white shadow-glass";
+
+const NODE_STATE_CLASS: Record<string, string> = {
+  suspected_root:
+    "bg-gradient-to-br from-accent-amber to-orange-500 border-accent-amber/60",
+  primary_affected:
+    "bg-gradient-to-br from-accent-red to-accent-red-strong border-accent-red/60",
+  impact_path:
+    "bg-gradient-to-br from-accent-emerald to-accent-emerald-strong border-accent-emerald/60",
+  blast_radius:
+    "bg-gradient-to-br from-accent-purple to-accent-purple-strong border-accent-purple/60",
+};
+const NODE_STATE_FALLBACK_CLASS = "bg-white/10 border-white/20";
 
 function createUuid() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -86,24 +129,24 @@ function formatDate(timestamp: string) {
   });
 }
 
-function determineBadgeClass(status: string) {
+function statusBadgeVariant(status: string): BadgeVariant {
   switch (status) {
     case "open":
-      return "bg-amber-100 text-amber-900";
+      return "warning";
     case "investigating":
-      return "bg-sky-100 text-sky-900";
+      return "info";
     case "resolved":
-      return "bg-emerald-100 text-emerald-900";
+      return "success";
     case "rejected":
-      return "bg-red-100 text-red-900";
+      return "danger";
     default:
-      return "bg-slate-100 text-slate-700";
+      return "neutral";
   }
 }
 
 function eventColor(point: TimelinePoint) {
   if (!point.attached) {
-    return "#cbd5e1";
+    return CHART_COLORS.excludedDot;
   }
   return laneColor[point.modality];
 }
@@ -124,6 +167,26 @@ function kindToModality(
       return "log";
   }
 }
+
+const EVIDENCE_KIND_LABEL: Record<
+  components["schemas"]["EvidenceKind"],
+  string
+> = {
+  observed: "Verified observed facts",
+  correlated: "Correlated signals",
+  conflicting: "Conflicting evidence",
+  missing: "Missing evidence",
+};
+
+const EVIDENCE_KIND_ICON: Record<
+  components["schemas"]["EvidenceKind"],
+  typeof CheckIcon
+> = {
+  observed: CheckIcon,
+  correlated: LinkIcon,
+  conflicting: AlertTriangleIcon,
+  missing: HelpCircleIcon,
+};
 
 const defaultInvestigation =
   investigationFixture as unknown as InvestigationResponse;
@@ -302,7 +365,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   }
 
   if (!investigation) {
-    return <div className="p-8">Loading incident investigation...</div>;
+    return <PageSkeleton label="Loading incident investigation..." />;
   }
 
   const filteredAuditTrail = auditTrail.filter((record) =>
@@ -314,61 +377,72 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   return (
     <main
       data-testid={TEST_IDS.investigationPanel}
-      className="mx-auto max-w-7xl space-y-8 p-8"
+      className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8"
     >
-      <header className="space-y-3 rounded-3xl border bg-white p-6 shadow-sm">
+      <Card as="header" glow="none" className="animate-fade-in-up space-y-3 p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-sm text-slate-500">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-sm text-text-secondary">
+              <ClockIcon className="h-3.5 w-3.5" />
               Analysis run {investigation.analysis_run_id}
             </p>
-            <h1 className="text-3xl font-bold">
+            <h1 className="mt-1 break-words text-3xl font-extrabold tracking-tight text-text-primary">
               {investigation.incident.title}
             </h1>
-            <p className="mt-2 text-slate-600">
-              Current incident status:{" "}
-              <span className="font-semibold">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Badge variant={statusBadgeVariant(investigation.incident.status)}>
                 {investigation.incident.status}
+              </Badge>
+              <span className="text-sm text-text-secondary">
+                Current incident status
               </span>
-            </p>
+            </div>
           </div>
-          <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
+          <div className="glass-inset shrink-0 px-4 py-3 text-sm text-text-secondary md:max-w-xs">
             Affected entities:{" "}
-            {Array.from(
-              new Set(
-                investigation.hypotheses.map((h) => h.candidate_entity_id),
-              ),
-            ).join(", ")}
+            <span className="font-semibold text-text-primary">
+              {Array.from(
+                new Set(
+                  investigation.hypotheses.map((h) => h.candidate_entity_id),
+                ),
+              ).join(", ")}
+            </span>
           </div>
         </div>
         {banner ? (
           <div
             role="status"
-            className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-900"
+            className="glass-panel flex items-center gap-2 border-accent-amber/30 bg-accent-amber/10 px-4 py-3 text-sm font-semibold text-accent-amber"
             data-testid={
               banner.includes("Analysis updated")
                 ? TEST_IDS.staleAnalysisBanner
                 : TEST_IDS.genericBanner
             }
           >
-            <span aria-hidden="true">ℹ️</span> {banner}
+            <InfoIcon className="h-4 w-4 shrink-0" aria-hidden="true" /> {banner}
           </div>
         ) : null}
         {apiError ? (
           <div
             role="alert"
-            className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-900"
+            className="glass-panel flex items-center gap-2 border-accent-red/30 bg-accent-red/10 px-4 py-3 text-sm font-semibold text-accent-red"
           >
-            <span aria-hidden="true">❌</span> {apiError}
+            <AlertTriangleIcon className="h-4 w-4 shrink-0" aria-hidden="true" />{" "}
+            {apiError}
           </div>
         ) : null}
-      </header>
+      </Card>
 
       <section className="grid gap-6 xl:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
-          <article className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Incident Timeline</h2>
-            <p className="mt-2 text-sm text-slate-500">
+          <Card interactive glow="cyan">
+            <div className="flex items-center gap-2">
+              <ClockIcon className="h-5 w-5 text-accent-cyan" />
+              <h2 className="text-xl font-semibold text-text-primary">
+                Incident Timeline
+              </h2>
+            </div>
+            <p className="mt-2 text-sm text-text-secondary">
               One aligned time axis with four lanes. Click an event to inspect
               the raw record.
             </p>
@@ -380,7 +454,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 <ComposedChart data={timelinePoints}>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="#e2e8f0"
+                    stroke={CHART_COLORS.gridStroke}
                     vertical={false}
                   />
                   <XAxis
@@ -389,7 +463,8 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     scale="time"
                     domain={["dataMin", "dataMax"]}
                     tickFormatter={formatTimestamp}
-                    tick={{ fill: "#475569", fontSize: 12 }}
+                    tick={{ fill: CHART_COLORS.axisTick, fontSize: 12 }}
+                    stroke={CHART_COLORS.gridStroke}
                   />
                   <YAxis
                     dataKey="y"
@@ -399,10 +474,11 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       laneLabels[value as components["schemas"]["Modality"]]
                     }
                     ticks={laneOrder.map((_, index) => index)}
-                    tick={{ fill: "#475569", fontSize: 12 }}
+                    tick={{ fill: CHART_COLORS.axisTick, fontSize: 12 }}
+                    stroke={CHART_COLORS.gridStroke}
                   />
-                  <Tooltip
-                    cursor={{ stroke: "#64748b", strokeWidth: 1 }}
+                  <RechartsTooltip
+                    cursor={{ stroke: "#38bdf8", strokeWidth: 1 }}
                     formatter={(_, name) => [name, "event"]}
                     labelFormatter={(value) =>
                       `Time: ${formatTimestamp(Number(value))}`
@@ -413,14 +489,14 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       }
                       const point = payload[0].payload as TimelinePoint;
                       return (
-                        <div className="rounded-2xl border bg-white p-3 shadow-lg">
-                          <p className="text-sm font-semibold text-slate-900">
+                        <div className="glass-panel px-3 py-2.5 text-sm">
+                          <p className="font-semibold text-text-primary">
                             {laneLabels[point.modality]}
                           </p>
-                          <p className="mt-1 text-sm text-slate-600">
+                          <p className="mt-1 text-text-secondary">
                             {point.event.event_type}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-text-muted">
                             Score: {point.attachment_score}
                           </p>
                         </div>
@@ -431,7 +507,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     name="events"
                     data={timelinePoints}
                     dataKey="x"
-                    fill="#0ea5e9"
+                    fill="#22d3ee"
                     shape={(props) => {
                       const { cx, cy, payload } = props as any;
                       if (cx == null || cy == null) {
@@ -446,9 +522,9 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                           data-attached={String(point.attached)}
                           data-testid="timeline-event"
                           fill={eventColor(point)}
-                          stroke={point.attached ? "#0f172a" : "#94a3b8"}
+                          stroke={point.attached ? "#e2e8f0" : "#64748b"}
                           strokeWidth={point.attached ? 2 : 1}
-                          style={{ cursor: "pointer" }}
+                          className="cursor-pointer"
                           onClick={() => openEventModal(point.event)}
                         />
                       );
@@ -457,19 +533,25 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-          </article>
+          </Card>
 
-          <article className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Topology Impact Graph</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Topology is rendered from the single investigation snapshot; edges
-              show relation_type and node state.
+          <Card interactive glow="purple">
+            <div className="flex items-center gap-2">
+              <NetworkIcon className="h-5 w-5 text-accent-purple" />
+              <h2 className="text-xl font-semibold text-text-primary">
+                Topology Impact Graph
+              </h2>
+            </div>
+            <p className="mt-2 text-sm text-text-secondary">
+              Topology is rendered from the single investigation snapshot;
+              edges show relation_type and node state.
             </p>
             <div
-              className="mt-6 h-[420px] rounded-3xl border border-slate-200 bg-slate-50"
+              className="glass-inset mt-6 h-[420px] overflow-hidden"
               data-testid={TEST_IDS.topologyGraph}
             >
               <ReactFlow
+                className="react-flow-dark"
                 nodes={investigation.topology.nodes.map((node, index) => ({
                   id: node.id,
                   position: {
@@ -477,23 +559,10 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     y: Math.floor(index / 4) * 140 + 30,
                   },
                   data: { label: `${node.name}` },
-                  style: {
-                    backgroundColor:
-                      node.state === "suspected_root"
-                        ? "#f97316"
-                        : node.state === "primary_affected"
-                          ? "#ef4444"
-                          : node.state === "impact_path"
-                            ? "#22c55e"
-                            : node.state === "blast_radius"
-                              ? "#6366f1"
-                              : "#64748b",
-                    color: "white",
-                    border: "2px solid rgba(255,255,255,0.8)",
-                    padding: 10,
-                    width: 180,
-                    borderRadius: 16,
-                  },
+                  className: `${NODE_BASE_CLASS} ${
+                    NODE_STATE_CLASS[String(node.state)] ??
+                    NODE_STATE_FALLBACK_CLASS
+                  }`,
                 }))}
                 edges={investigation.topology.edges.map((edge, index) => ({
                   id: `${edge.source}-${edge.target}-${edge.relation_type}-${index}`,
@@ -503,7 +572,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                   label: edge.relation_type,
                   labelBgPadding: [6, 4],
                   labelBgBorderRadius: 4,
-                  labelBgStyle: { fill: "#f8fafc", stroke: "#cbd5e1" },
+                  labelBgStyle: EDGE_LABEL_STYLE,
                   animated: false,
                 }))}
                 fitView
@@ -513,47 +582,51 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
               </ReactFlow>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                <p className="font-semibold">Node states</p>
+              <div className="glass-inset p-4 text-sm text-text-secondary">
+                <p className="font-semibold text-text-primary">Node states</p>
                 <ul className="mt-3 space-y-2">
                   <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-orange-500"></span>{" "}
+                    <span className="h-3 w-3 rounded-full bg-accent-amber" />{" "}
                     suspected_root
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-red-600"></span>{" "}
+                    <span className="h-3 w-3 rounded-full bg-accent-red" />{" "}
                     primary_affected
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-emerald-500"></span>{" "}
+                    <span className="h-3 w-3 rounded-full bg-accent-emerald" />{" "}
                     impact_path
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-indigo-500"></span>{" "}
+                    <span className="h-3 w-3 rounded-full bg-accent-purple" />{" "}
                     blast_radius
                   </li>
                 </ul>
               </div>
-              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                <p className="font-semibold">Edge labels</p>
+              <div className="glass-inset p-4 text-sm text-text-secondary">
+                <p className="font-semibold text-text-primary">Edge labels</p>
                 <ul className="mt-3 space-y-2">
                   <li>
-                    <strong>depends_on</strong> — static relationship between
-                    nodes
+                    <strong className="text-text-primary">depends_on</strong> —
+                    static relationship between nodes
                   </li>
                   <li>
-                    <strong>sends_traffic_to</strong> — traffic direction used
-                    by active hypothesis
+                    <strong className="text-text-primary">
+                      sends_traffic_to
+                    </strong>{" "}
+                    — traffic direction used by active hypothesis
                   </li>
                 </ul>
               </div>
             </div>
-          </article>
+          </Card>
         </div>
 
         <aside className="space-y-6">
-          <article className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Ranked Hypotheses</h2>
+          <Card interactive glow="cyan">
+            <h2 className="text-xl font-semibold text-text-primary">
+              Ranked Hypotheses
+            </h2>
             <div className="mt-4 space-y-4">
               {investigation.hypotheses.map((hypothesis) => {
                 const evidenceItems =
@@ -563,39 +636,38 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 );
                 const confirmed =
                   reviewStatus[hypothesis.hypothesis_id] === "confirmed";
+                const busy = Boolean(busyHypothesis[hypothesis.hypothesis_id]);
                 return (
                   <article
                     key={hypothesis.hypothesis_id}
                     data-testid={hypothesisRowTestId(hypothesis.hypothesis_id)}
-                    className="rounded-3xl border border-slate-200 p-4"
+                    className="glass-inset animate-fade-in-up p-4"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-xs font-bold uppercase tracking-widest text-accent-cyan">
                           Rank {hypothesis.rank}
                         </p>
-                        <p className="mt-2 text-lg font-semibold text-slate-900">
+                        <p className="mt-2 text-lg font-semibold text-text-primary">
                           {confirmed
                             ? "Confirmed root cause"
                             : hypothesis.candidate_entity_id}
                         </p>
                         {!confirmed ? (
-                          <p className="text-sm text-slate-600">
+                          <p className="text-sm text-text-secondary">
                             {hypothesis.hypothesis_type}
                           </p>
                         ) : null}
                       </div>
-                      <div className="rounded-3xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800">
-                        Evidence score {Math.round(hypothesis.evidence_score)}
-                      </div>
+                      <EvidenceScoreBar score={hypothesis.evidence_score} />
                     </div>
-                    <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                    <div className="mt-4 rounded-2xl border border-border-subtle bg-white/[0.02] p-4 text-sm text-text-secondary">
                       {hypothesis.evidence_coverage.available}/
                       {hypothesis.evidence_coverage.expected} expected evidence
                       requirements available
                     </div>
-                    <details className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
-                      <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                    <details className="mt-4 rounded-2xl border border-border-subtle bg-white/[0.02] p-4">
+                      <summary className="cursor-pointer text-sm font-semibold text-text-primary">
                         Factor breakdown
                       </summary>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -603,12 +675,14 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                           ([factor, score]) => (
                             <div
                               key={factor}
-                              className="rounded-2xl bg-slate-50 p-3 text-sm"
+                              className="rounded-xl border border-border-subtle bg-surface-soft p-3 text-sm"
                             >
-                              <p className="font-semibold text-slate-800">
-                                {factor}
-                              </p>
-                              <p className="mt-1 text-slate-600">
+                              <UiTooltip label={`Contribution of ${factor.replace(/_/g, " ")} to the overall evidence score`}>
+                                <p className="cursor-help font-semibold text-text-primary underline decoration-dotted decoration-text-muted underline-offset-4">
+                                  {factor}
+                                </p>
+                              </UiTooltip>
+                              <p className="mt-1 text-text-secondary">
                                 {Number(score).toFixed(2)}
                               </p>
                             </div>
@@ -617,36 +691,39 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       </div>
                     </details>
                     <div className="mt-4 flex flex-wrap gap-3">
-                      <button
+                      <Button
+                        variant="success"
                         data-testid={TEST_IDS.hypothesisConfirm}
                         aria-label="Confirm hypothesis"
-                        className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                        disabled={busyHypothesis[hypothesis.hypothesis_id]}
+                        icon={<CheckIcon className="h-4 w-4" />}
+                        loading={busy}
+                        disabled={busy}
                         onClick={() =>
                           postReview(hypothesis.hypothesis_id, "confirmed")
                         }
                       >
                         Confirm
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="danger"
                         data-testid={TEST_IDS.hypothesisReject}
                         aria-label="Reject hypothesis"
-                        className="rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                        disabled={busyHypothesis[hypothesis.hypothesis_id]}
+                        icon={<XIcon className="h-4 w-4" />}
+                        loading={busy}
+                        disabled={busy}
                         onClick={() =>
                           postReview(hypothesis.hypothesis_id, "rejected")
                         }
                       >
                         Reject
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="warning"
                         data-testid={TEST_IDS.evidenceRequest}
                         aria-label="Request evidence"
-                        className="rounded-2xl bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-60"
-                        disabled={
-                          busyHypothesis[hypothesis.hypothesis_id] ||
-                          missingEvidence.length === 0
-                        }
+                        icon={<HelpCircleIcon className="h-4 w-4" />}
+                        loading={busy}
+                        disabled={busy || missingEvidence.length === 0}
                         onClick={() =>
                           postReview(
                             hypothesis.hypothesis_id,
@@ -656,22 +733,25 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                         }
                       >
                         Request evidence
-                      </button>
+                      </Button>
                     </div>
                   </article>
                 );
               })}
             </div>
-          </article>
+          </Card>
 
-          <article
-            className="rounded-3xl border bg-white p-6 shadow-sm"
+          <Card
+            interactive
+            glow="purple"
             data-testid={TEST_IDS.evidencePanel}
           >
-            <h2 className="text-xl font-semibold">Evidence Explorer</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Verified observed facts, correlated signals, conflicting evidence,
-              and missing evidence.
+            <h2 className="text-xl font-semibold text-text-primary">
+              Evidence Explorer
+            </h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              Verified observed facts, correlated signals, conflicting
+              evidence, and missing evidence.
             </p>
             <div className="mt-4 space-y-3">
               {(
@@ -681,109 +761,116 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                   "conflicting",
                   "missing",
                 ] as components["schemas"]["EvidenceKind"][]
-              ).map((kind) => (
-                <details
-                  key={kind}
-                  className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
-                >
-                  <summary className="cursor-pointer font-semibold text-slate-900">
-                    {kind === "observed"
-                      ? "Verified observed facts"
-                      : kind === "correlated"
-                        ? "Correlated signals"
-                        : kind === "conflicting"
-                          ? "Conflicting evidence"
-                          : "Missing evidence"}
-                  </summary>
-                  <div className="mt-3 space-y-3">
-                    {groupedEvidence[kind].length === 0 ? (
-                      <p className="text-sm text-slate-500">
-                        No items in this category.
-                      </p>
-                    ) : (
-                      groupedEvidence[kind].map((item) => (
-                        <button
-                          key={item.evidence_id}
-                          className={`w-full rounded-2xl border p-4 text-left text-sm transition ${
-                            kind === "conflicting"
-                              ? "border-amber-300 bg-amber-50 text-amber-900"
-                              : kind === "missing"
-                                ? "border-slate-300 bg-slate-50 text-slate-900"
-                                : "border-slate-200 bg-white text-slate-900"
-                          }`}
-                          onClick={() => {
-                            const canonicalEvent = {
-                              entity_id:
-                                item.source_event_id ?? item.evidence_id,
-                              event_id:
-                                item.source_event_id ?? item.evidence_id,
-                              event_type: item.reason_code,
-                              ingested_at: item.created_at,
-                              modality: kindToModality(kind),
-                              schema_version: "1.0",
-                              severity: 0,
-                              source: "evidence",
-                              timestamp: item.created_at,
-                              quality_flags: [],
-                              raw_payload: {},
-                            } as components["schemas"]["CanonicalEvent"];
-
-                            openEventModal(canonicalEvent);
-                          }}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="font-semibold">{item.statement}</p>
-                              {kind === "observed" ? (
-                                <p className="mt-1 text-xs text-slate-500">
-                                  Confirms the record and value were observed;
-                                  does not confirm causation
-                                </p>
-                              ) : null}
-                            </div>
-                            <span className="text-xs font-semibold uppercase tracking-wide">
-                              {kind === "conflicting"
-                                ? "Conflicting"
+              ).map((kind) => {
+                const KindIcon = EVIDENCE_KIND_ICON[kind];
+                return (
+                  <details
+                    key={kind}
+                    className="glass-inset p-4"
+                  >
+                    <summary className="flex cursor-pointer items-center gap-2 font-semibold text-text-primary">
+                      <KindIcon className="h-4 w-4 shrink-0" />
+                      {EVIDENCE_KIND_LABEL[kind]}
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      {groupedEvidence[kind].length === 0 ? (
+                        <EmptyState message="No items in this category." />
+                      ) : (
+                        groupedEvidence[kind].map((item) => (
+                          <button
+                            key={item.evidence_id}
+                            data-testid={TEST_IDS.evidenceItem}
+                            className={`w-full rounded-2xl border p-4 text-left text-sm transition-colors ${
+                              kind === "conflicting"
+                                ? "border-accent-amber/30 bg-accent-amber/10 text-accent-amber"
                                 : kind === "missing"
-                                  ? "Missing"
-                                  : kind === "correlated"
-                                    ? "Correlated"
-                                    : "Observed"}
-                            </span>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </article>
+                                  ? "border-border-subtle bg-white/[0.02] text-text-primary hover:bg-white/[0.05]"
+                                  : "border-border-subtle bg-white/[0.02] text-text-primary hover:bg-white/[0.05]"
+                            }`}
+                            onClick={() => {
+                              const canonicalEvent = {
+                                entity_id:
+                                  item.source_event_id ?? item.evidence_id,
+                                event_id:
+                                  item.source_event_id ?? item.evidence_id,
+                                event_type: item.reason_code,
+                                ingested_at: item.created_at,
+                                modality: kindToModality(kind),
+                                schema_version: "1.0",
+                                severity: 0,
+                                source: "evidence",
+                                timestamp: item.created_at,
+                                quality_flags: [],
+                                raw_payload: {},
+                              } as components["schemas"]["CanonicalEvent"];
 
-          <article className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Explanation summary</h2>
-            <p className="mt-2 text-sm text-slate-500">
+                              openEventModal(canonicalEvent);
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-semibold">{item.statement}</p>
+                                {kind === "observed" ? (
+                                  <p className="mt-1 text-xs text-text-muted">
+                                    Confirms the record and value were
+                                    observed; does not confirm causation
+                                  </p>
+                                ) : null}
+                              </div>
+                              <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-text-muted">
+                                {kind === "conflicting"
+                                  ? "Conflicting"
+                                  : kind === "missing"
+                                    ? "Missing"
+                                    : kind === "correlated"
+                                      ? "Correlated"
+                                      : "Observed"}
+                              </span>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card interactive glow="emerald">
+            <div className="flex items-center gap-2">
+              <SparklesIcon className="h-5 w-5 text-accent-emerald" />
+              <h2 className="text-xl font-semibold text-text-primary">
+                Explanation summary
+              </h2>
+            </div>
+            <p className="mt-2 text-sm text-text-secondary">
               Diagnostic summary from the current investigation snapshot.
             </p>
-            <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">
+            <div className="glass-inset mt-4 p-4 text-sm text-text-secondary">
+              <p className="font-semibold text-text-primary">
                 {investigation.explanation.summary}
               </p>
               <p className="mt-2">
                 Generator:{" "}
-                <span className="font-semibold">
+                <span className="font-semibold text-text-primary">
                   {investigation.explanation.generator}
                 </span>
               </p>
-              <p className="mt-2 text-slate-600">
+              <p className="mt-2 text-text-muted">
                 {investigation.explanation.claims.length} supporting claims
               </p>
             </div>
-          </article>
+          </Card>
 
-          <article className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Catalogue Recommendations</h2>
-            <p className="mt-2 text-sm text-slate-500">
+          <Card interactive glow="cyan">
+            <div className="flex items-center gap-2">
+              <ClipboardListIcon className="h-5 w-5 text-accent-cyan" />
+              <h2 className="text-xl font-semibold text-text-primary">
+                Catalogue Recommendations
+              </h2>
+            </div>
+            <p className="mt-2 text-sm text-text-secondary">
               Recommendations are safe suggestions and are not executed
               automatically.
             </p>
@@ -796,18 +883,22 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 return recommendations.map((recommendation) => (
                   <div
                     key={recommendation.recommendation_id}
-                    className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
+                    className="glass-inset p-4"
                   >
-                    <p className="font-semibold text-slate-900">
+                    <p className="font-semibold text-text-primary">
                       Catalogue recommendation — not executed
                     </p>
-                    <p className="mt-2 text-sm text-slate-700">
+                    <p className="mt-2 text-sm text-text-secondary">
                       {recommendation.title}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
-                      <span>step_id: {recommendation.step_id}</span>
-                      <span>risk_level: {recommendation.risk_level}</span>
-                      <span>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">
+                      <span className="rounded-full border border-border-subtle px-2 py-1">
+                        step_id: {recommendation.step_id}
+                      </span>
+                      <span className="rounded-full border border-border-subtle px-2 py-1">
+                        risk_level: {recommendation.risk_level}
+                      </span>
+                      <span className="rounded-full border border-border-subtle px-2 py-1">
                         requires_human_approval:{" "}
                         {recommendation.requires_human_approval ? "yes" : "no"}
                       </span>
@@ -816,80 +907,106 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 ));
               })}
             </div>
-          </article>
+          </Card>
 
-          <article className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Audit Trail</h2>
-            <p className="mt-2 text-sm text-slate-500">
+          <Card
+            interactive
+            glow="purple"
+            data-testid={TEST_IDS.auditTrailPanel}
+          >
+            <h2 className="text-xl font-semibold text-text-primary">
+              Audit Trail
+            </h2>
+            <p className="mt-2 text-sm text-text-secondary">
               Append-only table showing action history for this incident.
             </p>
-            <div className="mt-4" data-testid={TEST_IDS.auditTrailPanel} />
-            <label className="mt-4 block text-sm font-medium text-slate-700">
+            <label className="relative mt-4 block text-sm font-medium text-text-secondary">
               Filter audit entries
+              <span className="pointer-events-none absolute left-3 top-[calc(50%+0.3rem)] text-text-muted">
+                <SearchIcon className="h-4 w-4" />
+              </span>
               <input
                 value={auditFilter}
                 onChange={(event) => setAuditFilter(event.target.value)}
-                className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="mt-2 block w-full rounded-xl border border-border-strong bg-surface py-2 pl-9 pr-3 text-sm text-text-primary shadow-sm outline-none focus:border-accent-cyan focus:ring-2 focus:ring-accent-cyan/30"
                 placeholder="Type actor, action, or object"
               />
             </label>
-            <div className="mt-4 overflow-hidden rounded-3xl border">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-border-subtle">
               <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-100 text-slate-600">
+                <thead className="bg-white/[0.03] text-text-secondary">
                   <tr>
-                    <th className="px-4 py-3">Timestamp</th>
-                    <th className="px-4 py-3">Actor</th>
-                    <th className="px-4 py-3">Action</th>
-                    <th className="px-4 py-3">Object</th>
+                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                      Timestamp
+                    </th>
+                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                      Actor
+                    </th>
+                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                      Action
+                    </th>
+                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                      Object
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAuditTrail.map((record) => (
-                    <tr
-                      key={record.audit_id}
-                      className="border-t border-slate-100"
-                    >
-                      <td className="px-4 py-3 text-slate-700">
-                        {formatDate(record.timestamp)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {record.actor_type}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {record.action}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {record.object_type} {record.object_id}
+                  {filteredAuditTrail.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6">
+                        <EmptyState message="No audit records match this filter." />
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredAuditTrail.map((record) => (
+                      <tr
+                        key={record.audit_id}
+                        className="border-t border-border-subtle transition-colors hover:bg-white/[0.03]"
+                      >
+                        <td className="px-4 py-3 text-text-secondary">
+                          {formatDate(record.timestamp)}
+                        </td>
+                        <td className="px-4 py-3 text-text-secondary">
+                          {record.actor_type}
+                        </td>
+                        <td className="px-4 py-3 text-text-secondary">
+                          {record.action}
+                        </td>
+                        <td className="px-4 py-3 text-text-secondary">
+                          {record.object_type} {record.object_id}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
-          </article>
+          </Card>
         </aside>
       </section>
 
       {selectedEvent ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="glass-panel animate-scale-in max-h-[90vh] w-full max-w-3xl overflow-auto p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold">Raw CanonicalEvent</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-xl font-semibold text-text-primary">
+                  Raw CanonicalEvent
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary">
                   Attachment score and reasons accompany the raw event.
                 </p>
               </div>
-              <button
+              <Button
+                variant="ghost"
                 data-testid={TEST_IDS.evidenceCloseModal}
                 aria-label="Close event details modal"
+                icon={<XIcon className="h-4 w-4" />}
                 onClick={closeEventModal}
-                className="rounded-full bg-slate-100 px-3 py-2 text-slate-700"
-              >
-                Close
-              </button>
+                className="px-3 py-2"
+              />
             </div>
-            <div className="mt-6 space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <div className="glass-inset mt-6 p-4 text-sm text-text-secondary">
               <pre className="whitespace-pre-wrap break-words text-xs">
                 {JSON.stringify(selectedEvent, null, 2)}
               </pre>

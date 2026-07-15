@@ -8,6 +8,22 @@ import {
   incidentRowTestId,
   sourceHealthTestId,
 } from "../test-fixtures/testid-manifest";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { StatCard } from "../components/ui/StatCard";
+import {
+  ActivityIcon,
+  AlertTriangleIcon,
+  BellIcon,
+  ClockIcon,
+  DatabaseIcon,
+  FileTextIcon,
+  GaugeIcon,
+  NetworkIcon,
+  RadioIcon,
+  SettingsIcon,
+} from "../components/icons";
 
 type InvestigationResponse = components["schemas"]["InvestigationResponse"];
 
@@ -116,6 +132,14 @@ const baseAnomalies: AnomalyRecord[] = [
   },
 ];
 
+const SOURCE_ICON: Record<string, typeof ActivityIcon> = {
+  "simulator.prometheus": ActivityIcon,
+  "simulator.syslog": FileTextIcon,
+  "simulator.alertmanager": BellIcon,
+  "simulator.config_audit": SettingsIcon,
+  "fixture.cmdb_topology": NetworkIcon,
+};
+
 function formatClock(date: Date) {
   return date.toLocaleTimeString("en-US", { hour12: false });
 }
@@ -130,16 +154,16 @@ function formatDate(timestamp: string) {
   });
 }
 
-function badgeClass(severity: "low" | "medium" | "high" | "critical") {
+function severityBadgeVariant(severity: "low" | "medium" | "high" | "critical") {
   switch (severity) {
     case "low":
-      return "bg-emerald-100 text-emerald-800";
+      return "success" as const;
     case "medium":
-      return "bg-amber-100 text-amber-900";
+      return "warning" as const;
     case "high":
-      return "bg-orange-100 text-orange-900";
+      return "warning" as const;
     case "critical":
-      return "bg-red-100 text-red-900";
+      return "danger" as const;
   }
 }
 
@@ -243,125 +267,184 @@ export function OverviewPage() {
 
   const hasQuarantine = health.some((source) => source.quarantined > 0);
 
+  const totalAccepted = useMemo(
+    () => health.reduce((sum, source) => sum + source.accepted, 0),
+    [health],
+  );
+  const totalQuarantined = useMemo(
+    () => health.reduce((sum, source) => sum + source.quarantined, 0),
+    [health],
+  );
+  const sourcesOnline = useMemo(
+    () => health.filter((source) => source.status === "ready").length,
+    [health],
+  );
+
   return (
-    <main className="mx-auto max-w-6xl space-y-8 p-8">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-widest text-red-600">
+    <main className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6 lg:p-8">
+      <header className="animate-fade-in-up">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-accent-cyan">
           Operations
         </p>
-        <h1 className="text-3xl font-bold">Network Anomaly RCA</h1>
-        <p className="mt-2 text-slate-600">
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl">
+          Network Anomaly RCA
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm text-text-secondary sm:text-base">
           Phase 1 overview with source health, simulator controls, anomalies,
           and incident navigation.
         </p>
       </header>
+
       {apiError ? (
         <div
           role="alert"
-          className="rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="glass-panel animate-fade-in-up flex items-center gap-3 border-accent-red/30 bg-accent-red/10 px-4 py-3 text-sm text-accent-red"
         >
-          <strong className="font-semibold">Error:</strong> {apiError}
+          <AlertTriangleIcon className="h-4 w-4 shrink-0" />
+          <span>
+            <strong className="font-semibold">Error:</strong> {apiError}
+          </span>
         </div>
       ) : null}
+
       {hasQuarantine ? (
         <div
           role="status"
-          className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="glass-panel animate-fade-in-up flex items-center gap-3 border-accent-amber/30 bg-accent-amber/10 px-4 py-3 text-sm text-accent-amber"
         >
-          <span className="mr-2">⚠️</span>
+          <AlertTriangleIcon className="h-4 w-4 shrink-0" />
           Quarantine warning: at least one source has quarantined records.
         </div>
       ) : null}
 
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Events Accepted"
+          value={totalAccepted}
+          icon={<GaugeIcon className="h-5 w-5" />}
+          accent="cyan"
+        />
+        <StatCard
+          label="Anomalies Detected"
+          value={anomalies.length}
+          icon={<ActivityIcon className="h-5 w-5" />}
+          accent="purple"
+        />
+        <StatCard
+          label="Sources Online"
+          value={sourcesOnline}
+          icon={<RadioIcon className="h-5 w-5" />}
+          accent="emerald"
+        />
+        <StatCard
+          label="Quarantined Records"
+          value={totalQuarantined}
+          icon={<AlertTriangleIcon className="h-5 w-5" />}
+          accent="amber"
+        />
+      </section>
+
       <section className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {health.map((source) => (
-            <article
-              key={source.id}
-              className="rounded-2xl border bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {source.title}
-                  </p>
-                  <p className="text-xs text-slate-500">{source.source}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {health.map((source) => {
+            const SourceIcon = SOURCE_ICON[source.id] ?? DatabaseIcon;
+            return (
+              <Card key={source.id} interactive glow="cyan" className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-cyan/10 text-accent-cyan">
+                      <SourceIcon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-text-primary">
+                        {source.title}
+                      </p>
+                      <p className="truncate text-xs text-text-secondary">
+                        {source.source}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={source.status === "ready" ? "success" : "danger"}
+                    data-testid={sourceHealthTestId(source.id)}
+                    className="shrink-0"
+                  >
+                    {source.status}
+                  </Badge>
                 </div>
-                <span
-                  data-testid={sourceHealthTestId(source.id)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    source.status === "ready"
-                      ? "bg-emerald-100 text-emerald-900"
-                      : "bg-red-100 text-red-900"
-                  }`}
-                >
-                  {source.status}
-                </span>
-              </div>
-              <div className="mt-4 space-y-2 text-sm text-slate-700">
-                <p>Last ingest: {formatDate(source.ingestAt)}</p>
-                <p>Accepted: {source.accepted}</p>
-                <p>Collapsed: {source.collapsed}</p>
-                <p>Quarantined: {source.quarantined}</p>
-              </div>
-            </article>
-          ))}
+                <div className="mt-4 space-y-1.5 text-sm text-text-secondary">
+                  <p>Last ingest: {formatDate(source.ingestAt)}</p>
+                  <p>
+                    Accepted:{" "}
+                    <span className="font-semibold text-text-primary">
+                      {source.accepted}
+                    </span>
+                  </p>
+                  <p>Collapsed: {source.collapsed}</p>
+                  <p>Quarantined: {source.quarantined}</p>
+                </div>
+              </Card>
+            );
+          })}
         </div>
 
-        <div className="space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold">Simulator Controls</h2>
-              <p className="text-sm text-slate-500">
+        <Card as="div" className="space-y-4 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-text-primary">
+                Simulator Controls
+              </h2>
+              <p className="text-sm text-text-secondary">
                 Start, stop, reset, or trigger a scenario. Buttons are
                 idempotent and disabled while transitioning.
               </p>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
+            <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-3 py-1 text-sm font-medium text-text-secondary">
+              <ClockIcon className="h-3.5 w-3.5" />
               {formatClock(clock)}
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <button
+            <Button
+              variant="primary"
               data-testid={TEST_IDS.simulatorStart}
               disabled={transitioning}
               aria-label="Start simulator"
               onClick={() => handleSimulatorAction("start")}
-              className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Start
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               data-testid={TEST_IDS.simulatorStop}
               disabled={transitioning}
               aria-label="Stop simulator"
               onClick={() => handleSimulatorAction("stop")}
-              className="rounded-xl bg-slate-700 px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Stop
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               data-testid={TEST_IDS.simulatorReset}
               disabled={transitioning}
               aria-label="Reset simulator"
               onClick={() => handleSimulatorAction("reset")}
-              className="rounded-xl bg-slate-500 px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Reset
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="warning"
               data-testid={TEST_IDS.scenarioTrigger}
               disabled={transitioning}
               aria-label="Trigger scenario"
               onClick={() => triggerScenario(preferredScenario)}
-              className="rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Trigger scenario
-            </button>
+            </Button>
           </div>
 
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-text-secondary">
             Scenario
             <select
               data-testid="scenario-select"
@@ -369,69 +452,93 @@ export function OverviewPage() {
               onChange={(event) => setPreferredScenario(event.target.value)}
               disabled={transitioning}
               aria-label="Choose scenario"
-              className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+              className="mt-2 block w-full rounded-xl border border-border-strong bg-surface px-3 py-2 text-sm text-text-primary shadow-sm outline-none focus:border-accent-cyan focus:ring-2 focus:ring-accent-cyan/30"
             >
               {scenarios.map((scenario) => (
-                <option key={scenario.id} value={scenario.id}>
+                <option
+                  key={scenario.id}
+                  value={scenario.id}
+                  className="bg-bg-elevated text-text-primary"
+                >
                   {scenario.title}
                 </option>
               ))}
             </select>
           </label>
 
-          <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            <span aria-hidden="true">📡</span> State:{" "}
-            <span className="font-semibold">{statusMessage}</span>
+          <p className="glass-inset flex items-center gap-2 px-4 py-3 text-sm text-text-secondary">
+            <RadioIcon
+              className="h-4 w-4 shrink-0 text-accent-cyan"
+              aria-hidden="true"
+            />
+            State:{" "}
+            <span className="font-semibold text-text-primary">
+              {statusMessage}
+            </span>
           </p>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-text-muted">
             {scenarioTriggered
               ? "Scenario active and the baseline has been replaced."
               : "Baseline running; no incident has been triggered yet."}
           </p>
-        </div>
+        </Card>
       </section>
 
-      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+      <Card as="section" className="p-5">
         <header className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Recent Anomalies</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="text-xl font-semibold text-text-primary">
+              Recent Anomalies
+            </h2>
+            <p className="text-sm text-text-secondary">
               Last 20 records update automatically as the system polls.
             </p>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <Badge variant="info" hideIcon>
             Polling
-          </span>
+          </Badge>
         </header>
 
-        <div className="mt-4 overflow-hidden rounded-xl border">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-border-subtle">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-white/[0.03] text-text-secondary">
               <tr>
-                <th className="px-4 py-3">Entity</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Score</th>
-                <th className="px-4 py-3">Detector</th>
-                <th className="px-4 py-3">Time</th>
+                <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                  Entity
+                </th>
+                <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                  Type
+                </th>
+                <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                  Score
+                </th>
+                <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                  Detector
+                </th>
+                <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                  Time
+                </th>
               </tr>
             </thead>
             <tbody>
               {anomalies.slice(0, 20).map((anomaly) => (
                 <tr
                   key={anomaly.anomalyId}
-                  className="border-t border-slate-100 hover:bg-slate-50"
+                  className="border-t border-border-subtle transition-colors hover:bg-white/[0.03]"
                 >
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                  <td className="px-4 py-3 font-medium text-text-primary">
                     {anomaly.entity}
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{anomaly.type}</td>
-                  <td className="px-4 py-3 text-slate-700">
+                  <td className="px-4 py-3 text-text-secondary">
+                    {anomaly.type}
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-accent-cyan">
                     {anomaly.score.toFixed(1)}
                   </td>
-                  <td className="px-4 py-3 text-slate-700">
+                  <td className="px-4 py-3 text-text-secondary">
                     {anomaly.detectorId}
                   </td>
-                  <td className="px-4 py-3 text-slate-700">
+                  <td className="px-4 py-3 text-text-secondary">
                     {formatDate(anomaly.timestamp)}
                   </td>
                 </tr>
@@ -439,54 +546,60 @@ export function OverviewPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </Card>
 
-      <section
-        data-testid={TEST_IDS.incidentList}
-        className="rounded-2xl border bg-white p-5 shadow-sm"
-      >
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">Incident List</h2>
-            <p className="text-sm text-slate-500">
+      <Card as="section" data-testid={TEST_IDS.incidentList} className="p-5">
+        <header className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-text-primary">
+              Incident List
+            </h2>
+            <p className="text-sm text-text-secondary">
               Select an incident to investigate the RCA snapshot.
             </p>
           </div>
-          <span className={badgeClass(incidentRow.severity)}>
+          <Badge
+            variant={severityBadgeVariant(incidentRow.severity)}
+            hideIcon
+            className="shrink-0"
+          >
             {incidentRow.status}
-          </span>
+          </Badge>
         </header>
 
-        <div className="mt-4 divide-y divide-slate-100">
+        <div className="mt-4 divide-y divide-border-subtle">
           <a
             data-testid={incidentRowTestId(incidentRow.incidentId)}
             href={`/incidents/${incidentRow.incidentId}`}
-            className="block space-y-3 rounded-2xl p-4 transition hover:bg-slate-50"
+            className="group block space-y-3 rounded-2xl p-4 transition-colors hover:bg-white/[0.03]"
           >
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-lg font-semibold text-slate-900">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-lg font-semibold text-text-primary transition-colors group-hover:text-accent-cyan">
                   {incidentRow.title}
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-text-secondary">
                   {incidentRow.affectedEntities.join(", ")}
                 </p>
               </div>
-              <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-700">
+              <Badge
+                variant={severityBadgeVariant(incidentRow.severity)}
+                className="shrink-0"
+              >
                 {incidentRow.severity}
-              </span>
+              </Badge>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-text-secondary">
                 Start: {formatDate(incidentRow.startTime)}
               </p>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-text-secondary">
                 Status: {incidentRow.status}
               </p>
             </div>
           </a>
         </div>
-      </section>
+      </Card>
     </main>
   );
 }

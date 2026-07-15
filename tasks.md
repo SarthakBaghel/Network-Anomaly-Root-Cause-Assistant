@@ -508,10 +508,10 @@
 
 ### Phase 0 — Topology Engine First (Hours 0–3, no dependencies)
 
-- [ ] **P4-00**: Publish initial handoffs before runtime code: a complete valid `topology.json`, `hypotheses.yaml`, `symptom_families.yaml`, and `backend/tests/fixtures/golden_expected_analysis.json` copied from the frozen factor table as structured data. Include schema/content versions and a checksum. P5 and P2 may mock against these immediately; later runtime generation must reproduce them without diff.
+- [x] **P4-00**: Publish initial handoffs before runtime code: a complete valid `topology.json`, `hypotheses.yaml`, `symptom_families.yaml`, and `backend/tests/fixtures/golden_expected_analysis.json` copied from the frozen factor table as structured data. Include schema/content versions and a checksum. P5 and P2 may mock against these immediately; later runtime generation must reproduce them without diff.
   - Topology must contain all five locked nodes, the traffic path `gateway → checkout → payment → DB`, the `gateway → auth` branch, and parallel `depends_on` edges wherever operational dependency is asserted.
 
-- [ ] **P4-01**: Create `backend/app/topology/graph.py` — `nx.MultiDiGraph` built from `fixtures/topology.json`:
+- [x] **P4-01**: Create `backend/app/topology/graph.py` — `nx.MultiDiGraph` built from `fixtures/topology.json`:
   ```python
   # All operations MUST specify relation_type and direction — no generic "connected" boolean
   def get_neighbors(entity_id, relation_type, direction, max_hops) -> list[str]
@@ -528,12 +528,12 @@
   - "Where does excessive traffic propagate?" → `sends_traffic_to`, forward from change point
   - "What sends traffic into an overloaded entity?" → `sends_traffic_to`, reverse from overloaded entity
 
-- [ ] **P4-02**: Create `backend/app/api/topology.py` — API endpoints (blueprint §18.3):
+- [x] **P4-02**: Create `backend/app/api/topology.py` — API endpoints (blueprint §18.3):
   - `GET /api/v1/topology?incident_id=` — returns nodes with state, typed edges with state
   - `GET /api/v1/topology/path?source=&target=&relation_type=&direction=`
   - `GET /api/v1/topology/blast-radius/{entity_id}?mode=dependency|traffic`
 
-- [ ] **P4-03**: Write `backend/tests/unit/test_topology.py`:
+- [x] **P4-03**: Write `backend/tests/unit/test_topology.py`:
   - `get_dependency_blast_radius("payment-db-01")` traverses reverse `depends_on` and returns `payment-api-01`, `checkout-api-01`, then `api-gateway-01` when those dependency edges are present
   - `get_traffic_blast_radius("api-gateway-01", max_hops=3)` returns `checkout-api-01`, `payment-api-01`, `payment-db-01`, and `auth-api-01`; a `max_hops=2` test excludes the DB
   - `get_dependency_path("checkout-api-01", "payment-db-01")` returns correct typed path
@@ -543,7 +543,7 @@
 
 ### Phase 1 — Incident Manager (Hours 3–7, uses Person 3's `golden_anomalies.json`)
 
-- [ ] **P4-04**: Create `backend/app/incidents/manager.py` — incident opening and event attachment (blueprint §12):
+- [x] **P4-04**: Create `backend/app/incidents/manager.py` — incident opening and event attachment (blueprint §12):
 
   **Incident creation rules (§12.1):**
   - Create new incident when anomaly: exceeds `INCIDENT_OPEN_THRESHOLD`, cannot attach to existing open incident, has valid primary entity, has `can_open_incident=True`
@@ -566,14 +566,14 @@
 
   **Auth warning exclusion (§10.3):** `auth-api-01` log at T+120 with `trace_id=maintenance_auth_001` must score ≤ 0 and be excluded. This is verified via `symptom_families.yaml` (`maintenance_warning` incompatible with `traffic_saturation`) + different trace. Do NOT hard-code this exclusion; it must follow the observable rule.
 
-- [ ] **P4-05**: Implement incident lifecycle transitions (blueprint §12.4):
+- [x] **P4-05**: Implement incident lifecycle transitions (blueprint §12.4):
   - `open → investigating` on first successful analysis publication
   - `investigating → resolved` on human Confirm
   - `investigating → rejected` only when every hypothesis in the current run is rejected
 
-- [ ] **P4-06**: Create `backend/tests/fixtures/golden_incident_bundle.json` — frozen incident with all attached event IDs plus separate evaluated/excluded event records, each carrying `attachment_score` and `attachment_reasons`. Publish a static version first; after implementation, regenerate and require no diff. This is the handoff artifact for Person 5.
+- [x] **P4-06**: Create `backend/tests/fixtures/golden_incident_bundle.json` — frozen incident with all attached event IDs plus separate evaluated/excluded event records, each carrying `attachment_score` and `attachment_reasons`. Publish a static version first; after implementation, regenerate and require no diff. This is the handoff artifact for Person 5.
 
-- [ ] **P4-07**: Write `backend/tests/unit/test_incident_manager.py`:
+- [x] **P4-07**: Write `backend/tests/unit/test_incident_manager.py`:
   - Config-change marker (T+0) attaches via lookback when symptom (T+30) opens the incident
   - Auth warning (T+120) is excluded — score < 0.40 or no valid identity/topology/trace relationship
   - Incident `started_at` = T+0 (config change time), not T+30 (opening anomaly time)
@@ -582,7 +582,7 @@
 
 ### Phase 2 — Candidate Generator & Root-Cause Ranker (Hours 6–12)
 
-- [ ] **P4-08**: Own `fixtures/hypotheses.yaml` and `fixtures/symptom_families.yaml`, then create `backend/app/rca/candidate_generator.py` — generates only catalogue-backed candidates (blueprint §14.1, §14.2):
+- [x] **P4-08**: Own `fixtures/hypotheses.yaml` and `fixtures/symptom_families.yaml`, then create `backend/app/rca/candidate_generator.py` — generates only catalogue-backed candidates (blueprint §14.1, §14.2):
   - Reads `hypotheses.yaml` catalogue
   - For the golden scenario, generates exactly three candidates:
     1. `configuration_regression`
@@ -591,7 +591,7 @@
   - Generation uses: anomaly type, entity types, topology location, recent changes, log patterns
   - Must NOT use an LLM to invent candidate types
 
-- [ ] **P4-09**: Create `backend/app/rca/ranker.py` — deterministic weighted scoring (blueprint §14.3, §14.4):
+- [x] **P4-09**: Create `backend/app/rca/ranker.py` — deterministic weighted scoring (blueprint §14.3, §14.4):
 
   **Weights (exact, sum to 100%):**
   ```
@@ -621,36 +621,36 @@
   ```
   Round final score **half-up to one decimal place** (never truncate). Store unrounded factor inputs. The UI label is **"Evidence score"** — never "confidence score" or "causal probability".
 
-- [ ] **P4-10**: Implement **conflict effects** from `hypotheses.yaml` (blueprint §14.4):
+- [x] **P4-10**: Implement **conflict effects** from `hypotheses.yaml` (blueprint §14.4):
   - Each conflict pattern declares `factor`, `operation: subtract|cap`, `value`
   - Apply in catalogue order; clamp factor to `[0.0, 1.0]`
   - Every conflict effect creates a `conflicting` `EvidenceItem` with the pattern ID as `reason_code`
   - For DoS, stable raw ingress/source distribution means one of two required symptoms is present, so `symptom_compatibility=0.5`; `change_causal_fit=0.0` and `temporal_proximity=0.0` already follow the frozen rubric. Emit a conflict item without applying a second, invented penalty.
   - Example: normal DB utilization at T+100 creates conflicting evidence against DB-exhaustion candidate
 
-- [ ] **P4-11**: Verify frozen golden outputs (blueprint §10.3 table):
+- [x] **P4-11**: Verify frozen golden outputs (blueprint §10.3 table):
   ```
   Gateway config regression: score 92.1  (rank 1)
   External DoS/traffic surge: score 65.6  (rank 2)
   Payment DB exhaustion:      score 41.5  (rank 3)
   ```
 
-- [ ] **P4-12**: Implement a pure deterministic `AnalysisEngine.analyse(incident_bundle) -> AnalysisResult`:
+- [x] **P4-12**: Implement a pure deterministic `AnalysisEngine.analyse(incident_bundle) -> AnalysisResult`:
   - Returns candidates, unrounded factors, ranks, conflict reason codes, topology states, and evidence requirements without opening its own DB transaction
   - Same ordered canonical input always produces the same output
   - Does not set `current_analysis_run_id`, supersede runs, or publish partial rows; P1's orchestrator owns fingerprinting and atomic publication
   - Raises typed, sanitized domain errors that P1 can persist as a failed run
 
-- [ ] **P4-13**: Add a generator/verification test for `golden_expected_analysis.json`: the implemented engine must reproduce the Hour-0 fixture exactly (factor inputs + scores + reason codes). This remains P4's handoff artifact for Person 5 and Person 2.
+- [x] **P4-13**: Add a generator/verification test for `golden_expected_analysis.json`: the implemented engine must reproduce the Hour-0 fixture exactly (factor inputs + scores + reason codes). This remains P4's handoff artifact for Person 5 and Person 2.
 
-- [ ] **P4-14**: Write `backend/tests/unit/test_ranker.py`:
+- [x] **P4-14**: Write `backend/tests/unit/test_ranker.py`:
   - Golden scenario produces scores `92.1`, `65.6`, `41.5` in that rank order
   - Decimal half-up rounding: verify `92.10` displays as `92.1`
   - DoS candidate: stable raw ingress yields `symptom_compatibility=0.5`, `change_causal_fit=0.0`, `temporal_proximity=0.0`, and a matching conflict EvidenceItem
   - Conflict pattern against DB candidate: normal utilization emits conflicting EvidenceItem with correct `reason_code`
   - Missing factors score zero (not renormalized)
 
-- [ ] **P4-15**: Write `backend/tests/integration/test_full_rca_pipeline.py`:
+- [x] **P4-15**: Write `backend/tests/integration/test_full_rca_pipeline.py`:
   - Feed golden anomaly bundle → 3 candidates generated
   - Top hypothesis = `configuration_regression` on `api-gateway-01`
   - Score = `92.1` exactly

@@ -32,6 +32,9 @@ from app.readiness import catalogue_status  # noqa: E402
 
 HANDOFFS = (
     "backend/openapi.json",
+    "backend/app/fixtures/topology.json",
+    "backend/app/fixtures/hypotheses.yaml",
+    "backend/app/fixtures/symptom_families.yaml",
     "backend/tests/fixtures/golden_events.jsonl",
     "backend/tests/fixtures/golden_anomalies.json",
     "backend/tests/fixtures/golden_incident_bundle.json",

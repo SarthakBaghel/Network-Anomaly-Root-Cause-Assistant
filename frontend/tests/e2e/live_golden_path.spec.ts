@@ -60,7 +60,10 @@ test("real UI completes reset, replay, investigation, review, and audit", async 
     page.getByTestId(TEST_IDS.auditTrailPanel).getByText("REVIEW_CONFIRMED"),
   ).toBeVisible();
 
-  await page.getByTestId(TEST_IDS.auditFilter).fill("REVIEW_CONFIRMED");
+  await page
+    .getByTestId(TEST_IDS.auditFilter)
+    .getByRole("button", { name: "review" })
+    .click();
   await expect(
     page.getByTestId(TEST_IDS.auditTrailPanel).getByText("REVIEW_CONFIRMED"),
   ).toBeVisible();

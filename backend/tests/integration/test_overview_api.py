@@ -107,7 +107,7 @@ def test_recent_anomalies_include_entity_and_detector_identity():
         app.dependency_overrides.clear()
 
 
-def test_simulator_status_exposes_five_typed_source_health_rows():
+def test_simulator_status_exposes_six_typed_source_health_rows():
     with TestClient(app) as client:
         payload = client.get("/api/v1/simulator/status").json()
     assert payload["generated_at"].endswith("Z")
@@ -116,8 +116,9 @@ def test_simulator_status_exposes_five_typed_source_health_rows():
         "simulator.syslog",
         "simulator.alertmanager",
         "simulator.config_audit",
+        "simulator.trace",
         "fixture.cmdb_topology",
     ]
     topology = payload["source_health"][-1]
     assert topology["status"] == "healthy"
-    assert topology["fixture_version"] == "topology-1.1"
+    assert topology["fixture_version"] == "topology-1.2"

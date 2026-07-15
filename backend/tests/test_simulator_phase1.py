@@ -8,7 +8,12 @@ from fastapi.testclient import TestClient
 import app.api.simulator as simulator_api
 from app.main import app
 from app.contracts import CanonicalEvent
-from app.simulator.emitters import AlertmanagerEmitter, ConfigAuditEmitter, PrometheusEmitter, SyslogEmitter
+from app.simulator.emitters import (
+    AlertmanagerEmitter,
+    ConfigAuditEmitter,
+    PrometheusEmitter,
+    SyslogEmitter,
+)
 from app.simulator.engine import SimulatorEngine
 from app.simulator.ingestion import AdapterValidationSink
 
@@ -20,10 +25,81 @@ def test_four_emitters_have_distinct_sources_shapes_and_common_envelope():
     at = datetime(2026, 7, 14, 9, 30, tzinfo=timezone.utc)
     scenario = "scenario_gateway_rate_limit_001"
     emitted = [
-        (PrometheusEmitter(), PrometheusEmitter().emit(sample_id="sample", observed_at=at, metric="rps", value=1.0, unit="requests/s", labels={"entity_id": "api-gateway-01"}, scenario_id=scenario), {"sample_id", "observed_at", "metric", "value", "unit", "labels"}),
-        (SyslogEmitter(), SyslogEmitter().emit(record_id="log", timestamp=at, host="payment-api-01", facility="application", level="ERROR", code="UPSTREAM_TIMEOUT", message="timeout", trace_id=scenario, attributes={}, scenario_id=scenario), {"record_id", "observed_at", "host", "facility", "level", "code", "message", "trace_id", "attributes"}),
-        (AlertmanagerEmitter(), AlertmanagerEmitter().emit(fingerprint="alert", starts_at=at, status="firing", labels={"entity_id": "api-gateway-01", "alertname": "HighRate"}, annotations={}, scenario_id=scenario), {"fingerprint", "startsAt", "status", "labels", "annotations"}),
-        (ConfigAuditEmitter(), ConfigAuditEmitter().emit(change_id="change", changed_at=at, target_entity_id="api-gateway-01", actor="bot", config_key="enabled", old_value=True, new_value=False, change_ticket="CHG-1", scenario_id=scenario), {"change_id", "changed_at", "target_entity_id", "actor", "config_key", "old_value", "new_value", "change_ticket"}),
+        (
+            PrometheusEmitter(),
+            PrometheusEmitter().emit(
+                sample_id="sample",
+                observed_at=at,
+                metric="rps",
+                value=1.0,
+                unit="requests/s",
+                labels={"entity_id": "api-gateway-01"},
+                scenario_id=scenario,
+            ),
+            {"sample_id", "observed_at", "metric", "value", "unit", "labels"},
+        ),
+        (
+            SyslogEmitter(),
+            SyslogEmitter().emit(
+                record_id="log",
+                timestamp=at,
+                host="payment-api-01",
+                facility="application",
+                level="ERROR",
+                code="UPSTREAM_TIMEOUT",
+                message="timeout",
+                trace_id=scenario,
+                attributes={},
+                scenario_id=scenario,
+            ),
+            {
+                "record_id",
+                "observed_at",
+                "host",
+                "facility",
+                "level",
+                "code",
+                "message",
+                "trace_id",
+                "attributes",
+            },
+        ),
+        (
+            AlertmanagerEmitter(),
+            AlertmanagerEmitter().emit(
+                fingerprint="alert",
+                starts_at=at,
+                status="firing",
+                labels={"entity_id": "api-gateway-01", "alertname": "HighRate"},
+                annotations={},
+                scenario_id=scenario,
+            ),
+            {"fingerprint", "startsAt", "status", "labels", "annotations"},
+        ),
+        (
+            ConfigAuditEmitter(),
+            ConfigAuditEmitter().emit(
+                change_id="change",
+                changed_at=at,
+                target_entity_id="api-gateway-01",
+                actor="bot",
+                config_key="enabled",
+                old_value=True,
+                new_value=False,
+                change_ticket="CHG-1",
+                scenario_id=scenario,
+            ),
+            {
+                "change_id",
+                "changed_at",
+                "target_entity_id",
+                "actor",
+                "config_key",
+                "old_value",
+                "new_value",
+                "change_ticket",
+            },
+        ),
     ]
     assert len({emitter.source_name for emitter, _, _ in emitted}) == 4
     for _, raw, payload_fields in emitted:
@@ -71,14 +147,13 @@ def test_trigger_emits_complete_golden_stream_only_through_ingestion():
         "simulator.config_audit": {"emitted": 1, "accepted": 1, "collapsed": 0, "quarantined": 0},
         "simulator.alertmanager": {"emitted": 2, "accepted": 2, "collapsed": 0, "quarantined": 0},
         "simulator.syslog": {"emitted": 3, "accepted": 3, "collapsed": 0, "quarantined": 0},
+        "simulator.trace": {"emitted": 0, "accepted": 0, "collapsed": 0, "quarantined": 0},
     }
     events = sorted(sink.accepted_events, key=lambda event: (event.ingested_at, event.event_id))
     expected = sorted(
         [
             CanonicalEvent.model_validate(json.loads(line))
-            for line in (FIXTURES / "golden_events.jsonl")
-            .read_text(encoding="utf-8")
-            .splitlines()
+            for line in (FIXTURES / "golden_events.jsonl").read_text(encoding="utf-8").splitlines()
         ],
         key=lambda event: (event.ingested_at, event.event_id),
     )
@@ -99,12 +174,16 @@ def test_required_simulator_api_handlers(monkeypatch):
         assert start.status_code == 200
         assert start.json()["request_id"].startswith("req_")
         assert client.get("/api/v1/simulator/status").json()["state"] == "running"
-        assert client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger").status_code == 409
+        assert (
+            client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger").status_code == 409
+        )
         isolated.complete_baseline()
         result = client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger")
         assert result.status_code == 200 and result.json()["scenario_state"] == "completed"
         assert result.json()["request_id"].startswith("req_")
-        assert client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger").status_code == 409
+        assert (
+            client.post("/api/v1/simulator/scenarios/gateway_rate_limit/trigger").status_code == 409
+        )
         assert client.post("/api/v1/simulator/start").status_code == 409
         reset = client.post("/api/v1/simulator/reset").json()
         assert reset["scenario_state"] == "idle"
@@ -140,9 +219,23 @@ def test_scenario_catalogue_endpoint_is_backend_driven():
     payload = response.json()
     assert [item["scenario_id"] for item in payload["items"]] == [
         "gateway_rate_limit_disabled",
-        "database_connection_pool_exhaustion",
         "network_path_congestion",
+        "ddos_syn_flood",
+        "gaia_resource_saturation",
+        "port_scan_reconnaissance",
+        "hdfs_datanode_failure",
+        "trace_anomaly",
+        "database_connection_pool_exhaustion",
         "dns_resolution_failure",
         "tls_certificate_failure",
     ]
+    reference_items = [
+        item for item in payload["items"] if item["quality_flag"] == "REFERENCE_DERIVED"
+    ]
+    assert len(reference_items) == 6
+    assert all(item["reference_datasets"] for item in reference_items)
+    assert all(
+        item["transformation_version"] == "reference-scenario-builder-1.0"
+        for item in reference_items
+    )
     assert all(item["expected_signals"] for item in payload["items"])

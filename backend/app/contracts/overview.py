@@ -17,7 +17,7 @@ class SourceCounters(UtcModel):
 
 class SourceHealth(UtcModel):
     source_id: str = Field(min_length=1)
-    source_type: Literal["metrics", "logs", "alerts", "config_changes", "topology"]
+    source_type: Literal["metrics", "logs", "alerts", "config_changes", "traces", "topology"]
     status: Literal["healthy", "delayed", "offline", "quarantined", "error"]
     last_ingest_at: datetime | None
     accepted: int = Field(ge=0)
@@ -49,6 +49,9 @@ class SimulatorScenario(UtcModel):
     duration_seconds: int = Field(gt=0)
     expected_signals: list[str] = Field(min_length=1)
     difficulty: Literal["introductory", "intermediate", "advanced"]
+    reference_datasets: list[str] = Field(default_factory=list)
+    transformation_version: str = Field(min_length=1)
+    quality_flag: Literal["SYNTHETIC", "REFERENCE_DERIVED"]
 
 
 class SimulatorScenarioListResponse(UtcModel):

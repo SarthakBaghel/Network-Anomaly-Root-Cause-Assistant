@@ -13,9 +13,9 @@ def test_full_topology_returns_typed_fixture_without_incident_state() -> None:
     response = client.get("/api/v1/topology")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["fixture_version"] == "topology-1.1"
-    assert len(payload["nodes"]) == 5
-    assert len(payload["edges"]) == 8
+    assert payload["fixture_version"] == "topology-1.2"
+    assert len(payload["nodes"]) == 8
+    assert len(payload["edges"]) == 12
     assert {edge["relation_type"] for edge in payload["edges"]} == {
         "depends_on",
         "sends_traffic_to",
@@ -147,8 +147,6 @@ def test_topology_query_validation_and_not_found_errors() -> None:
     assert unknown_entity.status_code == 404
     assert unknown_entity.json()["error"]["code"] == "TOPOLOGY_NOT_FOUND"
 
-    missing_incident = client.get(
-        "/api/v1/topology", params={"incident_id": "missing-incident"}
-    )
+    missing_incident = client.get("/api/v1/topology", params={"incident_id": "missing-incident"})
     assert missing_incident.status_code == 404
     assert missing_incident.json()["error"]["code"] == "INCIDENT_NOT_FOUND"

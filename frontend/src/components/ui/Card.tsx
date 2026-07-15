@@ -4,10 +4,10 @@ type GlowVariant = "none" | "cyan" | "purple" | "emerald" | "red";
 
 const GLOW_CLASSES: Record<GlowVariant, string> = {
   none: "",
-  cyan: "hover:border-accent-cyan/40 hover:shadow-glow-cyan",
-  purple: "hover:border-accent-purple/40 hover:shadow-glow-purple",
-  emerald: "hover:border-accent-emerald/40 hover:shadow-glow-emerald",
-  red: "hover:border-accent-red/40 hover:shadow-glow-red",
+  cyan: "hover:border-border-strong",
+  purple: "hover:border-border-strong",
+  emerald: "hover:border-border-strong",
+  red: "hover:border-border-strong",
 };
 
 type CardProps = ComponentPropsWithoutRef<"div"> & {
@@ -26,8 +26,8 @@ export function Card({
   ...rest
 }: CardProps) {
   const classes = [
-    "glass-panel animate-fade-in-up p-6",
-    interactive ? `transition-all duration-300 ${GLOW_CLASSES[glow]}` : "",
+    "glass-panel p-5",
+    interactive ? `transition-colors duration-150 ${GLOW_CLASSES[glow]}` : "",
     className,
   ]
     .filter(Boolean)

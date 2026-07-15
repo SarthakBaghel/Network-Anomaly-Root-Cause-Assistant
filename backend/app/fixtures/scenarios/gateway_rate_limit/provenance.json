@@ -13,7 +13,7 @@
       "origin": "checked-in-profile",
       "path": "backend/app/fixtures/reference_profiles/network_profile.json",
       "record_count": null,
-      "sha256": "fdd5f5015478b960406f3d97fff9ad0eeb0e6ffaeeb0efe7117eb9fbc66af5fe"
+      "sha256": "45ede7690c8d239558cbf7f0082350c513ec7d1d153f067c54009fe2484a4fea"
     },
     {
       "license": "project-authored synthetic fixture",

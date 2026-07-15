@@ -52,7 +52,7 @@
       "hypothesis_type": "dos_or_traffic_surge",
       "incident_id": "inc_001",
       "rank": 2,
-      "summary": "A traffic surge explains the impact pattern, but stable raw ingress and source distribution conflict with an external DoS cause."
+      "summary": "An external traffic surge or SYN flood may explain the gateway pressure and downstream impact."
     },
     {
       "analysis_run_id": "run_007",

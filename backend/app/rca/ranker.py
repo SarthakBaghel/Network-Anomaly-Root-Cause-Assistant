@@ -72,8 +72,7 @@ def score_factors(factors: dict[str, float]) -> float:
     if unknown:
         raise RankingError("factor input contains an unsupported factor")
     weighted = sum(
-        weight * Decimal(str(factors.get(name, 0.0)))
-        for name, weight in WEIGHTS.items()
+        weight * Decimal(str(factors.get(name, 0.0))) for name, weight in WEIGHTS.items()
     )
     return round_half_up(Decimal("100") * weighted)
 
@@ -179,9 +178,7 @@ def _pattern_observations(
         ):
             continue
         observed[event.event_id] = event
-    return tuple(
-        sorted(observed.values(), key=lambda event: (event.timestamp, event.event_id))
-    )
+    return tuple(sorted(observed.values(), key=lambda event: (event.timestamp, event.event_id)))
 
 
 def _recursive_contains(value: Any, expected: str) -> bool:
@@ -194,9 +191,7 @@ def _recursive_contains(value: Any, expected: str) -> bool:
     return False
 
 
-def _direct_log_alert_factor(
-    bundle: IncidentAnalysisBundle, candidate_entity_id: str
-) -> float:
+def _direct_log_alert_factor(bundle: IncidentAnalysisBundle, candidate_entity_id: str) -> float:
     modalities: set[Modality] = set()
     for event in bundle.attached_events:
         if event.modality not in {Modality.LOG, Modality.ALERT}:
@@ -353,14 +348,10 @@ def _candidate_signal(
             *generation.any_event_types,
         ):
             matching[event.event_id] = event
-    return min(
-        matching.values(), key=lambda event: (event.timestamp, event.event_id), default=None
-    )
+    return min(matching.values(), key=lambda event: (event.timestamp, event.event_id), default=None)
 
 
-def _temporal_factor(
-    signal: CanonicalEvent | None, first_symptom: CanonicalEvent | None
-) -> float:
+def _temporal_factor(signal: CanonicalEvent | None, first_symptom: CanonicalEvent | None) -> float:
     if signal is None or first_symptom is None or signal.timestamp >= first_symptom.timestamp:
         return 0.0
     seconds = (first_symptom.timestamp - signal.timestamp).total_seconds()
@@ -407,9 +398,7 @@ def _change_causal_fit(
     return sum(bool(check) for check in checks) * 0.25
 
 
-def _historical_factor(
-    entry: HypothesisDefinition, bundle: IncidentAnalysisBundle
-) -> float:
+def _historical_factor(entry: HypothesisDefinition, bundle: IncidentAnalysisBundle) -> float:
     return max(
         (
             match.similarity
@@ -434,6 +423,16 @@ _CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
         "upstream_health",
         "dns_queries",
         "certificate_state",
+        "resource_usage",
+        "service_latency",
+        "resource_log",
+        "scan_pattern",
+        "scanner_source",
+        "connection_rejections",
+        "datanode_health",
+        "replication_state",
+        "trace_critical_path",
+        "span_errors",
     }
 )
 
@@ -444,12 +443,15 @@ def _available_requirement(
     candidate: HypothesisCandidate,
 ) -> bool:
     events = bundle.attached_events
-    contains = lambda event, *values: any(
-        value in (event.signal_name or "").lower()
-        or value in event.event_type.lower()
-        or value in json.dumps(event.raw_payload, sort_keys=True).lower()
-        for value in values
-    )
+
+    def contains(event: CanonicalEvent, *values: str) -> bool:
+        return any(
+            value in (event.signal_name or "").lower()
+            or value in event.event_type.lower()
+            or value in json.dumps(event.raw_payload, sort_keys=True).lower()
+            for value in values
+        )
+
     rules = {
         "config_diff": lambda event: event.modality is Modality.CONFIG_CHANGE,
         "forwarded_rate": lambda event: contains(event, "forwarded_request"),
@@ -460,8 +462,7 @@ def _available_requirement(
         ),
         "connection_pressure": lambda event: contains(event, "connection_utilization"),
         "downstream_latency": lambda event: contains(event, "latency"),
-        "timeout_log": lambda event: event.modality is Modality.LOG
-        and contains(event, "timeout"),
+        "timeout_log": lambda event: event.modality is Modality.LOG and contains(event, "timeout"),
         "waf_decision_logs": lambda event: contains(event, "waf_decision"),
         "waf_decisions": lambda event: contains(event, "waf_decision"),
         "db_utilization": lambda event: contains(event, "db_connection_utilization"),
@@ -475,6 +476,26 @@ def _available_requirement(
         "upstream_health": lambda event: contains(event, "upstream", "health"),
         "dns_queries": lambda event: contains(event, "dns", "resolver"),
         "certificate_state": lambda event: contains(event, "certificate", "tls"),
+        "resource_usage": lambda event: contains(event, "cpu_usage", "memory_usage"),
+        "service_latency": lambda event: contains(event, "service_p95_latency"),
+        "resource_log": lambda event: event.modality is Modality.LOG
+        and contains(event, "resource_saturation"),
+        "scan_pattern": lambda event: contains(
+            event, "unique_destination_ports", "destination_fanout", "port_scan"
+        ),
+        "scanner_source": lambda event: contains(event, "source_fingerprint"),
+        "connection_rejections": lambda event: contains(event, "rejected_connection_rate"),
+        "datanode_health": lambda event: contains(
+            event, "datanode_io_error", "hdfs_datanode_failure"
+        ),
+        "replication_state": lambda event: contains(event, "replica", "datanode_failure"),
+        "trace_critical_path": lambda event: event.modality is Modality.TRACE
+        and contains(event, "trace_span_duration"),
+        "span_errors": lambda event: event.modality is Modality.TRACE
+        and (
+            str(event.raw_payload.get("status", "")).lower() in {"error", "failed"}
+            or "missing" in str(event.raw_payload.get("parent_span_id", "")).lower()
+        ),
     }
     matcher = rules.get(key)
     if matcher is None:
@@ -506,9 +527,7 @@ def _coverage(
     candidate: HypothesisCandidate,
 ) -> EvidenceCoverage:
     expected_keys = tuple(dict.fromkeys(entry.expected_evidence))
-    available = sum(
-        _available_requirement(key, bundle, candidate) for key in expected_keys
-    )
+    available = sum(_available_requirement(key, bundle, candidate) for key in expected_keys)
     return EvidenceCoverage(available=available, expected=len(expected_keys))
 
 
@@ -535,21 +554,15 @@ class RootCauseRanker:
         factors = {
             "symptom_compatibility": _symptom_factor(entry, self.catalogue, bundle),
             "topology_relevance": topology_factor,
-            "direct_logs_alerts": _direct_log_alert_factor(
-                bundle, candidate.candidate_entity_id
-            ),
-            "propagation_consistency": _propagation_factor(
-                entry, self.catalogue, bundle
-            ),
+            "direct_logs_alerts": _direct_log_alert_factor(bundle, candidate.candidate_entity_id),
+            "propagation_consistency": _propagation_factor(entry, self.catalogue, bundle),
             "metric_anomaly": _metric_anomaly_factor(
                 entry, candidate, bundle, topology, topology_path
             ),
             "change_causal_fit": _change_causal_fit(
                 entry, candidate, bundle, topology_path, matched_conflicts
             ),
-            "temporal_proximity": _temporal_factor(
-                signal, _first_symptom_event(bundle)
-            ),
+            "temporal_proximity": _temporal_factor(signal, _first_symptom_event(bundle)),
             "historical_similarity": _historical_factor(entry, bundle),
         }
         conflicts: list[AppliedConflict] = []
@@ -590,8 +603,7 @@ class RootCauseRanker:
         bundle: IncidentAnalysisBundle,
     ) -> tuple[CandidateScore, ...]:
         catalogue_order = {
-            entry.hypothesis_type: index
-            for index, entry in enumerate(self.catalogue.hypotheses)
+            entry.hypothesis_type: index for index, entry in enumerate(self.catalogue.hypotheses)
         }
         scored = [self.score_candidate(candidate, bundle) for candidate in candidates]
         return tuple(

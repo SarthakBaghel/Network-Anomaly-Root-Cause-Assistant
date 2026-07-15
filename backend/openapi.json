@@ -1155,7 +1155,8 @@
           "metric",
           "log",
           "alert",
-          "config_change"
+          "config_change",
+          "trace"
         ],
         "title": "Modality",
         "type": "string"
@@ -1933,6 +1934,21 @@
             "title": "Expected Signals",
             "type": "array"
           },
+          "quality_flag": {
+            "enum": [
+              "SYNTHETIC",
+              "REFERENCE_DERIVED"
+            ],
+            "title": "Quality Flag",
+            "type": "string"
+          },
+          "reference_datasets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reference Datasets",
+            "type": "array"
+          },
           "scenario_id": {
             "minLength": 1,
             "title": "Scenario Id",
@@ -1941,6 +1957,11 @@
           "title": {
             "minLength": 1,
             "title": "Title",
+            "type": "string"
+          },
+          "transformation_version": {
+            "minLength": 1,
+            "title": "Transformation Version",
             "type": "string"
           }
         },
@@ -1951,7 +1972,9 @@
           "affected_entity_ids",
           "duration_seconds",
           "expected_signals",
-          "difficulty"
+          "difficulty",
+          "transformation_version",
+          "quality_flag"
         ],
         "title": "SimulatorScenario",
         "type": "object"
@@ -2168,6 +2191,7 @@
               "logs",
               "alerts",
               "config_changes",
+              "traces",
               "topology"
             ],
             "title": "Source Type",

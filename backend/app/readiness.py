@@ -19,11 +19,11 @@ CATALOGUES = (
     "playbooks.yaml",
 )
 SUPPORTED_CATALOGUE_VERSIONS = {
-    "topology.json": ("1.0", "topology-1.1"),
-    "detector_rules.yaml": ("1.0", "detector-rules-1.1"),
-    "symptom_families.yaml": ("1.0", "symptom-families-1.1"),
-    "hypotheses.yaml": ("1.0", "hypotheses-1.2"),
-    "playbooks.yaml": ("1.0", "playbooks-1.1"),
+    "topology.json": ("1.0", "topology-1.2"),
+    "detector_rules.yaml": ("1.0", "detector-rules-1.2"),
+    "symptom_families.yaml": ("1.0", "symptom-families-1.2"),
+    "hypotheses.yaml": ("1.0", "hypotheses-1.3"),
+    "playbooks.yaml": ("1.0", "playbooks-1.2"),
 }
 
 
@@ -52,8 +52,11 @@ def catalogue_status() -> dict[str, str]:
         "payment-api-01",
         "payment-db-01",
         "auth-api-01",
+        "hdfs-client-01",
+        "namenode-01",
+        "datanode-01",
     }:
-        raise ValueError("topology does not contain exactly the five frozen entity IDs")
+        raise ValueError("topology does not contain exactly the declared entity IDs")
     for edge in topology.get("edges", []):
         if edge["source"] not in node_ids or edge["target"] not in node_ids:
             raise ValueError("topology contains a dangling edge")

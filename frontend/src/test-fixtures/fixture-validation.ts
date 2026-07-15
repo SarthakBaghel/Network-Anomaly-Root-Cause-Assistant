@@ -34,7 +34,7 @@ function assertCanonicalEvent(value: unknown, label: string): asserts value is C
   for (const field of ['event_id', 'entity_id', 'event_type', 'timestamp', 'ingested_at', 'source', 'schema_version']) {
     requireString(event[field], `${label}.${field}`)
   }
-  if (!['metric', 'log', 'alert', 'config_change'].includes(String(event.modality))) {
+  if (!['metric', 'log', 'alert', 'config_change', 'trace'].includes(String(event.modality))) {
     throw new Error(`${label}.modality must be a generated Modality value`)
   }
   if (typeof event.severity !== 'number') {

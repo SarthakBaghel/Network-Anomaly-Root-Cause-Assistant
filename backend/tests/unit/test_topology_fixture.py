@@ -42,6 +42,8 @@ def test_all_edge_endpoints_exist() -> None:
         "payment-api-01",
         "payment-db-01",
         "auth-api-01",
+        "hdfs-client-01",
+        "namenode-01",
+        "datanode-01",
     }
     assert all(edge["source"] in nodes and edge["target"] in nodes for edge in payload["edges"])
-

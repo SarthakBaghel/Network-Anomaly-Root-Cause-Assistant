@@ -1,7 +1,9 @@
 # Network Anomaly Root-Cause Assistant
 
-Hackathon prototype implementing the contract in
-[`NETWORK_ANOMALY_RCA_PROTOTYPE_BLUEPRINT.md`](./NETWORK_ANOMALY_RCA_PROTOTYPE_BLUEPRINT.md).
+Hackathon prototype implementing the original contract in
+[`BLUEPRINT.md`](./BLUEPRINT.md), plus the documented post-blueprint scenario
+extensions described in
+[`docs/reference-scenario-extensions.md`](./docs/reference-scenario-extensions.md).
 
 ## Prerequisites
 
@@ -29,6 +31,35 @@ frontend boundary, generated-artifact check, and MSW-disabled live Playwright
 flow twice. A production reset is executed against the live-test database
 between passes, and the command fails unless both production replays produce
 the same normalized semantic snapshot.
+
+## Reference-derived scenarios
+
+These are additive implementation extensions; they were not requirements in
+the original blueprint. The simulator catalogue now includes six additional
+deterministic demo paths:
+
+- Network-path degradation (GAIA MicroSS + UNSW-NB15)
+- DDoS / SYN flood (UNSW-NB15 + NSL-KDD)
+- GAIA resource saturation
+- Port scan / reconnaissance (UNSW-NB15 + NSL-KDD)
+- HDFS DataNode failure (Loghub HDFS)
+- Distributed trace latency and structure anomalies
+
+The large local datasets stay under the ignored `/data/` directory. Runtime
+events contain provenance and `REFERENCE_DERIVED` markers, but never dataset
+outcome fields. The UI shows each scenario's reference datasets and
+transformation version.
+
+See the [extension specification](./docs/reference-scenario-extensions.md) for
+the scenario-to-dataset, signal, detector, RCA, topology, and playbook mappings;
+the meaning of deterministic execution; safety boundaries; and the recommended
+demo flow.
+
+To validate the local dataset bridges independently:
+
+```bash
+.venv/bin/python scripts/validate_dataset_pipeline.py
+```
 
 ## Optional local LLM explanation
 

@@ -19,6 +19,17 @@
       ],
       "attachment_score": 1.0,
       "decision": "attached",
+      "event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
+      "source_record_id": "prom-connection_utilization-0244"
+    },
+    {
+      "attachment_reasons": [
+        "SAME_ENTITY",
+        "SHARED_SCENARIO_TRACE",
+        "COMPATIBLE_SYMPTOM"
+      ],
+      "attachment_score": 1.0,
+      "decision": "attached",
       "event_id": "evt_01kxfzdbqgz32a749g3hva5w4g",
       "source_record_id": "prom-raw_ingress_requests_per_second-0241"
     },
@@ -52,27 +63,15 @@
       ],
       "attachment_score": 1.0,
       "decision": "attached",
-      "event_id": "evt_01kxfzdbqge9vt5479y2gkaqy9",
-      "source_record_id": "prom-connection_utilization-0244"
-    },
-    {
-      "attachment_reasons": [
-        "SAME_ENTITY",
-        "SHARED_SCENARIO_TRACE",
-        "COMPATIBLE_SYMPTOM"
-      ],
-      "attachment_score": 1.0,
-      "decision": "attached",
       "event_id": "evt_01kxfzdng0g0e87j0wtk5g24d9",
       "source_record_id": "prom-tcp_resets_total-0245"
     },
     {
       "attachment_reasons": [
         "SAME_ENTITY",
-        "SHARED_SCENARIO_TRACE",
-        "COMPATIBLE_SYMPTOM"
+        "SHARED_SCENARIO_TRACE"
       ],
-      "attachment_score": 1.0,
+      "attachment_score": 0.9,
       "decision": "attached",
       "event_id": "evt_01kxfzdng0djk00hf924wjkmcg",
       "source_record_id": "prom-tcp_retransmissions_total-0246"

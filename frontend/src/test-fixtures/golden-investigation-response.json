@@ -5,7 +5,7 @@
     "completed_at": "2026-07-14T09:31:41.320Z",
     "created_at": "2026-07-14T09:31:41.000Z",
     "incident_id": "inc_001",
-    "input_fingerprint": "sha256:22c3c3a525dac5fbcb5d7a2e7c1d5246b7b32673b30c5cfc2579a68d60110224",
+    "input_fingerprint": "sha256:40a2d8c5a9f0e27ae5bab53bfda145d0e1479fe092026297e8e9a03ae335ca38",
     "revision": 7,
     "status": "current",
     "trigger_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj"
@@ -347,7 +347,7 @@
       "hypothesis_type": "dos_or_traffic_surge",
       "incident_id": "inc_001",
       "rank": 2,
-      "summary": "A traffic surge explains the impact pattern, but stable raw ingress and source distribution conflict with an external DoS cause."
+      "summary": "An external traffic surge or SYN flood may explain the gateway pressure and downstream impact."
     },
     {
       "analysis_run_id": "run_007",
@@ -773,10 +773,9 @@
       "attachment_decision": "attached",
       "attachment_reasons": [
         "SAME_ENTITY",
-        "SHARED_SCENARIO_TRACE",
-        "COMPATIBLE_SYMPTOM"
+        "SHARED_SCENARIO_TRACE"
       ],
-      "attachment_score": 1.0,
+      "attachment_score": 0.9,
       "event": {
         "entity_id": "api-gateway-01",
         "event_id": "evt_01kxfzdng0djk00hf924wjkmcg",
@@ -1262,9 +1261,37 @@
         "source": "api-gateway-01",
         "state": null,
         "target": "auth-api-01"
+      },
+      {
+        "relation_type": "sends_traffic_to",
+        "relationship": "requests_block_locations",
+        "source": "hdfs-client-01",
+        "state": null,
+        "target": "namenode-01"
+      },
+      {
+        "relation_type": "sends_traffic_to",
+        "relationship": "coordinates_block_io",
+        "source": "namenode-01",
+        "state": null,
+        "target": "datanode-01"
+      },
+      {
+        "relation_type": "depends_on",
+        "relationship": "requires_namespace_metadata",
+        "source": "hdfs-client-01",
+        "state": null,
+        "target": "namenode-01"
+      },
+      {
+        "relation_type": "depends_on",
+        "relationship": "requires_block_storage",
+        "source": "namenode-01",
+        "state": null,
+        "target": "datanode-01"
       }
     ],
-    "fixture_version": "topology-1.1",
+    "fixture_version": "topology-1.2",
     "nodes": [
       {
         "criticality": "critical",
@@ -1305,6 +1332,30 @@
         "service": "auth-api",
         "state": "blast_radius",
         "type": "service"
+      },
+      {
+        "criticality": "high",
+        "id": "hdfs-client-01",
+        "name": "HDFS Client",
+        "service": "hdfs-client",
+        "state": null,
+        "type": "service"
+      },
+      {
+        "criticality": "critical",
+        "id": "namenode-01",
+        "name": "HDFS NameNode",
+        "service": "hdfs-namenode",
+        "state": null,
+        "type": "storage_service"
+      },
+      {
+        "criticality": "critical",
+        "id": "datanode-01",
+        "name": "HDFS DataNode",
+        "service": "hdfs-datanode",
+        "state": null,
+        "type": "storage_node"
       }
     ]
   }

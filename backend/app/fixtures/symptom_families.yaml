@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: symptom-families-1.1
+version: symptom-families-1.2
 families:
   traffic_saturation:
     incident_title: Checkout degradation through API gateway
@@ -9,7 +9,6 @@ families:
       - ACTIVE_CONNECTIONS
       - CONNECTION_UTILIZATION
       - TCP_RESETS
-      - TCP_RETRANSMISSIONS
       - HIGH_FORWARDED_REQUEST_RATE
       - HIGH_FORWARDED_REQUEST_AND_CONNECTION_RATE
       - CHECKOUT_P95_LATENCY
@@ -23,10 +22,49 @@ families:
       - DB_CONNECTION_POOL_EXHAUSTED
       - UPSTREAM_CONNECTION_TIMEOUT
   network_path:
-    incident_title: Network congestion on the checkout path
+    incident_title: Network-path degradation affecting checkout
     event_types:
       - TCP_RETRANSMISSIONS
+      - PACKET_LOSS_RATE
+      - NETWORK_LATENCY
       - PACKET_LOSS_WARNING
+      - NETWORKPATHDEGRADED
+  ddos_syn_flood:
+    incident_title: DDoS / SYN flood pressure at the gateway
+    event_types:
+      - RAW_INGRESS_RATE
+      - FORWARDED_REQUEST_RATE
+      - ACTIVE_CONNECTIONS
+      - SYN_ERROR_RATE
+      - SOURCE_DISTRIBUTION_CHANGE_SCORE
+      - SYN_FLOOD_DETECTED
+      - SYNFLOODSUSPECTED
+  resource_saturation:
+    incident_title: Payment service resource saturation
+    event_types:
+      - CPU_USAGE_PERCENT
+      - MEMORY_USAGE_PERCENT
+      - SERVICE_P95_LATENCY
+      - RESOURCE_SATURATION
+      - UPSTREAM_TIMEOUT
+  reconnaissance:
+    incident_title: Port-scan reconnaissance at the gateway
+    event_types:
+      - UNIQUE_DESTINATION_PORTS
+      - REJECTED_CONNECTION_RATE
+      - DESTINATION_FANOUT
+      - PORT_SCAN_DETECTED
+      - RECONNAISSANCESUSPECTED
+  distributed_storage:
+    incident_title: HDFS DataNode failure and replica degradation
+    event_types:
+      - DATANODE_IO_ERROR_RATE
+      - HDFS_DATANODE_FAILURE
+      - HDFSREPLICAUNDERREPLICATED
+  trace_anomaly:
+    incident_title: Distributed trace latency and structure anomaly
+    event_types:
+      - TRACE_SPAN
   dns_failure:
     incident_title: DNS resolution failure affecting checkout
     event_types:

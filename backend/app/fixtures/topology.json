@@ -1,13 +1,16 @@
 {
   "schema_version": "1.0",
-  "version": "topology-1.1",
+  "version": "topology-1.2",
   "generated_at": "2026-07-14T09:00:00.000Z",
   "nodes": [
     {"id": "api-gateway-01", "name": "API Gateway", "entity_type": "gateway", "service": "api-gateway", "criticality": "critical"},
     {"id": "checkout-api-01", "name": "Checkout API", "entity_type": "service", "service": "checkout-api", "criticality": "critical"},
     {"id": "payment-api-01", "name": "Payment API", "entity_type": "service", "service": "payment-api", "criticality": "critical"},
     {"id": "payment-db-01", "name": "Payment Database", "entity_type": "database", "service": "payment-db", "criticality": "critical"},
-    {"id": "auth-api-01", "name": "Authentication API", "entity_type": "service", "service": "auth-api", "criticality": "high"}
+    {"id": "auth-api-01", "name": "Authentication API", "entity_type": "service", "service": "auth-api", "criticality": "high"},
+    {"id": "hdfs-client-01", "name": "HDFS Client", "entity_type": "service", "service": "hdfs-client", "criticality": "high"},
+    {"id": "namenode-01", "name": "HDFS NameNode", "entity_type": "storage_service", "service": "hdfs-namenode", "criticality": "critical"},
+    {"id": "datanode-01", "name": "HDFS DataNode", "entity_type": "storage_node", "service": "hdfs-datanode", "criticality": "critical"}
   ],
   "edges": [
     {"source": "api-gateway-01", "target": "checkout-api-01", "relation_type": "sends_traffic_to", "relationship": "forwards_requests"},
@@ -17,7 +20,10 @@
     {"source": "api-gateway-01", "target": "checkout-api-01", "relation_type": "depends_on", "relationship": "requires_checkout_response"},
     {"source": "checkout-api-01", "target": "payment-api-01", "relation_type": "depends_on", "relationship": "requires_payment_service"},
     {"source": "payment-api-01", "target": "payment-db-01", "relation_type": "depends_on", "relationship": "requires_payment_store"},
-    {"source": "api-gateway-01", "target": "auth-api-01", "relation_type": "depends_on", "relationship": "requires_authentication"}
+    {"source": "api-gateway-01", "target": "auth-api-01", "relation_type": "depends_on", "relationship": "requires_authentication"},
+    {"source": "hdfs-client-01", "target": "namenode-01", "relation_type": "sends_traffic_to", "relationship": "requests_block_locations"},
+    {"source": "namenode-01", "target": "datanode-01", "relation_type": "sends_traffic_to", "relationship": "coordinates_block_io"},
+    {"source": "hdfs-client-01", "target": "namenode-01", "relation_type": "depends_on", "relationship": "requires_namespace_metadata"},
+    {"source": "namenode-01", "target": "datanode-01", "relation_type": "depends_on", "relationship": "requires_block_storage"}
   ]
 }
-

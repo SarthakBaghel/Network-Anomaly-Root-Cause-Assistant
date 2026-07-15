@@ -27,6 +27,7 @@ class Modality(str, Enum):
     LOG = "log"
     ALERT = "alert"
     CONFIG_CHANGE = "config_change"
+    TRACE = "trace"
 
 
 class EventStatus(str, Enum):

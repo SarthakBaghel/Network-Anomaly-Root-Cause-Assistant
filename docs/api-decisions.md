@@ -270,3 +270,34 @@ contracts only when its affected owners have reviewed it.
   and audit actions byte-for-byte and reports a SHA-256 digest.
 - **Affected owners:** Person 1 owns the runner; all persons own their included
   boundary tests.
+
+## EXT-001 — Post-blueprint reference scenario and modality expansion
+
+- **Status:** accepted and implemented on 2026-07-16
+- **Scope relationship:** this is an additive implementation extension, not a
+  retroactive requirement of `BLUEPRINT.md`. It supersedes the five-entity and
+  four-telemetry-adapter scope assumptions in M0-003 and the Person 2 live
+  overview note only for the expanded demo catalogue. The primary Milestone-0
+  golden scenario and its frozen semantic output remain supported.
+- **Scenario scope:** the simulator adds reference-derived network-path
+  degradation, DDoS / SYN flood, GAIA resource saturation, port scan /
+  reconnaissance, HDFS DataNode failure, and distributed trace anomaly paths.
+  Their authoritative mapping is recorded in
+  `docs/reference-scenario-extensions.md`.
+- **Contract scope:** `trace` is a canonical modality, `simulator.trace` is a
+  source-health adapter, `topology-1.2` adds HDFS entities, and simulator
+  scenario responses expose reference datasets, transformation version, and a
+  quality flag through the generated OpenAPI client.
+- **Runtime data policy:** the application replays curated deterministic
+  profiles rather than loading large raw datasets during a demo. Runtime
+  ingress recursively rejects dataset outcome fields; offline readers isolate
+  them under `_meta`, which is stripped before canonical ingestion.
+- **RCA and safety:** every scenario must publish its expected top hypothesis
+  through the production pipeline with zero quarantined records. Hypotheses
+  declare exact catalogue playbook IDs, catalogue cross-validation is
+  mandatory, all recommendations require human approval, and no remediation is
+  auto-executed.
+- **Verification:** the two-pass release gate produced identical semantic
+  digest
+  `sha256:196ff3c123a4e9ca73a3aa7934f03696b2de7e38539de06295a23ea42fff9419`.
+- **Affected owners:** all implementation owners

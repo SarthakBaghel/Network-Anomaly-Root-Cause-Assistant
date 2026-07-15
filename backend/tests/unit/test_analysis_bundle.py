@@ -30,9 +30,7 @@ def test_bundle_is_ordered_detached_and_matches_incident_handoff() -> None:
             input_fingerprint=f"sha256:{'a' * 64}",
         )
 
-    frozen = json.loads(
-        (FIXTURES / "golden_incident_bundle.json").read_text(encoding="utf-8")
-    )
+    frozen = json.loads((FIXTURES / "golden_incident_bundle.json").read_text(encoding="utf-8"))
     assert {event.event_id for event in bundle.attached_events} == {
         row["event_id"] for row in frozen["attached_events"]
     }
@@ -48,7 +46,7 @@ def test_bundle_is_ordered_detached_and_matches_incident_handoff() -> None:
         for anomaly in bundle.anomalies
     )
     assert len(bundle.anomalies) == 10  # nine actionable + config context marker
-    assert len(bundle.topology.nodes) == 5
+    assert len(bundle.topology.nodes) == 8
     assert bundle.historical_matches[0].similarity == 0.5
     assert bundle.canonical_json() == repeated.canonical_json()
 

@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: playbooks-1.1
+version: playbooks-1.2
 
 # This is the sole playbook catalogue consumed by app.playbooks.engine.
 # Every action remains a recommendation: a human must approve it before it
@@ -198,4 +198,160 @@ steps:
       - Correlate TLS handshake failures with the affected request path.
     risk_level: low
     rollback_note: Read-only diagnostic; no certificate or TLS policy is changed.
+    requires_human_approval: true
+
+  - step_id: inspect-resource-usage
+    title: Inspect service resource usage
+    step_type: diagnostic
+    applicable_hypothesis_types: [resource_saturation]
+    applicable_entity_types: [service]
+    preconditions: [resource_metrics_available]
+    instructions:
+      - Compare CPU and memory utilization with the healthy service baseline.
+      - Correlate saturation windows with request latency and timeout logs.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no workload or capacity is changed.
+    requires_human_approval: true
+
+  - step_id: inspect-service-latency
+    title: Inspect saturated service latency
+    step_type: diagnostic
+    applicable_hypothesis_types: [resource_saturation]
+    applicable_entity_types: [service]
+    preconditions: [latency_metrics_available]
+    instructions:
+      - Review service latency percentiles across the incident window.
+      - Identify operations whose latency rose with resource pressure.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no service configuration is changed.
+    requires_human_approval: true
+
+  - step_id: propose-capacity-mitigation
+    title: Propose bounded capacity mitigation
+    step_type: remediation
+    applicable_hypothesis_types: [resource_saturation]
+    applicable_entity_types: [service]
+    preconditions: [capacity_reviewed, operator_approval]
+    instructions:
+      - Prepare a bounded scale-out or workload-throttling proposal.
+      - Present impact, validation, and rollback plans for human approval.
+    risk_level: medium
+    rollback_note: Restore the previous replica or traffic configuration if validation fails.
+    requires_human_approval: true
+
+  - step_id: inspect-scan-pattern
+    title: Inspect reconnaissance pattern
+    step_type: diagnostic
+    applicable_hypothesis_types: [external_probe]
+    applicable_entity_types: [gateway]
+    preconditions: [connection_telemetry_available]
+    instructions:
+      - Review destination-port and service fanout for the suspected source.
+      - Compare rejected connections with the normal gateway pattern.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no source is blocked.
+    requires_human_approval: true
+
+  - step_id: validate-scanner-source
+    title: Validate scanner source
+    step_type: diagnostic
+    applicable_hypothesis_types: [external_probe]
+    applicable_entity_types: [gateway]
+    preconditions: [source_fingerprint_available]
+    instructions:
+      - Correlate the source fingerprint across flow and gateway logs.
+      - Confirm that the pattern is not an approved internal scanner.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no access policy is changed.
+    requires_human_approval: true
+
+  - step_id: propose-source-block
+    title: Propose bounded source block
+    step_type: remediation
+    applicable_hypothesis_types: [external_probe]
+    applicable_entity_types: [gateway]
+    preconditions: [scanner_source_confirmed, operator_approval]
+    instructions:
+      - Prepare a time-bounded block for the confirmed scanner fingerprint.
+      - Submit the change and validation plan for human approval.
+    risk_level: medium
+    rollback_note: Remove the approved rule if it affects legitimate traffic.
+    requires_human_approval: true
+
+  - step_id: inspect-datanode-health
+    title: Inspect DataNode health
+    step_type: diagnostic
+    applicable_hypothesis_types: [distributed_storage_node_failure]
+    applicable_entity_types: [storage_node]
+    preconditions: [datanode_telemetry_available]
+    instructions:
+      - Review DataNode volume, heartbeat, and I/O error telemetry.
+      - Identify failed disks and the first affected block operations.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no HDFS node is changed.
+    requires_human_approval: true
+
+  - step_id: inspect-replication-state
+    title: Inspect HDFS replication state
+    step_type: diagnostic
+    applicable_hypothesis_types: [distributed_storage_node_failure]
+    applicable_entity_types: [storage_node]
+    preconditions: [namenode_metrics_available]
+    instructions:
+      - Review under-replicated and missing block counts.
+      - Confirm which replicas were hosted by the failed DataNode.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no replica placement is changed.
+    requires_human_approval: true
+
+  - step_id: propose-datanode-isolation
+    title: Propose DataNode isolation
+    step_type: remediation
+    applicable_hypothesis_types: [distributed_storage_node_failure]
+    applicable_entity_types: [storage_node]
+    preconditions: [replication_headroom_confirmed, operator_approval]
+    instructions:
+      - Prepare a controlled DataNode decommission or isolation proposal.
+      - Require replication validation and human approval before execution.
+    risk_level: high
+    rollback_note: Recommission the node only after storage health is restored and validated.
+    requires_human_approval: true
+
+  - step_id: inspect-trace-critical-path
+    title: Inspect trace critical path
+    step_type: diagnostic
+    applicable_hypothesis_types: [trace_latency_regression]
+    applicable_entity_types: [service]
+    preconditions: [trace_spans_available]
+    instructions:
+      - Reconstruct the request critical path from accepted spans.
+      - Compare span duration with the declared operation p99 baseline.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no service is changed.
+    requires_human_approval: true
+
+  - step_id: inspect-span-errors
+    title: Inspect span errors and structure
+    step_type: diagnostic
+    applicable_hypothesis_types: [trace_latency_regression]
+    applicable_entity_types: [service]
+    preconditions: [trace_spans_available]
+    instructions:
+      - Review erroneous spans and missing parent-child relationships.
+      - Confirm whether instrumentation loss or service failure caused the gap.
+    risk_level: low
+    rollback_note: Read-only diagnostic; no instrumentation is changed.
+    requires_human_approval: true
+
+  - step_id: propose-service-rollback
+    title: Propose affected service rollback
+    step_type: remediation
+    applicable_hypothesis_types: [trace_latency_regression]
+    applicable_entity_types: [service]
+    preconditions: [recent_deployment_identified, operator_approval]
+    instructions:
+      - Prepare a rollback proposal for the service on the anomalous trace path.
+      - Present trace validation and recovery criteria for human approval.
+    risk_level: medium
+    rollback_note: Restore the newer version if rollback validation fails or introduces errors.
     requires_human_approval: true

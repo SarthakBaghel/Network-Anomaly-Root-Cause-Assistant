@@ -877,7 +877,7 @@ export interface components {
          * Modality
          * @enum {string}
          */
-        Modality: "metric" | "log" | "alert" | "config_change";
+        Modality: "metric" | "log" | "alert" | "config_change" | "trace";
         /** OverviewAnomaly */
         OverviewAnomaly: {
             /** Anomaly Id */
@@ -1182,10 +1182,19 @@ export interface components {
             duration_seconds: number;
             /** Expected Signals */
             expected_signals: string[];
+            /**
+             * Quality Flag
+             * @enum {string}
+             */
+            quality_flag: "SYNTHETIC" | "REFERENCE_DERIVED";
+            /** Reference Datasets */
+            reference_datasets?: string[];
             /** Scenario Id */
             scenario_id: string;
             /** Title */
             title: string;
+            /** Transformation Version */
+            transformation_version: string;
         };
         /** SimulatorScenarioListResponse */
         SimulatorScenarioListResponse: {
@@ -1264,7 +1273,7 @@ export interface components {
              * Source Type
              * @enum {string}
              */
-            source_type: "metrics" | "logs" | "alerts" | "config_changes" | "topology";
+            source_type: "metrics" | "logs" | "alerts" | "config_changes" | "traces" | "topology";
             /**
              * Status
              * @enum {string}

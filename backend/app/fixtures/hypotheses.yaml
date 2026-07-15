@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: hypotheses-1.2
+version: hypotheses-1.3
 pattern_definitions:
   symptoms:
     forwarded_traffic_spike:
@@ -7,6 +7,7 @@ pattern_definitions:
     downstream_degradation:
       anomaly_types: [CHECKOUT_LATENCY_HIGH, UPSTREAM_TIMEOUT, CHECKOUT_ERROR_ALERT]
     changed_source_distribution:
+      anomaly_types: [SOURCE_DISTRIBUTION_CHANGE]
       raw_payload_true_keys: [source_distribution_changed]
     payment_timeout:
       anomaly_types: [UPSTREAM_TIMEOUT]
@@ -25,6 +26,20 @@ pattern_definitions:
       anomaly_types: [DNS_RESOLUTION_FAILURE]
     tls_handshake_errors:
       anomaly_types: [TLS_HANDSHAKE_FAILURE]
+    resource_pressure:
+      anomaly_types: [CPU_SATURATION, MEMORY_SATURATION, RESOURCE_SATURATION_ANOMALY]
+    service_latency:
+      anomaly_types: [SERVICE_LATENCY_HIGH]
+    reconnaissance_fanout:
+      anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, RECONNAISSANCE_ACTIVITY]
+    rejected_connections:
+      anomaly_types: [REJECTED_CONNECTION_SPIKE]
+    datanode_failure:
+      anomaly_types: [DATANODE_IO_ERRORS, DISTRIBUTED_SYSTEM_FAILURE]
+    trace_latency:
+      anomaly_types: [TRACE_LATENCY_ANOMALY]
+    trace_structure:
+      anomaly_types: [TRACE_STRUCTURE_ANOMALY]
   propagation:
     gateway_pressure:
       anomaly_types: [FORWARDED_TRAFFIC_SPIKE, ACTIVE_CONNECTION_SPIKE, CONNECTION_UTILIZATION_HIGH]
@@ -51,6 +66,14 @@ pattern_definitions:
       anomaly_types: [TLS_HANDSHAKE_FAILURE]
     request_failure:
       anomaly_types: [CHECKOUT_ERROR_ALERT]
+    resource_degradation:
+      anomaly_types: [CPU_SATURATION, MEMORY_SATURATION, SERVICE_LATENCY_HIGH]
+    scan_activity:
+      anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE]
+    storage_failure:
+      anomaly_types: [DATANODE_IO_ERRORS, DISTRIBUTED_SYSTEM_FAILURE]
+    trace_degradation:
+      anomaly_types: [TRACE_LATENCY_ANOMALY, TRACE_STRUCTURE_ANOMALY]
 hypotheses:
   - hypothesis_type: configuration_regression
     entity_types: [gateway, service, database]
@@ -81,9 +104,9 @@ hypotheses:
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
     generation:
       candidate_selector: primary_entity
-      any_anomaly_types: [FORWARDED_TRAFFIC_SPIKE, GATEWAY_TRAFFIC_ALERT]
+      any_anomaly_types: [FORWARDED_TRAFFIC_SPIKE, GATEWAY_TRAFFIC_ALERT, RAW_INGRESS_TRAFFIC_SPIKE, SYN_ERROR_RATE_HIGH, SOURCE_DISTRIBUTION_CHANGE]
     change_based: false
-    metric_anomaly_types: [FORWARDED_TRAFFIC_SPIKE]
+    metric_anomaly_types: [FORWARDED_TRAFFIC_SPIKE, RAW_INGRESS_TRAFFIC_SPIKE, SYN_ERROR_RATE_HIGH, SOURCE_DISTRIBUTION_CHANGE]
     required_symptoms: [forwarded_traffic_spike, changed_source_distribution]
     expected_propagation: [gateway_pressure, checkout_latency, payment_timeout]
     expected_evidence:
@@ -99,7 +122,7 @@ hypotheses:
           event_types: [RAW_INGRESS_RATE]
           absent_anomaly_types: [RAW_INGRESS_SPIKE, SOURCE_DISTRIBUTION_CHANGE]
         statement: "Gateway raw ingress remained stable with no new source distribution."
-    summary: "A traffic surge explains the impact pattern, but stable raw ingress and source distribution conflict with an external DoS cause."
+    summary: "An external traffic surge or SYN flood may explain the gateway pressure and downstream impact."
     diagnostic_step_ids: [inspect-ingress-distribution]
     remediation_step_ids: [propose-edge-rate-limit]
   - hypothesis_type: database_connection_exhaustion
@@ -145,6 +168,80 @@ hypotheses:
     summary: "Network path congestion may explain packet loss and retransmissions."
     diagnostic_step_ids: [inspect-network-path]
     remediation_step_ids: []
+  - hypothesis_type: resource_saturation
+    entity_types: [service]
+    traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: event_entity
+      any_anomaly_types: [CPU_SATURATION, MEMORY_SATURATION, RESOURCE_SATURATION_ANOMALY]
+      any_log_event_types: [RESOURCE_SATURATION]
+    change_based: false
+    metric_anomaly_types: [CPU_SATURATION, MEMORY_SATURATION, SERVICE_LATENCY_HIGH]
+    required_symptoms: [resource_pressure, service_latency]
+    expected_propagation: [resource_degradation]
+    expected_evidence:
+      resource_usage: "Obtain CPU and memory utilization for the candidate service."
+      service_latency: "Obtain service latency telemetry for the candidate service."
+      resource_log: "Obtain resource saturation logs for the candidate service."
+    conflict_patterns: []
+    summary: "CPU and memory saturation in a service may be driving request latency and timeouts."
+    diagnostic_step_ids: [inspect-resource-usage, inspect-service-latency]
+    remediation_step_ids: [propose-capacity-mitigation]
+  - hypothesis_type: external_probe
+    entity_types: [gateway]
+    traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 1}
+    generation:
+      candidate_selector: primary_entity
+      any_anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE, RECONNAISSANCE_ACTIVITY]
+      any_log_event_types: [PORT_SCAN_DETECTED]
+    change_based: false
+    metric_anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE]
+    required_symptoms: [reconnaissance_fanout, rejected_connections]
+    expected_propagation: [scan_activity]
+    expected_evidence:
+      scan_pattern: "Obtain port and destination fanout telemetry."
+      scanner_source: "Obtain the observed scanner source fingerprint."
+      connection_rejections: "Obtain rejected-connection telemetry."
+    conflict_patterns: []
+    summary: "A reconnaissance probe may explain the unusual port fanout and rejected connections."
+    diagnostic_step_ids: [inspect-scan-pattern, validate-scanner-source]
+    remediation_step_ids: [propose-source-block]
+  - hypothesis_type: distributed_storage_node_failure
+    entity_types: [storage_node]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: event_entity
+      any_anomaly_types: [DATANODE_IO_ERRORS, DISTRIBUTED_SYSTEM_FAILURE]
+      any_log_event_types: [HDFS_DATANODE_FAILURE]
+    change_based: false
+    metric_anomaly_types: [DATANODE_IO_ERRORS, DISTRIBUTED_SYSTEM_FAILURE]
+    required_symptoms: [datanode_failure]
+    expected_propagation: [storage_failure]
+    expected_evidence:
+      datanode_health: "Obtain DataNode health and I/O error telemetry."
+      replication_state: "Obtain HDFS block-replication state."
+    conflict_patterns: []
+    summary: "A failed HDFS DataNode may explain I/O errors and replica degradation."
+    diagnostic_step_ids: [inspect-datanode-health, inspect-replication-state]
+    remediation_step_ids: [propose-datanode-isolation]
+  - hypothesis_type: trace_latency_regression
+    entity_types: [service]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: event_entity
+      any_anomaly_types: [TRACE_LATENCY_ANOMALY, TRACE_STRUCTURE_ANOMALY]
+      any_event_types: [TRACE_SPAN]
+    change_based: false
+    metric_anomaly_types: [TRACE_LATENCY_ANOMALY, TRACE_STRUCTURE_ANOMALY]
+    required_symptoms: [trace_latency, trace_structure]
+    expected_propagation: [trace_degradation]
+    expected_evidence:
+      trace_critical_path: "Obtain the distributed trace critical path."
+      span_errors: "Obtain erroneous and structurally invalid spans."
+    conflict_patterns: []
+    summary: "A latency regression on the distributed trace critical path may explain the request failure."
+    diagnostic_step_ids: [inspect-trace-critical-path, inspect-span-errors]
+    remediation_step_ids: [propose-service-rollback]
   - hypothesis_type: upstream_service_failure
     entity_types: [service]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}

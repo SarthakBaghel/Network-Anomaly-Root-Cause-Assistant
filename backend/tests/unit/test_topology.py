@@ -35,17 +35,15 @@ def test_fixture_loads_as_multidigraph_with_parallel_typed_edges(
     graph: TopologyGraph,
 ) -> None:
     assert isinstance(graph.graph, nx.MultiDiGraph)
-    assert graph.fixture_version == "topology-1.1"
-    assert graph.graph.number_of_nodes() == 5
+    assert graph.fixture_version == "topology-1.2"
+    assert graph.graph.number_of_nodes() == 8
     assert graph.graph.number_of_edges("api-gateway-01", "checkout-api-01") == 2
 
 
 def test_generic_dependency_search_is_forward_from_affected_service(
     graph: TopologyGraph,
 ) -> None:
-    assert graph.get_neighbors(
-        "api-gateway-01", "depends_on", "forward", max_hops=2
-    ) == [
+    assert graph.get_neighbors("api-gateway-01", "depends_on", "forward", max_hops=2) == [
         "checkout-api-01",
         "auth-api-01",
         "payment-api-01",
@@ -160,9 +158,7 @@ def test_direction_and_hop_limit_must_be_explicit_and_valid(graph: TopologyGraph
 def test_snapshot_maps_fixture_entity_type_to_api_type(graph: TopologyGraph) -> None:
     snapshot = graph.snapshot(
         node_states={"api-gateway-01": "suspected_root"},
-        edge_states={
-            ("api-gateway-01", "checkout-api-01", "sends_traffic_to"): "impact_path"
-        },
+        edge_states={("api-gateway-01", "checkout-api-01", "sends_traffic_to"): "impact_path"},
     )
     gateway = next(node for node in snapshot["nodes"] if node["id"] == "api-gateway-01")
     traffic_edge = next(
@@ -175,4 +171,3 @@ def test_snapshot_maps_fixture_entity_type_to_api_type(graph: TopologyGraph) -> 
     assert gateway["type"] == "gateway"
     assert gateway["state"] == "suspected_root"
     assert traffic_edge["state"] == "impact_path"
-

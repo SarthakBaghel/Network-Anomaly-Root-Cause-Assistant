@@ -17,7 +17,9 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "source_adapters"
 
 
 def test_ingestion_status_codes_batch_partial_success_and_cursor(monkeypatch) -> None:
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
     Base.metadata.create_all(engine)
 
     def override_session():
@@ -31,13 +33,22 @@ def test_ingestion_status_codes_batch_partial_success_and_cursor(monkeypatch) ->
 
     # Seed required entities
     from app.db.models import Entity
+
     with Session(engine) as seed_session:
         for entity_id, entity_type, service in [
             ("api-gateway-01", "gateway", "gateway"),
             ("payment-api-01", "api", "payment"),
         ]:
-            seed_session.add(Entity(id=entity_id, name=entity_id, entity_type=entity_type,
-                                    service=service, criticality="tier-1", metadata_json={}))
+            seed_session.add(
+                Entity(
+                    id=entity_id,
+                    name=entity_id,
+                    entity_type=entity_type,
+                    service=service,
+                    criticality="tier-1",
+                    metadata_json={},
+                )
+            )
         seed_session.commit()
 
     app.dependency_overrides[get_session] = override_session
@@ -55,15 +66,22 @@ def test_ingestion_status_codes_batch_partial_success_and_cursor(monkeypatch) ->
     )
     try:
         # New API uses 'raw' field name (not 'record')
-        created = client.post("/api/v1/events", json={"source": "simulator.prometheus", "raw": metric})
-        retry = client.post("/api/v1/events", json={"source": "simulator.prometheus", "raw": metric})
+        created = client.post(
+            "/api/v1/events", json={"source": "simulator.prometheus", "raw": metric}
+        )
+        retry = client.post(
+            "/api/v1/events", json={"source": "simulator.prometheus", "raw": metric}
+        )
         batch_metric = json.loads(json.dumps(metric))
         batch_metric["sample_id"] = "batch-metric-two"
-        batch = client.post("/api/v1/events/batch", json=[
-            {"source": "simulator.prometheus", "raw": batch_metric},
-            {"source": "simulator.syslog", "raw": invalid},
-            {"source": "unknown.source", "raw": {}},
-        ])
+        batch = client.post(
+            "/api/v1/events/batch",
+            json=[
+                {"source": "simulator.prometheus", "raw": batch_metric},
+                {"source": "simulator.syslog", "raw": invalid},
+                {"source": "unknown.source", "raw": {}},
+            ],
+        )
         first_page = client.get("/api/v1/events", params={"limit": 1, "modality": "metric"})
         cursor = first_page.json()["next_cursor"]
         second_page = client.get(
@@ -81,7 +99,9 @@ def test_ingestion_status_codes_batch_partial_success_and_cursor(monkeypatch) ->
     finally:
         app.dependency_overrides.clear()
 
-    assert created.status_code in (200, 201), f"Expected 200/201, got {created.status_code}: {created.text}"
+    assert created.status_code in (200, 201), (
+        f"Expected 200/201, got {created.status_code}: {created.text}"
+    )
     assert created.json()["status"] == "accepted"
     assert retry.status_code == 200
     assert batch.status_code == 200
@@ -111,3 +131,30 @@ def test_batch_rejects_more_than_one_hundred_items() -> None:
         json=[{"source": "unknown.source", "raw": {}} for _ in range(101)],
     )
     assert response.status_code == 413
+
+
+def test_runtime_ingestion_quarantines_nested_dataset_outcome_fields() -> None:
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+
+    def override_session():
+        with Session(engine) as session:
+            yield session
+            session.commit()
+
+    app.dependency_overrides[get_session] = override_session
+    raw = json.loads((FIXTURES / "valid_prometheus_sample.json").read_text(encoding="utf-8"))
+    raw["dataset_context"] = {"nested": [{"attack_cat": "DoS"}]}
+    try:
+        response = TestClient(app).post(
+            "/api/v1/events",
+            json={"source": "simulator.prometheus", "raw": raw},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "quarantined"
+    assert response.json()["reason_codes"] == ["DATASET_LABEL_FIELD_FORBIDDEN"]

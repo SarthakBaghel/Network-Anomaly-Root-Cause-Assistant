@@ -38,7 +38,7 @@ describe('Person 2 Phase 0', () => {
     expect(events.items).toHaveLength(goldenEvents.length)
     expect(investigation.analysis_run_id).toBe(goldenInvestigationResponse.analysis_run_id)
     expect(topology.fixture_version).toBe(goldenInvestigationResponse.topology.fixture_version)
-    expect(simulator.source_health).toHaveLength(5)
+    expect(simulator.source_health).toHaveLength(6)
     expect(simulator.state).toBe('stopped')
   })
 

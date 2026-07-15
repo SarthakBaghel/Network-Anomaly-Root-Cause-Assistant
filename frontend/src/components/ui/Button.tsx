@@ -4,16 +4,16 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "succ
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-accent-cyan-strong to-accent-purple-strong text-slate-950 shadow-glow-cyan hover:brightness-110 hover:-translate-y-0.5",
+    "border border-accent-cyan-strong bg-accent-cyan-strong text-slate-950 hover:bg-accent-cyan",
   secondary:
-    "border border-border-strong bg-surface text-text-primary hover:border-accent-cyan/40 hover:-translate-y-0.5",
+    "border border-border-strong bg-surface-strong text-text-primary hover:border-text-muted",
   ghost: "border border-transparent text-text-secondary hover:bg-white/5 hover:text-text-primary",
   danger:
-    "bg-gradient-to-r from-accent-red to-accent-red-strong text-white shadow-glow-red hover:brightness-110 hover:-translate-y-0.5",
+    "border border-accent-red-strong bg-accent-red-strong text-white hover:bg-accent-red",
   success:
-    "bg-gradient-to-r from-accent-emerald to-accent-emerald-strong text-slate-950 shadow-glow-emerald hover:brightness-110 hover:-translate-y-0.5",
+    "border border-accent-emerald-strong bg-accent-emerald-strong text-slate-950 hover:bg-accent-emerald",
   warning:
-    "bg-gradient-to-r from-accent-amber to-amber-500 text-slate-950 hover:brightness-110 hover:-translate-y-0.5",
+    "border border-accent-amber bg-accent-amber text-slate-950 hover:bg-amber-400",
 };
 
 type ButtonProps = ComponentPropsWithoutRef<"button"> & {
@@ -35,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
     >
       {loading ? (

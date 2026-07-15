@@ -11,23 +11,20 @@ export function Topbar({ activePath }: TopbarProps) {
   const incidentPath = isInvestigation ? activePath : null;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg-base/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-border-subtle bg-bg-base">
       <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-2 text-sm">
           <span className="font-semibold text-text-primary">
             {isInvestigation ? "Incident Investigation" : "Operations Overview"}
           </span>
           <span className="hidden text-text-muted sm:inline">/</span>
-          <span className="hidden truncate text-text-secondary sm:inline">
+          <span className="font-data hidden truncate text-text-secondary sm:inline">
             {isInvestigation ? incidentId : "live monitoring"}
           </span>
         </div>
 
-        <span className="hidden items-center gap-2 rounded-full border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary sm:flex">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-emerald opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-emerald" />
-          </span>
+        <span className="hidden items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary sm:flex">
+          <span className="h-2 w-2 rounded-full bg-accent-emerald" />
           Live Feed
         </span>
       </div>
@@ -37,7 +34,7 @@ export function Topbar({ activePath }: TopbarProps) {
           href="/"
           data-testid={TEST_IDS.mobileOverviewLink}
           aria-label="Open operations overview"
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${
             activePath === "/"
               ? "bg-accent-cyan/10 text-accent-cyan"
               : "text-text-secondary hover:text-text-primary"
@@ -49,7 +46,7 @@ export function Topbar({ activePath }: TopbarProps) {
           href={incidentPath}
           data-testid={TEST_IDS.mobileIncidentLink}
           aria-label="Open current incident investigation"
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${
             activePath === incidentPath
               ? "bg-accent-purple/10 text-accent-purple"
               : "text-text-secondary hover:text-text-primary"

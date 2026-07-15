@@ -87,6 +87,27 @@ REQUIREMENT_MATCHERS: dict[str, EventMatcher] = {
     "certificate_state": lambda event: _contains(
         event.event_type, "certificate", "tls", "handshake"
     ),
+    "resource_usage": lambda event: _contains(event.signal_name, "cpu_usage", "memory_usage"),
+    "service_latency": lambda event: _contains(event.signal_name, "service_p95_latency"),
+    "resource_log": lambda event: event.modality is Modality.LOG
+    and _contains(event.event_type, "resource_saturation"),
+    "scan_pattern": lambda event: _contains(
+        event.signal_name, "unique_destination_ports", "destination_fanout"
+    )
+    or _contains(event.event_type, "port_scan"),
+    "scanner_source": lambda event: _payload_contains(event, "source_fingerprint"),
+    "connection_rejections": lambda event: _contains(event.signal_name, "rejected_connection_rate"),
+    "datanode_health": lambda event: _contains(event.signal_name, "datanode_io_error")
+    or _contains(event.event_type, "hdfs_datanode_failure"),
+    "replication_state": lambda event: _contains(event.event_type, "replica", "datanode_failure")
+    or _payload_contains(event, "replica"),
+    "trace_critical_path": lambda event: event.modality is Modality.TRACE
+    and _contains(event.signal_name, "trace_span_duration"),
+    "span_errors": lambda event: event.modality is Modality.TRACE
+    and (
+        str(event.raw_payload.get("status", "")).lower() in {"error", "failed"}
+        or _contains(str(event.raw_payload.get("parent_span_id")), "missing")
+    ),
 }
 
 
@@ -111,6 +132,16 @@ REASON_CODES = {
     "upstream_health": "UPSTREAM_HEALTH_OBSERVED",
     "dns_queries": "DNS_QUERY_EVIDENCE_OBSERVED",
     "certificate_state": "CERTIFICATE_STATE_OBSERVED",
+    "resource_usage": "RESOURCE_USAGE_OBSERVED",
+    "service_latency": "SERVICE_LATENCY_OBSERVED",
+    "resource_log": "RESOURCE_SATURATION_LOG_OBSERVED",
+    "scan_pattern": "SCAN_PATTERN_OBSERVED",
+    "scanner_source": "SCANNER_SOURCE_OBSERVED",
+    "connection_rejections": "CONNECTION_REJECTIONS_OBSERVED",
+    "datanode_health": "DATANODE_HEALTH_OBSERVED",
+    "replication_state": "REPLICATION_STATE_OBSERVED",
+    "trace_critical_path": "TRACE_CRITICAL_PATH_OBSERVED",
+    "span_errors": "SPAN_ERRORS_OBSERVED",
 }
 
 
@@ -280,6 +311,16 @@ _CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
         "upstream_health",
         "dns_queries",
         "certificate_state",
+        "resource_usage",
+        "service_latency",
+        "resource_log",
+        "scan_pattern",
+        "scanner_source",
+        "connection_rejections",
+        "datanode_health",
+        "replication_state",
+        "trace_critical_path",
+        "span_errors",
     }
 )
 

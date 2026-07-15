@@ -24,13 +24,14 @@ This script is the step-by-step guide for performing a 4–6 minute live demonst
 **UI Actions:**
 1. Open the browser to the main dashboard `/`.
 2. Point out the **Source Health Bar** at the top.
-3. Hover over the five adapter health cards.
+3. Inspect the six source-health cards.
 
 **Talking Points:**
 * "Welcome to the demo of our Network Anomaly Root-Cause Assistant."
-* "The system starts in a healthy baseline state. At the top of our Operations Overview, we see the live health and event counters for our **five distinct telemetry adapters**: Metrics from Prometheus, Application Logs from Syslog, Alerts from Alertmanager, Configuration Changes from our deployment audit feed, and our CMDB Topology load status."
+* "The system starts in a healthy baseline state. At the top of our Operations Overview, we see live health and event counters for **six sources**: Prometheus metrics, Syslog application logs, Alertmanager alerts, deployment audit configuration changes, distributed traces, and the CMDB topology fixture."
 * "Our data strategy is **strictly honest**: these adapters normalise multiple raw stream formats into a single `CanonicalEvent` schema. Public datasets like NSL-KDD, UNSW-NB15, and LogHub informed our log format and anomaly profiles, but they are not required at runtime. The live system runs entirely from our deterministic telemetry simulator."
 * "At this moment, the network topology is clean, the baseline metric rate is stable at **7,800 requests per second** (RPS), and no incidents are open."
+* "Start is intentionally finite. When all healthy baseline ticks have been emitted, the state automatically changes from running to ready; ready means we can trigger a scenario."
 
 ---
 
@@ -111,6 +112,24 @@ This script is the step-by-step guide for performing a 4–6 minute live demonst
 
 ---
 
+## Optional post-blueprint scenario comparison
+
+The main script above preserves the original golden scenario. To demonstrate
+the post-blueprint expansion, reset and complete the baseline again, then choose
+one scenario from the catalogue. The complete mapping and presenter guidance
+are in
+[`reference-scenario-extensions.md`](./reference-scenario-extensions.md).
+
+The strongest two-run comparison is:
+
+1. **Gateway rate-limit disabled:** stable external ingress plus a preceding
+   configuration change ranks `configuration_regression` first.
+2. **DDoS / SYN flood:** external ingress, SYN failures, and source-distribution
+   changes without a configuration change rank `dos_or_traffic_surge` first.
+
+This comparison shows that the prototype is not returning one hardcoded RCA
+for every gateway incident.
+
 ## 🚨 Demo Fallback Procedures
 
 In case of live failures during presentation, follow these instructions:
@@ -131,7 +150,10 @@ In case of live failures during presentation, follow these instructions:
 ### Failure Scenario B: UI Graph fails to Render
 1. **Symptom:** `@xyflow/react` shows a blank node space or throws layout errors.
 2. **Action:** Reload the page with `Ctrl+F5` to clear cache.
-3. **Reasoning:** Ensure `topology.json` contains exactly the five frozen entity IDs. If a custom edge was added, verify it has a valid relation type (`depends_on` or `sends_traffic_to`).
+3. **Reasoning:** Ensure `topology.json` contains the five original service
+   entities plus `hdfs-client-01`, `namenode-01`, and `datanode-01`. If a custom
+   edge was added, verify it has a valid relation type (`depends_on` or
+   `sends_traffic_to`).
 
 ### Failure Scenario C: Port Contention on Startup
 1. **Symptom:** Backend or frontend refuses to bind to port `8000` or `5173`.

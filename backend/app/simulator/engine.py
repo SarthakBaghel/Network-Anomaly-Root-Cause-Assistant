@@ -15,6 +15,7 @@ SOURCE_TYPES = {
     "simulator.syslog": "logs",
     "simulator.alertmanager": "alerts",
     "simulator.config_audit": "config_changes",
+    "simulator.trace": "traces",
 }
 TOPOLOGY_SOURCE = "fixture.cmdb_topology"
 TOPOLOGY_FIXTURE = Path(__file__).parents[1] / "fixtures/topology.json"

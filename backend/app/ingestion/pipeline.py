@@ -24,14 +24,12 @@ from app.db import models
 from app.db.repositories import EventRepository
 from app.ingestion.adapters import ADAPTERS
 from app.ingestion.adapters.base import AdapterError
+from app.ingestion.runtime_label_guard import contains_forbidden_label
 from app.ingestion.redaction import redact_payload
 
 
 _LOG_TEMPLATE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "fixtures"
-    / "reference_profiles"
-    / "log_templates.yaml"
+    Path(__file__).resolve().parents[1] / "fixtures" / "reference_profiles" / "log_templates.yaml"
 )
 
 
@@ -55,9 +53,7 @@ def _source_record_id(raw: dict[str, Any]) -> str | None:
 def _repeatable_log_codes() -> frozenset[str]:
     catalogue = yaml.safe_load(_LOG_TEMPLATE_PATH.read_text(encoding="utf-8"))
     return frozenset(
-        row["event_code"]
-        for row in catalogue.get("templates", [])
-        if row.get("repeatable") is True
+        row["event_code"] for row in catalogue.get("templates", []) if row.get("repeatable") is True
     )
 
 
@@ -118,8 +114,12 @@ def event_to_contract(row: models.Event) -> CanonicalEvent:
 
     return CanonicalEvent(
         event_id=row.id,
-        timestamp=row.timestamp if row.timestamp.tzinfo else row.timestamp.replace(tzinfo=timezone.utc),
-        ingested_at=row.ingested_at if row.ingested_at.tzinfo else row.ingested_at.replace(tzinfo=timezone.utc),
+        timestamp=row.timestamp
+        if row.timestamp.tzinfo
+        else row.timestamp.replace(tzinfo=timezone.utc),
+        ingested_at=row.ingested_at
+        if row.ingested_at.tzinfo
+        else row.ingested_at.replace(tzinfo=timezone.utc),
         entity_id=row.entity_id,
         modality=Modality(row.modality),
         event_type=row.event_type,
@@ -161,6 +161,16 @@ class IngestionPipeline:
                 source_record_id=_source_record_id(raw),
                 request_id=request_id,
                 reason_codes=["UNKNOWN_SOURCE"],
+                now=now,
+                session=session,
+            )
+        if contains_forbidden_label(raw):
+            return self._quarantine(
+                source=source,
+                raw=clean_raw,
+                source_record_id=_source_record_id(raw),
+                request_id=request_id,
+                reason_codes=["DATASET_LABEL_FIELD_FORBIDDEN"],
                 now=now,
                 session=session,
             )

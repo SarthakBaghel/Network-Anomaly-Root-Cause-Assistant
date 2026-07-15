@@ -5,6 +5,7 @@ Tests for the new production wiring:
   3. service._build_context — EWMA/topology/recent_anomalies injection
   4. TopologyCascadeDetector fires end-to-end with real context wiring
 """
+
 from __future__ import annotations
 
 import datetime
@@ -24,6 +25,7 @@ from app.contracts import CanonicalEvent, Modality
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _fresh_session() -> Session:
     engine = create_engine(
         "sqlite://",
@@ -32,7 +34,8 @@ def _fresh_session() -> Session:
     )
 
     @sa_event.listens_for(engine, "connect")
-    def _fk(conn, _): conn.execute("PRAGMA foreign_keys=ON")
+    def _fk(conn, _):
+        conn.execute("PRAGMA foreign_keys=ON")
 
     Base.metadata.create_all(engine)
     return Session(engine)
@@ -43,19 +46,31 @@ def _now() -> datetime.datetime:
 
 
 def _entity(session: Session, entity_id: str) -> None:
-    session.add(Entity(
-        id=entity_id, name=entity_id, entity_type="service",
-        service=entity_id, criticality="normal", metadata_json={},
-    ))
+    session.add(
+        Entity(
+            id=entity_id,
+            name=entity_id,
+            entity_type="service",
+            service=entity_id,
+            criticality="normal",
+            metadata_json={},
+        )
+    )
     session.flush()
 
 
 def _edge(session: Session, src: str, tgt: str, rel: str) -> None:
-    session.add(TopologyEdge(
-        id=f"edge_{src}_{tgt}_{rel}", source_entity_id=src,
-        target_entity_id=tgt, relation_type=rel, relationship=rel,
-        active_from=None, active_to=None,
-    ))
+    session.add(
+        TopologyEdge(
+            id=f"edge_{src}_{tgt}_{rel}",
+            source_entity_id=src,
+            target_entity_id=tgt,
+            relation_type=rel,
+            relationship=rel,
+            active_from=None,
+            active_to=None,
+        )
+    )
     session.flush()
 
 
@@ -90,6 +105,7 @@ def _canonical_event(
 
 
 # ─── EwmaStateStore tests ──────────────────────────────────────────────────────
+
 
 class TestEwmaStateStore:
     def test_get_returns_none_on_cold_start(self):
@@ -151,11 +167,16 @@ class TestEwmaStateStore:
     def test_load_from_db_on_first_get(self):
         session = _fresh_session()
         # Manually insert a row (simulate an existing warm baseline)
-        session.add(EwmaBaseline(
-            entity_id="gw", signal_name="sig",
-            ewma_mean=55.0, ewma_variance=2.0, n_samples=100,
-            updated_at=_now(),
-        ))
+        session.add(
+            EwmaBaseline(
+                entity_id="gw",
+                signal_name="sig",
+                ewma_mean=55.0,
+                ewma_variance=2.0,
+                n_samples=100,
+                updated_at=_now(),
+            )
+        )
         session.flush()
 
         store = EwmaStateStore()
@@ -180,6 +201,7 @@ class TestEwmaStateStore:
 
 # ─── TopologyView tests ────────────────────────────────────────────────────────
 
+
 class TestTopologyView:
     def test_empty_topology_returns_none(self):
         topo = TopologyView([])
@@ -190,18 +212,22 @@ class TestTopologyView:
         assert topo.distance("a", "b", "sends_traffic_to") == 1
 
     def test_two_hop_path(self):
-        topo = TopologyView([
-            ("a", "b", "sends_traffic_to"),
-            ("b", "c", "sends_traffic_to"),
-        ])
+        topo = TopologyView(
+            [
+                ("a", "b", "sends_traffic_to"),
+                ("b", "c", "sends_traffic_to"),
+            ]
+        )
         assert topo.distance("a", "c", "sends_traffic_to") == 2
 
     def test_hop_limit_returns_none_at_3(self):
-        topo = TopologyView([
-            ("a", "b", "sends_traffic_to"),
-            ("b", "c", "sends_traffic_to"),
-            ("c", "d", "sends_traffic_to"),
-        ])
+        topo = TopologyView(
+            [
+                ("a", "b", "sends_traffic_to"),
+                ("b", "c", "sends_traffic_to"),
+                ("c", "d", "sends_traffic_to"),
+            ]
+        )
         # 3 hops exceeds MAX_HOPS=2 → None
         assert topo.distance("a", "d", "sends_traffic_to") is None
 
@@ -228,16 +254,20 @@ class TestTopologyView:
 
 # ─── Context injection tests ──────────────────────────────────────────────────
 
+
 class TestContextInjection:
     def test_production_detector_registry_includes_adaptive_and_cascade_detectors(self):
         from app.detection.service import DETECTORS
 
         assert [detector.detector_id for detector in DETECTORS] == [
+            "reference_threshold_v1",
             "rolling_zscore_v1",
             "ewma_v1",
             "log_rule_v1",
             "alert_severity_v1",
             "config_change_marker_v1",
+            "trace_latency_v1",
+            "trace_structure_v1",
             "topology_cascade_v1",
         ]
 
@@ -247,6 +277,7 @@ class TestContextInjection:
         _entity(session, "gw")
         event = _canonical_event("gw", "forwarded_requests_per_second", 300.0)
         from app.detection.service import _build_context
+
         ctx = _build_context(event, session)
         assert hasattr(ctx, "ewma_state")
         assert isinstance(ctx.ewma_state, dict)
@@ -257,14 +288,16 @@ class TestContextInjection:
 
         session = _fresh_session()
         _entity(session, "gw")
-        session.add(EwmaBaseline(
-            entity_id="gw",
-            signal_name="forwarded_requests_per_second",
-            ewma_mean=55.0,
-            ewma_variance=2.0,
-            n_samples=100,
-            updated_at=_now(),
-        ))
+        session.add(
+            EwmaBaseline(
+                entity_id="gw",
+                signal_name="forwarded_requests_per_second",
+                ewma_mean=55.0,
+                ewma_variance=2.0,
+                n_samples=100,
+                updated_at=_now(),
+            )
+        )
         session.flush()
         ewma_store.reset()
         try:
@@ -285,6 +318,7 @@ class TestContextInjection:
         _entity(session, "gw")
         event = _canonical_event("gw", "forwarded_requests_per_second", 300.0)
         from app.detection.service import _build_context
+
         ctx = _build_context(event, session)
         assert hasattr(ctx, "_ewma_updates")
         assert isinstance(ctx._ewma_updates, dict)
@@ -297,6 +331,7 @@ class TestContextInjection:
         event = _canonical_event("api", "forwarded_requests_per_second", 300.0)
         topo = TopologyView.build_for_session(session)
         from app.detection.service import _build_context
+
         ctx = _build_context(event, session, topology=topo)
         assert ctx.topology is not None
         assert ctx.topology.distance("gw", "api", "sends_traffic_to") == 1
@@ -307,12 +342,14 @@ class TestContextInjection:
         _entity(session, "gw")
         event = _canonical_event("gw", "forwarded_requests_per_second", 300.0)
         from app.detection.service import _build_context
+
         ctx = _build_context(event, session)
         assert hasattr(ctx, "recent_anomalies")
         assert isinstance(ctx.recent_anomalies, list)
 
 
 # ─── Cascade detector end-to-end with live wiring ────────────────────────────
+
 
 class TestTopologyCascadeEndToEnd:
     """Verifies that TopologyCascadeDetector fires when topology + recent_anomalies
@@ -328,9 +365,11 @@ class TestTopologyCascadeEndToEnd:
         """Manually assemble a DetectionContext that simulates what service.py injects."""
         from app.detection.service import _RecentAnomaly
 
-        topo = TopologyView([
-            (upstream_entity, downstream_entity, "sends_traffic_to"),
-        ])
+        topo = TopologyView(
+            [
+                (upstream_entity, downstream_entity, "sends_traffic_to"),
+            ]
+        )
         recent = [
             _RecentAnomaly(
                 entity_id=upstream_entity,
@@ -364,7 +403,9 @@ class TestTopologyCascadeEndToEnd:
         session = _fresh_session()
         detector = TopologyCascadeDetector()
         event = _canonical_event(entity_id="downstream", event_type="METRIC", severity=0.8)
-        ctx = self._make_context_with_upstream(session, "upstream", "downstream", upstream_anomaly_score=0.90)
+        ctx = self._make_context_with_upstream(
+            session, "upstream", "downstream", upstream_anomaly_score=0.90
+        )
         results = detector.evaluate(event, ctx)
         assert len(results) == 1
         # 0.7 × 0.8 + 0.3 × 0.90 = 0.56 + 0.27 = 0.83
@@ -399,6 +440,7 @@ class TestTopologyCascadeEndToEnd:
 
 
 # ─── EWMA state persistence across context evaluations ───────────────────────
+
 
 class TestEwmaStatePersistence:
     def test_ewma_state_written_to_updates_on_second_sample(self):

@@ -19,16 +19,9 @@ import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { StatCard } from "../components/ui/StatCard";
 import {
-  ActivityIcon,
   AlertTriangleIcon,
-  BellIcon,
   ClockIcon,
-  DatabaseIcon,
-  FileTextIcon,
-  GaugeIcon,
-  NetworkIcon,
   RadioIcon,
-  SettingsIcon,
 } from "../components/icons";
 
 type SimulatorStatus = components["schemas"]["SimulatorStatusResponse"];
@@ -36,14 +29,6 @@ type SimulatorScenario = components["schemas"]["SimulatorScenario"];
 type OverviewAnomaly = components["schemas"]["OverviewAnomaly"];
 type IncidentSummary = components["schemas"]["IncidentSummary"];
 type CanonicalEvent = components["schemas"]["CanonicalEvent"];
-
-const SOURCE_ICON: Record<string, typeof ActivityIcon> = {
-  "simulator.prometheus": ActivityIcon,
-  "simulator.syslog": FileTextIcon,
-  "simulator.alertmanager": BellIcon,
-  "simulator.config_audit": SettingsIcon,
-  "fixture.cmdb_topology": NetworkIcon,
-};
 
 const LIFECYCLE_STEPS = ["Reset", "Baseline", "Ready", "Scenario"] as const;
 
@@ -101,6 +86,30 @@ function healthBadge(status: SimulatorStatus["source_health"][number]["status"])
 function friendlyLabel(value: string) {
   const words = value.toLowerCase().replaceAll("_", " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function relativeTime(timestamp: string, reference?: string) {
+  const end = reference ? Date.parse(reference) : Date.now();
+  const start = Date.parse(timestamp);
+  if (Number.isNaN(start) || Number.isNaN(end)) return formatDate(timestamp);
+  const seconds = Math.max(0, Math.round((end - start) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  return minutes < 60 ? `${minutes}m ago` : formatDate(timestamp);
+}
+
+function sourceDot(status: SimulatorStatus["source_health"][number]["status"]) {
+  if (status === "healthy") return "bg-accent-emerald";
+  if (status === "delayed" || status === "quarantined") return "bg-accent-amber";
+  if (status === "offline") return "bg-text-muted";
+  return "bg-accent-red";
+}
+
+function anomalyTypeClass(source: string) {
+  if (source.includes("prometheus")) return "border-accent-cyan/40 text-accent-cyan";
+  if (source.includes("syslog")) return "border-accent-emerald/40 text-accent-emerald";
+  if (source.includes("alert")) return "border-accent-amber/40 text-accent-amber";
+  return "border-accent-purple/40 text-accent-purple";
 }
 
 function lifecycleIndex(status: SimulatorStatus | null) {
@@ -307,10 +316,10 @@ export function OverviewPage() {
           : "Run the baseline before triggering a scenario.";
 
   return (
-    <main className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8">
-      <header className="animate-fade-in-up">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-accent-cyan">Operations</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl">
+    <main className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+      <header className="order-0 border-b border-border-subtle pb-5">
+        <p className="text-sm font-medium text-text-secondary">Operations overview</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">
           Network Anomaly RCA
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-text-secondary sm:text-base">
@@ -324,33 +333,20 @@ export function OverviewPage() {
           role="alert"
           aria-live="assertive"
           data-testid={TEST_IDS.genericBanner}
-          className="glass-panel flex items-center gap-3 border-accent-red/30 bg-accent-red/10 px-4 py-3 text-sm text-accent-red"
+          className="order-1 flex items-center gap-3 rounded border border-l-2 border-border-subtle border-l-accent-red bg-surface px-4 py-3 text-sm text-accent-red"
         >
           <AlertTriangleIcon className="h-4 w-4" aria-hidden="true" />
           <strong>{apiError}</strong>
         </div>
       ) : null}
-      {hasQuarantine ? (
-        <div
-          role="status"
-          aria-live="polite"
-          data-testid={TEST_IDS.quarantineBanner}
-          className="glass-panel flex items-center gap-3 border-accent-amber/30 bg-accent-amber/10 px-4 py-3 text-sm text-accent-amber"
-        >
-          <AlertTriangleIcon className="h-4 w-4" aria-hidden="true" />
-          Quarantine warning: {totalQuarantined} source record
-          {totalQuarantined === 1 ? "" : "s"} require attention.
-        </div>
-      ) : null}
-
-      <section aria-label="Operations totals" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Events Accepted" value={totalAccepted} icon={<GaugeIcon className="h-5 w-5" />} accent="cyan" />
-        <StatCard label="Actionable Anomalies" value={actionableAnomalies.length} icon={<ActivityIcon className="h-5 w-5" />} accent="purple" />
-        <StatCard label={`Sources Online (of ${health.length})`} value={sourcesOnline} icon={<RadioIcon className="h-5 w-5" />} accent="emerald" />
-        <StatCard label="Context Markers" value={contextMarkers.length} icon={<FileTextIcon className="h-5 w-5" />} accent="amber" />
+      <section aria-label="Operations totals" className="order-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Events accepted" value={totalAccepted} accent="cyan" />
+        <StatCard label="Actionable anomalies" value={actionableAnomalies.length} accent="purple" />
+        <StatCard label={`Sources online / ${health.length}`} value={sourcesOnline} accent="emerald" />
+        <StatCard label="Context markers" value={contextMarkers.length} accent="amber" />
       </section>
 
-      <Card as="section" className="p-5">
+      <Card as="section" className="order-6 p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-text-primary">Scenario lifecycle</h2>
@@ -360,7 +356,7 @@ export function OverviewPage() {
             {LIFECYCLE_STEPS.map((step, index) => (
               <div
                 key={step}
-                className={`rounded-xl border px-2 py-2 text-center text-xs font-semibold ${
+                className={`rounded border px-2 py-1.5 text-center text-xs font-semibold ${
                   index < activeLifecycleIndex
                     ? "border-accent-emerald/30 bg-accent-emerald/10 text-accent-emerald"
                     : index === activeLifecycleIndex
@@ -375,57 +371,62 @@ export function OverviewPage() {
         </div>
       </Card>
 
-      <section className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-        <div className="grid gap-4 sm:grid-cols-2" aria-label="Source health">
+      <>
+        <Card as="section" className="order-3 p-4" aria-label="Source health">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="mr-2 text-sm font-semibold text-text-primary">Source health</h2>
           {health.length === 0 ? (
             <div data-testid={TEST_IDS.overviewLoading}>
               <EmptyState message="Loading source health…" />
             </div>
           ) : (
             health.map((source) => {
-              const SourceIcon = SOURCE_ICON[source.source_id] ?? DatabaseIcon;
               const healthPresentation = healthBadge(source.status);
               return (
-                <Card key={source.source_id} className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-cyan/10 text-accent-cyan">
-                        <SourceIcon className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-text-primary">{source.source_id}</p>
-                        <p className="text-xs text-text-secondary">
-                          {source.source_type}
-                          {source.fixture_version ? ` · ${source.fixture_version}` : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={healthPresentation.variant}
-                      data-testid={sourceHealthTestId(source.source_id)}
-                    >
-                      {healthPresentation.label}
-                    </Badge>
-                  </div>
-                  <dl className="mt-4 space-y-1.5 text-sm text-text-secondary">
-                    <div>Last ingest: {formatDate(source.last_ingest_at)}</div>
-                    <div>Accepted: <strong className="text-text-primary">{source.accepted}</strong></div>
-                    <div>Collapsed: {source.collapsed}</div>
-                    <div>Quarantined: {source.quarantined}</div>
+                <details
+                  key={source.source_id}
+                  data-testid={sourceHealthTestId(source.source_id)}
+                  className="group relative"
+                >
+                  <summary className="font-data flex cursor-pointer list-none items-center gap-2 rounded border border-border-subtle bg-surface-strong px-2.5 py-1.5 text-xs text-text-secondary hover:border-border-strong">
+                    <span className={`h-2 w-2 rounded-full ${sourceDot(source.status)}`} />
+                    <span>{source.source_id}</span>
+                    <span className="text-text-muted">{source.accepted.toLocaleString()}</span>
+                    {source.quarantined > 0 ? (
+                      <span className="text-accent-amber">q:{source.quarantined}</span>
+                    ) : null}
+                    <span className="sr-only">{healthPresentation.label}</span>
+                  </summary>
+                  <dl className="absolute left-0 top-full z-20 mt-1 w-72 rounded border border-border-strong bg-surface-strong p-3 text-xs text-text-secondary shadow-glass-lg">
+                    <div>Status: <strong className="text-text-primary">{healthPresentation.label}</strong></div>
+                    <div className="mt-1">Type: {source.source_type}</div>
+                    <div className="mt-1">Last ingest: <span className="font-data">{formatDate(source.last_ingest_at)}</span></div>
+                    <div className="mt-1">Collapsed: {source.collapsed} · Quarantined: {source.quarantined}</div>
+                    {source.fixture_version ? <div className="mt-1 font-data">{source.fixture_version}</div> : null}
                   </dl>
-                </Card>
+                </details>
               );
             })
           )}
-        </div>
+          </div>
+          {hasQuarantine ? (
+            <p
+              role="status"
+              data-testid={TEST_IDS.quarantineBanner}
+              className="mt-3 border-l-2 border-l-accent-amber pl-3 text-xs text-accent-amber"
+            >
+              {totalQuarantined} source record{totalQuarantined === 1 ? "" : "s"} quarantined
+            </p>
+          ) : null}
+        </Card>
 
-        <Card as="section" className="space-y-4 p-5">
+        <Card as="section" className="order-7 space-y-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-text-primary">Simulator Controls</h2>
               <p className="text-sm text-text-secondary">Finite, deterministic baseline replay.</p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1 text-sm text-text-secondary">
+            <div className="font-data flex items-center gap-1.5 rounded border border-border-subtle px-3 py-1 text-xs text-text-secondary">
               <ClockIcon className="h-3.5 w-3.5" aria-hidden="true" />
               {formatDate(status?.virtual_clock)}
             </div>
@@ -447,7 +448,7 @@ export function OverviewPage() {
           </div>
 
           {confirmingReset ? (
-            <div role="dialog" aria-label="Confirm simulator reset" className="rounded-2xl border border-accent-red/30 bg-accent-red/10 p-4 text-sm text-text-secondary">
+            <div role="dialog" aria-label="Confirm simulator reset" className="rounded-md border border-accent-red/30 bg-accent-red/10 p-4 text-sm text-text-secondary">
               <p><strong className="text-text-primary">Delete the current demo investigation?</strong></p>
               <p className="mt-1">This clears anomalies, incidents, reviews, and audit records.</p>
               <div className="mt-3 flex gap-2">
@@ -473,7 +474,7 @@ export function OverviewPage() {
               value={preferredScenario}
               onChange={(event) => setPreferredScenario(event.target.value)}
               disabled={transitioning || scenarios.length === 0}
-              className="mt-2 block w-full rounded-xl border border-border-strong bg-surface px-3 py-2 text-sm text-text-primary"
+              className="mt-2 block w-full rounded border border-border-strong bg-surface px-3 py-2 text-sm text-text-primary"
             >
               {scenarios.map((scenario) => (
                 <option key={scenario.scenario_id} value={scenario.scenario_id}>{scenario.title}</option>
@@ -485,15 +486,31 @@ export function OverviewPage() {
             <div className="glass-inset space-y-2 px-4 py-3 text-sm text-text-secondary">
               <div className="flex items-center justify-between gap-2">
                 <strong className="text-text-primary">{selectedScenario.title}</strong>
-                <Badge variant="info">{selectedScenario.difficulty}</Badge>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Badge variant="info">{selectedScenario.difficulty}</Badge>
+                  <Badge
+                    variant={selectedScenario.quality_flag === "REFERENCE_DERIVED" ? "success" : "neutral"}
+                  >
+                    {selectedScenario.quality_flag === "REFERENCE_DERIVED"
+                      ? "reference-derived"
+                      : "synthetic"}
+                  </Badge>
+                </div>
               </div>
               <p>{selectedScenario.description}</p>
               <p>Affects: {selectedScenario.affected_entity_ids.join(", ")}</p>
               <p>Signals: {selectedScenario.expected_signals.join(", ")}</p>
+              {(selectedScenario.reference_datasets ?? []).length > 0 ? (
+                <p>
+                  Reference data: {(selectedScenario.reference_datasets ?? []).join(", ")} · Transformation: <span className="font-data">{selectedScenario.transformation_version}</span>
+                </p>
+              ) : (
+                <p>Deterministic simulator fixture · <span className="font-data">{selectedScenario.transformation_version}</span></p>
+              )}
             </div>
           ) : null}
 
-          <p data-testid={TEST_IDS.simulatorState} aria-live="polite" className="glass-inset flex items-center gap-2 px-4 py-3 text-sm text-text-secondary">
+          <p data-testid={TEST_IDS.simulatorState} aria-live="polite" className="glass-inset font-data flex items-center gap-2 px-4 py-3 text-sm text-text-secondary">
             <RadioIcon className="h-4 w-4 text-accent-cyan" aria-hidden="true" />
             State: <strong className="text-text-primary">{transitioning ? "transitioning" : status?.state ?? "loading"}</strong>
           </p>
@@ -502,20 +519,20 @@ export function OverviewPage() {
               <span>{statusMessage}</span><span>{baselinePercent}%</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/5">
-              <div className="h-full rounded-full bg-gradient-to-r from-accent-cyan to-accent-purple transition-all" style={{ width: `${baselinePercent}%` }} />
+              <div className="h-full bg-accent-cyan transition-all" style={{ width: `${baselinePercent}%` }} />
             </div>
           </div>
           <dl className="grid grid-cols-2 gap-2 text-xs text-text-muted">
-            <div>Scenario ID<br /><strong className="text-text-secondary">{status?.scenario_id ?? "Not triggered"}</strong></div>
-            <div>Last reset<br /><strong className="text-text-secondary">{formatDate(status?.last_reset_at)}</strong></div>
+            <div>Scenario ID<br /><strong className="font-data text-text-secondary">{status?.scenario_id ?? "Not triggered"}</strong></div>
+            <div>Last reset<br /><strong className="font-data text-text-secondary">{formatDate(status?.last_reset_at)}</strong></div>
           </dl>
         </Card>
-      </section>
+      </>
 
-      <Card as="section" className="p-5" data-testid={TEST_IDS.anomalyTable}>
+      <Card as="section" className="order-5 p-4" data-testid={TEST_IDS.anomalyTable}>
         <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-text-primary">Recent detector records</h2>
+            <h2 className="text-lg font-semibold text-text-primary">Recent detector records</h2>
             <p className="text-sm text-text-secondary">
               {actionableAnomalies.length} actionable anomal{actionableAnomalies.length === 1 ? "y" : "ies"} + {contextMarkers.length} context marker{contextMarkers.length === 1 ? "" : "s"}.
             </p>
@@ -534,24 +551,25 @@ export function OverviewPage() {
         {filteredAnomalies.length === 0 ? (
           <div className="mt-4"><EmptyState message={anomalies.length ? "No detector records match the active filters." : "No detector records yet."} /></div>
         ) : (
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-border-subtle">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-white/[0.03] text-text-secondary"><tr><th className="px-4 py-3">Entity</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Severity</th><th className="px-4 py-3">Score</th><th className="px-4 py-3">Source</th><th className="px-4 py-3">Actions</th></tr></thead>
+          <div className="mt-4 overflow-x-auto rounded-md border border-border-subtle">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-surface-strong text-text-secondary"><tr><th className="px-3 py-2">Entity</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Severity</th><th className="px-3 py-2">Score</th><th className="px-3 py-2">Source</th><th className="px-3 py-2">Detected</th><th className="px-3 py-2">Actions</th></tr></thead>
               <tbody>
                 {filteredAnomalies.map((anomaly) => {
                   const relatedIncident = incidents.find((incident) => incident.affected_entity_ids.includes(anomaly.entity_id));
                   const rawEvent = eventsById[anomaly.event_id];
                   return [
                     <tr key={anomaly.anomaly_id} data-testid={anomalyRowTestId(anomaly.anomaly_id)} className="border-t border-border-subtle">
-                      <td className="px-4 py-3 font-medium text-text-primary">{anomaly.entity_id}</td>
-                      <td className="px-4 py-3 text-text-secondary"><span>{friendlyLabel(anomaly.anomaly_type)}</span>{anomaly.context_only ? <Badge className="ml-2" variant="neutral">context</Badge> : null}</td>
-                      <td className="px-4 py-3"><Badge variant={severityBadgeVariant(anomaly.severity)}>{severityLabel(anomaly.severity)}</Badge></td>
-                      <td className="px-4 py-3 font-semibold text-accent-cyan">{(anomaly.score * 100).toFixed(1)}</td>
-                      <td className="px-4 py-3 text-text-secondary">{anomaly.source}</td>
-                      <td className="px-4 py-3"><div className="flex gap-2"><Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => void toggleAnomaly(anomaly)}>{expandedAnomalyId === anomaly.anomaly_id ? "Hide" : "Why?"}</Button>{relatedIncident ? <a className="rounded-xl border border-accent-cyan/30 px-2 py-1 text-xs font-semibold text-accent-cyan" href={`/incidents/${relatedIncident.incident_id}`}>Open incident</a> : null}</div></td>
+                      <td className="font-data px-3 py-1.5 font-medium text-text-primary">{anomaly.entity_id}</td>
+                      <td className="px-3 py-1.5 text-text-secondary"><span className={`inline-flex rounded border px-1.5 py-0.5 ${anomalyTypeClass(anomaly.source)}`}>{friendlyLabel(anomaly.anomaly_type)}</span>{anomaly.context_only ? <span className="font-data ml-1.5 rounded border border-border-strong px-1 py-0.5 text-[0.65rem] text-text-muted">CTX</span> : null}</td>
+                      <td className="px-3 py-1.5"><Badge variant={severityBadgeVariant(anomaly.severity)}>{severityLabel(anomaly.severity)}</Badge></td>
+                      <td className="px-3 py-1.5"><div className="flex items-center gap-2"><span className="font-data w-10 text-right text-text-primary">{(anomaly.score * 100).toFixed(1)}</span><span className="h-4 w-0.5 bg-border-strong"><span className="block w-0.5 bg-accent-cyan" style={{ height: `${anomaly.score * 100}%` }} /></span></div></td>
+                      <td className="font-data px-3 py-1.5 text-text-secondary">{anomaly.source}</td>
+                      <td className="font-data whitespace-nowrap px-3 py-1.5 text-text-secondary" title={formatDate(anomaly.detected_at)}>{relativeTime(anomaly.detected_at, status?.virtual_clock)}</td>
+                      <td className="px-3 py-1.5"><div className="flex gap-1"><Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => void toggleAnomaly(anomaly)}>{expandedAnomalyId === anomaly.anomaly_id ? "Hide" : "Why?"}</Button>{relatedIncident ? <a className="rounded border border-border-strong px-2 py-1 text-xs font-semibold text-accent-cyan" href={`/incidents/${relatedIncident.incident_id}`}>Open incident</a> : null}</div></td>
                     </tr>,
                     expandedAnomalyId === anomaly.anomaly_id ? (
-                      <tr key={`${anomaly.anomaly_id}-details`} className="border-t border-border-subtle bg-white/[0.02]"><td colSpan={6} className="px-4 py-4"><div className="grid gap-4 lg:grid-cols-2"><div><p className="font-semibold text-text-primary">Why the detector fired</p><p className="mt-1 text-text-secondary">{anomaly.explanation}</p><p className="mt-2 text-xs text-text-muted">Detector: {anomaly.detector_id} · Event: {anomaly.event_id} · {formatDate(anomaly.detected_at)}</p></div><div><p className="font-semibold text-text-primary">Raw event payload</p>{rawEvent ? <pre className="mt-1 max-h-48 overflow-auto rounded-xl bg-slate-950/70 p-3 text-xs text-text-secondary">{JSON.stringify(rawEvent.raw_payload, null, 2)}</pre> : <p className="mt-1 text-text-muted">Loading raw event…</p>}</div></div></td></tr>
+                      <tr key={`${anomaly.anomaly_id}-details`} className="border-t border-border-subtle bg-surface-soft"><td colSpan={7} className="px-3 py-3"><div className="grid gap-4 lg:grid-cols-2"><div><p className="font-semibold text-text-primary">Why the detector fired</p><p className="mt-1 text-text-secondary">{anomaly.explanation}</p><p className="font-data mt-2 text-xs text-text-muted">Detector: {anomaly.detector_id} · Event: {anomaly.event_id} · {formatDate(anomaly.detected_at)}</p></div><div><p className="font-semibold text-text-primary">Raw event payload</p>{rawEvent ? <pre className="font-data mt-1 max-h-48 overflow-auto rounded bg-slate-950 p-3 text-xs text-text-secondary">{JSON.stringify(rawEvent.raw_payload, null, 2)}</pre> : <p className="mt-1 text-text-muted">Loading raw event…</p>}</div></div></td></tr>
                     ) : null,
                   ];
                 })}
@@ -561,12 +579,12 @@ export function OverviewPage() {
         )}
       </Card>
 
-      <Card as="section" data-testid={TEST_IDS.incidentList} className="p-5">
-        <header><h2 className="text-xl font-semibold text-text-primary">Incident List</h2><p className="text-sm text-text-secondary">Select an incident to investigate its current immutable RCA snapshot.</p></header>
+      <Card as="section" data-testid={TEST_IDS.incidentList} className="order-2 border-l-2 border-l-accent-red p-5">
+        <header><h2 className="text-lg font-semibold text-text-primary">Active incidents</h2><p className="text-sm text-text-secondary">Current immutable RCA snapshots requiring operator attention.</p></header>
         {incidents.length === 0 ? (
           <div className="mt-4"><EmptyState message={scenarioTriggered ? "Scenario completed without a published incident." : status?.scenario_state === "baseline_complete" ? "Baseline complete; choose and trigger a scenario." : "No current-run incident. Reset and run the baseline to begin."} /></div>
         ) : (
-          <div className="mt-4 divide-y divide-border-subtle">{incidents.map((incident) => <a key={incident.incident_id} data-testid={incidentRowTestId(incident.incident_id)} aria-label={`Open incident ${incident.title}`} href={`/incidents/${incident.incident_id}`} className="group block rounded-2xl p-4 hover:bg-white/[0.03]"><div className="flex items-center justify-between gap-3"><div><p className="text-lg font-semibold text-text-primary group-hover:text-accent-cyan">{incident.title}</p><p className="mt-1 text-sm text-text-secondary">{incident.affected_entity_ids.join(", ")}</p></div><Badge variant={severityBadgeVariant(incident.severity)}>⚠ {severityLabel(incident.severity)}</Badge></div><div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-text-secondary"><p>Start: {formatDate(incident.started_at)}</p><Badge variant={incidentStatusVariant(incident.status)}>● {incident.status}</Badge></div></a>)}</div>
+          <div className="mt-3 divide-y divide-border-subtle">{incidents.map((incident) => <a key={incident.incident_id} data-testid={incidentRowTestId(incident.incident_id)} aria-label={`Open incident ${incident.title}`} href={`/incidents/${incident.incident_id}`} className="group block border-l-2 border-l-accent-red px-4 py-3 hover:bg-surface-strong"><div className="flex items-center justify-between gap-3"><div><p className="font-semibold text-text-primary group-hover:text-accent-cyan">{incident.title}</p><p className="font-data mt-1 text-xs text-text-secondary">{incident.affected_entity_ids.join(", ")}</p></div><Badge variant={severityBadgeVariant(incident.severity)}>{severityLabel(incident.severity)}</Badge></div><div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary"><p className="font-data">Start: {formatDate(incident.started_at)}</p><Badge variant={incidentStatusVariant(incident.status)}>{incident.status}</Badge></div></a>)}</div>
         )}
       </Card>
     </main>

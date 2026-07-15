@@ -33,10 +33,12 @@ def event_id(
         raise ValueError("event timestamp is outside the ULID range")
 
     provenance = (raw or {}).get("provenance", {})
-    seed = provenance.get("seed", settings.simulator_seed) if isinstance(provenance, dict) else settings.simulator_seed
-    entropy = hashlib.sha256(
-        f"{seed}|{source}|{source_record_id}".encode("utf-8")
-    ).digest()[:10]
+    seed = (
+        provenance.get("seed", settings.simulator_seed)
+        if isinstance(provenance, dict)
+        else settings.simulator_seed
+    )
+    entropy = hashlib.sha256(f"{seed}|{source}|{source_record_id}".encode("utf-8")).digest()[:10]
     value = timestamp_ms.to_bytes(6, "big") + entropy
     return f"evt_{ulid.from_bytes(value).str.lower()}"
 
@@ -48,7 +50,12 @@ def unpack(raw: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 def simulated_flags(raw: dict[str, Any]) -> list[str]:
-    return ["SIMULATED"] if "scenario_id" in raw else []
+    flags = ["SIMULATED"] if "scenario_id" in raw else []
+    provenance = raw.get("provenance")
+    quality_flags = provenance.get("quality_flags", []) if isinstance(provenance, dict) else []
+    if "REFERENCE_DERIVED" in quality_flags:
+        flags.append("REFERENCE_DERIVED")
+    return flags
 
 
 def trace_id(raw: dict[str, Any], payload: dict[str, Any]) -> str | None:
@@ -61,6 +68,7 @@ def trace_id(raw: dict[str, Any], payload: dict[str, Any]) -> str | None:
 
 def ingested_at(raw: dict[str, Any], timestamp: str) -> str:
     from datetime import datetime, timedelta
+
     value = raw.get("emitted_at", timestamp)
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00")) + timedelta(milliseconds=120)
     return parsed.isoformat(timespec="milliseconds").replace("+00:00", "Z")

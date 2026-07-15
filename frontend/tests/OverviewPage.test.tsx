@@ -111,7 +111,12 @@ describe('OverviewPage live contracts', () => {
 
     const scenarioSelect = await screen.findByTestId(TEST_IDS.scenarioSelect)
     expect(scenarioSelect).toHaveTextContent('Database connection-pool exhaustion')
-    expect(scenarioSelect).toHaveTextContent('Network path congestion')
+    expect(scenarioSelect).toHaveTextContent('Network-path degradation')
+    expect(scenarioSelect).toHaveTextContent('DDoS / SYN flood')
+    expect(scenarioSelect).toHaveTextContent('GAIA resource saturation')
+    expect(scenarioSelect).toHaveTextContent('Port scan / reconnaissance')
+    expect(scenarioSelect).toHaveTextContent('HDFS DataNode failure')
+    expect(scenarioSelect).toHaveTextContent('Distributed trace anomaly')
     expect(scenarioSelect).toHaveTextContent('DNS resolution failure')
     expect(scenarioSelect).toHaveTextContent('TLS certificate failure')
   })

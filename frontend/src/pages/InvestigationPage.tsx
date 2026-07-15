@@ -52,7 +52,6 @@ import {
   InfoIcon,
   LinkIcon,
   NetworkIcon,
-  SearchIcon,
   SparklesIcon,
   XIcon,
 } from "../components/icons";
@@ -97,18 +96,21 @@ const laneOrder: components["schemas"]["Modality"][] = [
   "log",
   "alert",
   "config_change",
+  "trace",
 ];
 const laneLabels: Record<components["schemas"]["Modality"], string> = {
   metric: "Metric",
   log: "Log",
   alert: "Alert",
   config_change: "Config Change",
+  trace: "Trace",
 };
 const laneColor: Record<components["schemas"]["Modality"], string> = {
   metric: "#22d3ee",
   log: "#34d399",
   alert: "#fbbf24",
   config_change: "#a78bfa",
+  trace: "#fb7185",
 };
 
 const CHART_COLORS = {
@@ -120,19 +122,37 @@ const CHART_COLORS = {
 const EDGE_LABEL_STYLE = { fill: "#e2e8f0", stroke: "#1e293b" };
 
 const NODE_BASE_CLASS =
-  "w-[180px] rounded-2xl border-2 px-3 py-2.5 text-center text-sm font-semibold text-white shadow-glass";
+  "font-data w-[180px] rounded border-l-4 px-3 py-2.5 text-center text-xs font-semibold text-white shadow-glass";
 
 const NODE_STATE_CLASS: Record<string, string> = {
-  suspected_root:
-    "bg-gradient-to-br from-accent-amber to-orange-500 border-accent-amber/60",
-  primary_affected:
-    "bg-gradient-to-br from-accent-red to-accent-red-strong border-accent-red/60",
-  impact_path:
-    "bg-gradient-to-br from-accent-emerald to-accent-emerald-strong border-accent-emerald/60",
-  blast_radius:
-    "bg-gradient-to-br from-accent-purple to-accent-purple-strong border-accent-purple/60",
+  suspected_root: "border-accent-amber bg-amber-950",
+  primary_affected: "border-accent-red bg-red-950",
+  impact_path: "border-accent-emerald bg-emerald-950",
+  blast_radius: "border-accent-purple bg-violet-950",
 };
 const NODE_STATE_FALLBACK_CLASS = "bg-white/10 border-white/20";
+
+const TOPOLOGY_POSITIONS: Record<string, { x: number; y: number }> = {
+  "api-gateway-01": { x: 330, y: 20 },
+  "auth-api-01": { x: 650, y: 20 },
+  "checkout-api-01": { x: 170, y: 170 },
+  "payment-api-01": { x: 490, y: 170 },
+  "payment-db-01": { x: 490, y: 320 },
+  "hdfs-client-01": { x: 90, y: 20 },
+  "namenode-01": { x: 330, y: 170 },
+  "datanode-01": { x: 570, y: 320 },
+};
+
+const FACTOR_WEIGHTS: Record<string, number> = {
+  symptom_compatibility: 25,
+  topology_relevance: 20,
+  direct_logs_alerts: 15,
+  propagation_consistency: 15,
+  metric_anomaly: 10,
+  change_causal_fit: 10,
+  temporal_proximity: 3,
+  historical_similarity: 2,
+};
 
 function createUuid() {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -174,6 +194,15 @@ function formatDate(timestamp: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function relativeTime(timestamp: string, reference: string) {
+  const delta = Math.max(0, Date.parse(reference) - Date.parse(timestamp));
+  const seconds = Math.round(delta / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return formatDate(timestamp);
 }
 
 function statusBadgeVariant(status: string): BadgeVariant {
@@ -231,7 +260,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   );
   const [banner, setBanner] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [auditFilter, setAuditFilter] = useState("");
+  const [auditFilter, setAuditFilter] = useState<"all" | "system" | "user" | "review">("all");
   const latestRevisionRef = useRef<number | null>(null);
   const latestGeneratedAtRef = useRef(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -480,28 +509,46 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
     return <PageSkeleton label="Loading incident investigation..." />;
   }
 
-  const filteredAuditTrail = auditTrail.filter((record) =>
-    `${record.actor_type} ${record.action} ${record.object_type} ${record.object_id}`
-      .toLowerCase()
-      .includes(auditFilter.toLowerCase()),
-  );
+  const filteredAuditTrail = auditTrail.filter((record) => {
+    if (auditFilter === "all") return true;
+    if (auditFilter === "review") return record.action.includes("REVIEW");
+    return record.actor_type === auditFilter;
+  });
   const explanationFallbackUsed = auditTrail.some(
     (record) => record.action === "EXPLANATION_FALLBACK_USED",
   );
+  const topHypothesis = [...investigation.hypotheses].sort(
+    (left, right) => left.rank - right.rank,
+  )[0];
+  const topEvidence = topHypothesis
+    ? evidenceByHypothesis[topHypothesis.hypothesis_id] ?? []
+    : [];
+  const topMissingEvidence = topEvidence.filter((item) => item.kind === "missing");
+  const topBusy = topHypothesis
+    ? Boolean(busyHypothesis[topHypothesis.hypothesis_id])
+    : false;
+  const incidentClosed = ["resolved", "rejected"].includes(investigation.incident.status);
+  const topTerminal = topHypothesis
+    ? investigation.reviews.some(
+        (review) =>
+          review.hypothesis_id === topHypothesis.hypothesis_id &&
+          ["confirmed", "rejected"].includes(review.decision),
+      )
+    : false;
 
   return (
     <main
       data-testid={TEST_IDS.investigationPanel}
       className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8"
     >
-      <Card as="header" glow="none" className="animate-fade-in-up space-y-3 p-6">
+      <Card as="header" glow="none" className="space-y-3 border-l-2 border-l-accent-red p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-sm text-text-secondary">
+            <p className="font-data flex items-center gap-1.5 text-xs text-text-secondary">
               <ClockIcon className="h-3.5 w-3.5" />
               Analysis run {investigation.analysis_run_id}
             </p>
-            <h1 className="mt-1 break-words text-3xl font-extrabold tracking-tight text-text-primary">
+            <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight text-text-primary">
               {investigation.incident.title}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -518,7 +565,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
           </div>
           <div className="glass-inset shrink-0 px-4 py-3 text-sm text-text-secondary md:max-w-xs">
             Affected entities:{" "}
-            <span className="font-semibold text-text-primary">
+            <span className="font-data font-semibold text-text-primary">
               {Array.from(
                 new Set(investigation.incident.affected_entity_ids),
               ).join(", ")}
@@ -552,9 +599,72 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
         ) : null}
       </Card>
 
-      <section className="grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <div className="space-y-6">
-          <Card interactive glow="cyan">
+      {topHypothesis ? (
+        <Card
+          as="section"
+          data-testid="top-hypothesis"
+          className="border-l-2 border-l-accent-cyan p-5"
+        >
+          <div className="grid gap-5 lg:grid-cols-[1fr_280px] lg:items-start">
+            <div>
+              <p className="text-sm font-medium text-text-secondary">Top-ranked hypothesis</p>
+              <h2 className="font-data mt-1 text-xl font-semibold text-text-primary">
+                {topHypothesis.hypothesis_type}
+              </h2>
+              <p className="font-data mt-1 text-sm text-accent-cyan">
+                {topHypothesis.candidate_entity_id}
+              </p>
+              <p className="mt-3 max-w-3xl text-sm text-text-secondary">
+                {investigation.explanation.summary}
+              </p>
+            </div>
+            <EvidenceScoreBar
+              score={topHypothesis.evidence_score}
+              available={topHypothesis.evidence_coverage.available}
+              expected={topHypothesis.evidence_coverage.expected}
+            />
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-border-subtle pt-4">
+            <Button
+              variant="success"
+              data-testid="top-hypothesis-confirm"
+              loading={topBusy}
+              disabled={topBusy || incidentClosed || topTerminal}
+              onClick={() => postReview(topHypothesis.hypothesis_id, "confirmed")}
+            >
+              Confirm
+            </Button>
+            <Button
+              variant="danger"
+              data-testid="top-hypothesis-reject"
+              loading={topBusy}
+              disabled={topBusy || incidentClosed || topTerminal}
+              onClick={() => postReview(topHypothesis.hypothesis_id, "rejected")}
+            >
+              Reject
+            </Button>
+            <Button
+              variant="warning"
+              data-testid="top-hypothesis-request-evidence"
+              loading={topBusy}
+              disabled={topBusy || incidentClosed || topMissingEvidence.length === 0}
+              onClick={() =>
+                postReview(
+                  topHypothesis.hypothesis_id,
+                  "evidence_requested",
+                  topMissingEvidence[0]?.evidence_id,
+                )
+              }
+            >
+              Request evidence
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      <section className="grid gap-6 xl:grid-cols-[3fr_2fr]">
+        <div className="contents">
+          <Card interactive glow="cyan" className="order-3 xl:col-span-2">
             <div className="flex items-center gap-2">
               <ClockIcon className="h-5 w-5 text-accent-cyan" />
               <h2 className="text-xl font-semibold text-text-primary">
@@ -562,7 +672,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
               </h2>
             </div>
             <p className="mt-2 text-sm text-text-secondary">
-              One aligned time axis with four lanes. Click an event to inspect
+              One aligned time axis with five lanes. Click an event to inspect
               the raw record.
             </p>
             <div
@@ -661,7 +771,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
             </div>
           </Card>
 
-          <Card interactive glow="purple">
+          <Card interactive glow="purple" className="order-4 xl:col-span-2">
             <div className="flex items-center gap-2">
               <NetworkIcon className="h-5 w-5 text-accent-purple" />
               <h2 className="text-xl font-semibold text-text-primary">
@@ -680,9 +790,9 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 className="react-flow-dark"
                 nodes={investigation.topology.nodes.map((node, index) => ({
                   id: node.id,
-                  position: {
-                    x: (index % 4) * 220 + 30,
-                    y: Math.floor(index / 4) * 140 + 30,
+                  position: TOPOLOGY_POSITIONS[node.id] ?? {
+                    x: (index % 3) * 260 + 50,
+                    y: Math.floor(index / 3) * 150 + 40,
                   },
                   data: { label: `${node.name}` },
                   className: `${NODE_BASE_CLASS} ${
@@ -706,52 +816,22 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 <Background gap={16} />
               </ReactFlow>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="glass-inset p-4 text-sm text-text-secondary">
-                <p className="font-semibold text-text-primary">Node states</p>
-                <ul className="mt-3 space-y-2">
-                  <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-accent-amber" />{" "}
-                    suspected_root
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-accent-red" />{" "}
-                    primary_affected
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-accent-emerald" />{" "}
-                    impact_path
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-accent-purple" />{" "}
-                    blast_radius
-                  </li>
-                </ul>
-              </div>
-              <div className="glass-inset p-4 text-sm text-text-secondary">
-                <p className="font-semibold text-text-primary">Edge labels</p>
-                <ul className="mt-3 space-y-2">
-                  <li>
-                    <strong className="text-text-primary">depends_on</strong> —
-                    forward from an affected service finds a dependency that
-                    could fail; reverse from a failed dependency finds impacted services
-                  </li>
-                  <li>
-                    <strong className="text-text-primary">
-                      sends_traffic_to
-                    </strong>{" "}
-                    — forward from a change point follows traffic impact;
-                    reverse finds sources feeding an overloaded entity
-                  </li>
-                </ul>
-              </div>
+            <div className="font-data mt-4 flex flex-wrap items-center gap-3 text-xs text-text-secondary">
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-amber" />suspected_root</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-red" />primary_affected</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-emerald" />impact_path</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-purple" />blast_radius</span>
+              <details className="ml-auto">
+                <summary className="cursor-pointer text-accent-cyan">Edge semantics</summary>
+                <p className="mt-2 max-w-xl text-text-secondary">depends_on follows service dependencies; sends_traffic_to follows traffic impact. Reverse traversal identifies affected upstream services.</p>
+              </details>
             </div>
           </Card>
         </div>
 
-        <aside className="space-y-6">
-          <Card interactive glow="cyan">
-            <h2 className="text-xl font-semibold text-text-primary">
+        <aside className="contents">
+          <Card interactive glow="cyan" className="order-2">
+            <h2 className="text-lg font-semibold text-text-primary">
               Ranked Hypotheses
             </h2>
             <div className="mt-4 space-y-4">
@@ -776,14 +856,14 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                   <article
                     key={hypothesis.hypothesis_id}
                     data-testid={hypothesisRowTestId(hypothesis.hypothesis_id)}
-                    className="glass-inset animate-fade-in-up p-4"
+                    className="glass-inset border-l-2 border-l-border-strong p-4"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-accent-cyan">
+                        <p className="text-xs font-medium text-text-muted">
                           Rank {hypothesis.rank}
                         </p>
-                        <p className="mt-2 text-lg font-semibold text-text-primary">
+                        <p className="font-data mt-2 text-sm font-semibold text-text-primary">
                           {confirmed
                             ? "Confirmed root cause"
                             : hypothesis.candidate_entity_id}
@@ -794,14 +874,18 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                           </p>
                         ) : null}
                       </div>
-                      <EvidenceScoreBar score={hypothesis.evidence_score} />
+                      <EvidenceScoreBar
+                        score={hypothesis.evidence_score}
+                        available={hypothesis.evidence_coverage.available}
+                        expected={hypothesis.evidence_coverage.expected}
+                      />
                     </div>
-                    <div className="mt-4 rounded-2xl border border-border-subtle bg-white/[0.02] p-4 text-sm text-text-secondary">
+                    <div className="font-data mt-4 rounded border border-border-subtle bg-surface-soft p-3 text-xs text-text-secondary">
                       {hypothesis.evidence_coverage.available}/
                       {hypothesis.evidence_coverage.expected} expected evidence
                       requirements available
                     </div>
-                    <details className="mt-4 rounded-2xl border border-border-subtle bg-white/[0.02] p-4">
+                    <details className="mt-4 rounded border border-border-subtle bg-surface-soft p-3">
                       <summary
                         data-testid={factorBreakdownTestId(hypothesis.hypothesis_id)}
                         aria-label={`Toggle factor breakdown for ${hypothesis.hypothesis_type}`}
@@ -809,24 +893,23 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       >
                         Factor breakdown
                       </summary>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div className="mt-3 space-y-2">
                         {Object.entries(hypothesis.factor_scores).map(
                           ([factor, score]) => (
                             <div
                               key={factor}
-                              className="rounded-xl border border-border-subtle bg-surface-soft p-3 text-sm"
+                              className="grid grid-cols-[minmax(110px,1fr)_minmax(90px,1.4fr)_42px] items-center gap-2 text-xs"
                             >
                               <UiTooltip
                                 label={`Contribution of ${factor.replace(/_/g, " ")} to the overall evidence score`}
                                 testId={factorTooltipTestId(hypothesis.hypothesis_id, factor)}
                               >
-                                <p className="cursor-help font-semibold text-text-primary underline decoration-dotted decoration-text-muted underline-offset-4">
-                                  {factor}
+                                <p className="font-data cursor-help truncate text-text-secondary" title={factor}>
+                                  {factor} <span className="text-text-muted">({FACTOR_WEIGHTS[factor] ?? 0}%)</span>
                                 </p>
                               </UiTooltip>
-                              <p className="mt-1 text-text-secondary">
-                                {Number(score).toFixed(2)}
-                              </p>
+                              <span className="h-1.5 overflow-hidden rounded-sm bg-white/10"><span className="block h-full bg-accent-cyan" style={{ width: `${Math.max(0, Math.min(1, Number(score))) * 100}%` }} /></span>
+                              <span className="font-data text-right text-text-primary">{Number(score).toFixed(2)}</span>
                             </div>
                           ),
                         )}
@@ -886,6 +969,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
           <Card
             interactive
             glow="purple"
+            className="order-1"
             data-testid={TEST_IDS.evidencePanel}
           >
             <h2 className="text-xl font-semibold text-text-primary">
@@ -928,7 +1012,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                             key={item.evidence_id}
                             data-testid={evidenceItemTestId(item.evidence_id)}
                             aria-label={kind === "missing" ? `Open collection request: ${item.statement}` : `Open source record: ${item.statement}`}
-                            className={`w-full rounded-2xl border p-4 text-left text-sm transition-colors ${
+                            className={`w-full rounded border-l-2 p-3 text-left text-sm transition-colors ${
                               kind === "conflicting"
                                 ? "border-accent-amber/30 bg-accent-amber/10 text-accent-amber"
                                 : kind === "missing"
@@ -973,7 +1057,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
             </div>
           </Card>
 
-          <Card interactive glow="emerald">
+          <Card interactive glow="emerald" className="order-5 xl:col-span-2">
             <div className="flex items-center gap-2">
               <SparklesIcon className="h-5 w-5 text-accent-emerald" />
               <h2 className="text-xl font-semibold text-text-primary">
@@ -998,7 +1082,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
               </p>
               <p className="mt-2">
                 Generator:{" "}
-                <span className="font-semibold text-text-primary">
+                <span className="font-data font-semibold text-text-primary">
                   {investigation.explanation.generator}
                 </span>
               </p>
@@ -1008,7 +1092,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
             </div>
           </Card>
 
-          <Card interactive glow="cyan">
+          <Card interactive glow="cyan" className="order-6 xl:col-span-2">
             <div className="flex items-center gap-2">
               <ClipboardListIcon className="h-5 w-5 text-accent-cyan" />
               <h2 className="text-xl font-semibold text-text-primary">
@@ -1036,14 +1120,14 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     <p className="mt-2 text-sm text-text-secondary">
                       {recommendation.title}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-text-muted">
-                      <span className="rounded-full border border-border-subtle px-2 py-1">
+                    <div className="font-data mt-3 flex flex-wrap gap-2 text-xs text-text-muted">
+                      <span className="rounded border border-border-subtle px-2 py-1">
                         step_id: {recommendation.step_id}
                       </span>
-                      <span className="rounded-full border border-border-subtle px-2 py-1">
+                      <span className="rounded border border-border-subtle px-2 py-1">
                         risk_level: {recommendation.risk_level}
                       </span>
-                      <span className="rounded-full border border-border-subtle px-2 py-1">
+                      <span className="rounded border border-border-subtle px-2 py-1">
                         requires_human_approval:{" "}
                         {recommendation.requires_human_approval ? "yes" : "no"}
                       </span>
@@ -1057,6 +1141,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
           <Card
             interactive
             glow="purple"
+            className="order-7 xl:col-span-2"
             data-testid={TEST_IDS.auditTrailPanel}
           >
             <h2 className="text-xl font-semibold text-text-primary">
@@ -1065,34 +1150,37 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
             <p className="mt-2 text-sm text-text-secondary">
               Append-only table showing action history for this incident.
             </p>
-            <label className="relative mt-4 block text-sm font-medium text-text-secondary">
-              Filter audit entries
-              <span className="pointer-events-none absolute left-3 top-[calc(50%+0.3rem)] text-text-muted">
-                <SearchIcon className="h-4 w-4" />
-              </span>
-              <input
-                data-testid={TEST_IDS.auditFilter}
-                aria-label="Filter audit entries"
-                value={auditFilter}
-                onChange={(event) => setAuditFilter(event.target.value)}
-                className="mt-2 block w-full rounded-xl border border-border-strong bg-surface py-2 pl-9 pr-3 text-sm text-text-primary shadow-sm outline-none focus:border-accent-cyan focus:ring-2 focus:ring-accent-cyan/30"
-                placeholder="Type actor, action, or object"
-              />
-            </label>
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-border-subtle">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-white/[0.03] text-text-secondary">
+            <div data-testid={TEST_IDS.auditFilter} aria-label="Filter audit entries" className="mt-4 flex flex-wrap gap-2">
+              {(["all", "system", "user", "review"] as const).map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  aria-pressed={auditFilter === filter}
+                  onClick={() => setAuditFilter(filter)}
+                  className={`rounded border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
+                    auditFilter === filter
+                      ? "border-accent-cyan bg-accent-cyan/10 text-accent-cyan"
+                      : "border-border-subtle text-text-secondary hover:border-border-strong"
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 overflow-x-auto rounded border border-border-subtle">
+              <table className="min-w-full text-left text-xs">
+                <thead className="bg-surface-strong text-text-secondary">
                   <tr>
-                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                    <th className="sticky top-0 bg-surface-strong px-3 py-2 font-semibold">
                       Timestamp
                     </th>
-                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                    <th className="sticky top-0 bg-surface-strong px-3 py-2 font-semibold">
                       Actor
                     </th>
-                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                    <th className="sticky top-0 bg-surface-strong px-3 py-2 font-semibold">
                       Action
                     </th>
-                    <th className="sticky top-0 bg-white/[0.03] px-4 py-3 font-semibold">
+                    <th className="sticky top-0 bg-surface-strong px-3 py-2 font-semibold">
                       Object
                     </th>
                   </tr>
@@ -1109,18 +1197,24 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                       <tr
                         key={record.audit_id}
                         data-testid={auditRowTestId(record.audit_id)}
-                        className="border-t border-border-subtle transition-colors hover:bg-white/[0.03]"
+                        className={`border-t border-l-2 border-border-subtle transition-colors hover:bg-surface-strong ${
+                          record.action.includes("REVIEW")
+                            ? "border-l-accent-emerald"
+                            : record.actor_type === "user"
+                              ? "border-l-accent-cyan"
+                              : "border-l-text-muted"
+                        }`}
                       >
-                        <td className="px-4 py-3 text-text-secondary">
-                          {formatDate(record.timestamp)}
+                        <td className="font-data whitespace-nowrap px-3 py-2 text-text-secondary" title={formatDate(record.timestamp)}>
+                          {relativeTime(record.timestamp, investigation.generated_at)}
                         </td>
-                        <td className="px-4 py-3 text-text-secondary">
+                        <td className="font-data px-3 py-2 text-text-secondary">
                           {record.actor_type}
                         </td>
-                        <td className="px-4 py-3 text-text-secondary">
+                        <td className="font-data px-3 py-2 font-semibold text-text-primary">
                           {record.action}
                         </td>
-                        <td className="px-4 py-3 text-text-secondary">
+                        <td className="font-data max-w-xs truncate px-3 py-2 text-text-secondary" title={`${record.object_type} ${record.object_id}`}>
                           {record.object_type} {record.object_id}
                         </td>
                       </tr>
@@ -1134,7 +1228,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
       </section>
 
       {selectedDetail ? (
-        <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+        <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
           <div
             ref={modalRef}
             role="dialog"
@@ -1164,7 +1258,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 className="px-3 py-2"
               />
             </div>
-            <div data-testid={TEST_IDS.eventModalBody} className="glass-inset mt-6 p-4 text-sm text-text-secondary">
+            <div data-testid={TEST_IDS.eventModalBody} className="glass-inset font-data mt-6 p-4 text-sm text-text-secondary">
               {selectedDetail.kind === "event" ? (
                 <>
                   {selectedDetail.attachment_decision ? <p><strong className="text-text-primary">Attachment:</strong> {selectedDetail.attachment_decision}</p> : null}

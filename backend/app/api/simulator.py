@@ -96,6 +96,9 @@ def scenarios() -> SimulatorScenarioListResponse:
                 duration_seconds=item.duration_seconds,
                 expected_signals=list(item.expected_signals),
                 difficulty=item.difficulty,
+                reference_datasets=list(item.reference_datasets),
+                transformation_version=item.transformation_version,
+                quality_flag=item.quality_flag,
             )
             for item in list_scenarios()
         ],

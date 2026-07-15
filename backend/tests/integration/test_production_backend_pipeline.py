@@ -73,18 +73,13 @@ def _replay(client: TestClient) -> tuple[str, dict]:
     items = incidents.json()["items"]
     assert len(items) == 1
     incident_id = items[0]["incident_id"]
-    investigation = client.get(
-        f"/api/v1/incidents/{incident_id}/investigation"
-    )
+    investigation = client.get(f"/api/v1/incidents/{incident_id}/investigation")
     assert investigation.status_code == 200, investigation.text
     return incident_id, investigation.json()
 
 
 def _semantic_projection(payload: dict) -> dict:
-    type_by_id = {
-        item["hypothesis_id"]: item["hypothesis_type"]
-        for item in payload["hypotheses"]
-    }
+    type_by_id = {item["hypothesis_id"]: item["hypothesis_type"] for item in payload["hypotheses"]}
     return {
         "incident": {
             "title": payload["incident"]["title"],
@@ -116,16 +111,13 @@ def _semantic_projection(payload: dict) -> dict:
         ],
         "evidence": {
             type_by_id[hypothesis_id]: sorted(
-                (item["kind"], item["reason_code"])
-                for item in evidence
+                (item["kind"], item["reason_code"]) for item in evidence
             )
             for hypothesis_id, evidence in payload["evidence_by_hypothesis"].items()
         },
         "recommendations": {
             type_by_id[hypothesis_id]: [item["step_id"] for item in rows]
-            for hypothesis_id, rows in payload[
-                "recommendations_by_hypothesis"
-            ].items()
+            for hypothesis_id, rows in payload["recommendations_by_hypothesis"].items()
         },
         "topology": {
             "nodes": [(item["id"], item["state"]) for item in payload["topology"]["nodes"]],
@@ -145,12 +137,8 @@ def _semantic_projection(payload: dict) -> dict:
             # Evidence IDs are intentionally run-scoped; claim text/order is
             # the deterministic semantic contract across reset/replay.
             "claims": [item["claim"] for item in payload["explanation"]["claims"]],
-            "diagnostic_step_ids": payload["explanation"][
-                "diagnostic_step_ids"
-            ],
-            "remediation_step_ids": payload["explanation"][
-                "remediation_step_ids"
-            ],
+            "diagnostic_step_ids": payload["explanation"]["diagnostic_step_ids"],
+            "remediation_step_ids": payload["explanation"]["remediation_step_ids"],
         },
     }
 
@@ -184,7 +172,6 @@ def test_production_reset_replay_is_deterministic_and_run_consistent(
         _assert_one_run(second)
         assert _semantic_projection(first) == _semantic_projection(second)
         assert first_incident_id != second_incident_id
-
 
         # Nine primary detector findings plus six independent EWMA
         # corroborations over the same metric events.
@@ -241,6 +228,11 @@ def test_production_reset_replay_is_deterministic_and_run_consistent(
     [
         ("database_connection_pool_exhaustion", "database_connection_exhaustion"),
         ("network_path_congestion", "network_path_congestion"),
+        ("ddos_syn_flood", "dos_or_traffic_surge"),
+        ("gaia_resource_saturation", "resource_saturation"),
+        ("port_scan_reconnaissance", "external_probe"),
+        ("hdfs_datanode_failure", "distributed_storage_node_failure"),
+        ("trace_anomaly", "trace_latency_regression"),
         ("dns_resolution_failure", "dns_resolution_failure"),
         ("tls_certificate_failure", "certificate_or_tls_failure"),
     ],
@@ -250,9 +242,10 @@ def test_additional_catalogue_scenarios_publish_matching_rca(
     scenario_id: str,
     expected_hypothesis_type: str,
 ) -> None:
-    with _production_client(
-        monkeypatch, raise_server_exceptions=True
-    ) as (client, _session_factory):
+    with _production_client(monkeypatch, raise_server_exceptions=True) as (
+        client,
+        _session_factory,
+    ):
         assert client.post("/api/v1/simulator/reset").status_code == 200
         assert client.post("/api/v1/simulator/start").status_code == 200
         simulator_api.simulator_engine.complete_baseline()
@@ -261,14 +254,18 @@ def test_additional_catalogue_scenarios_publish_matching_rca(
 
         incidents = client.get("/api/v1/incidents").json()["items"]
         assert incidents
-        investigation = client.get(
-            f"/api/v1/incidents/{incidents[0]['incident_id']}/investigation"
-        )
+        investigation = client.get(f"/api/v1/incidents/{incidents[0]['incident_id']}/investigation")
         assert investigation.status_code == 200, investigation.text
-        hypothesis_types = {
-            item["hypothesis_type"] for item in investigation.json()["hypotheses"]
-        }
+        payload = investigation.json()
+        hypothesis_types = {item["hypothesis_type"] for item in payload["hypotheses"]}
         assert expected_hypothesis_type in hypothesis_types
+        assert (
+            min(payload["hypotheses"], key=lambda item: item["rank"])["hypothesis_type"]
+            == expected_hypothesis_type
+        )
+
+        with _session_factory() as session:
+            assert session.scalar(select(func.count()).select_from(models.QuarantinedEvent)) == 0
 
 
 class _FailingAnalysisEngine:
@@ -282,9 +279,7 @@ def test_failed_publication_and_audit_are_durable(monkeypatch) -> None:
         prior_run_id = payload["analysis_run_id"]
         with session_factory() as session:
             membership = session.scalar(
-                select(models.IncidentEvent).where(
-                    models.IncidentEvent.incident_id == incident_id
-                )
+                select(models.IncidentEvent).where(models.IncidentEvent.incident_id == incident_id)
             )
             assert membership is not None
             event = session.get(models.Event, membership.event_id)
@@ -312,11 +307,14 @@ def test_failed_publication_and_audit_are_durable(monkeypatch) -> None:
             )
             assert failed is not None
             assert failed.failure_reason
-            assert session.scalar(
-                select(func.count())
-                .select_from(models.Hypothesis)
-                .where(models.Hypothesis.analysis_run_id == failed.id)
-            ) == 0
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(models.Hypothesis)
+                    .where(models.Hypothesis.analysis_run_id == failed.id)
+                )
+                == 0
+            )
             audit = session.scalar(
                 select(models.AuditLog).where(
                     models.AuditLog.action == "PIPELINE_STAGE_FAILED",
@@ -348,8 +346,11 @@ def test_reset_hook_failure_rolls_back_database_reset(monkeypatch) -> None:
             incident = session.get(models.Incident, incident_id)
             assert incident is not None
             assert incident.current_analysis_run_id == payload["analysis_run_id"]
-            assert session.scalar(
-                select(func.count()).select_from(models.AuditLog).where(
-                    models.AuditLog.action == "DEMO_RESET"
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(models.AuditLog)
+                    .where(models.AuditLog.action == "DEMO_RESET")
                 )
-            ) == 1
+                == 1
+            )

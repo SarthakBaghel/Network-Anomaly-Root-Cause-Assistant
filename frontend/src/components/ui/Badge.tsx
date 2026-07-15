@@ -1,22 +1,13 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { AlertTriangleIcon, CheckCircleIcon, InfoIcon, XCircleIcon } from "../icons";
 
 export type BadgeVariant = "success" | "warning" | "danger" | "info" | "neutral";
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-  success: "border-accent-emerald/30 bg-accent-emerald/10 text-accent-emerald",
-  warning: "border-accent-amber/30 bg-accent-amber/10 text-accent-amber",
-  danger: "border-accent-red/30 bg-accent-red/10 text-accent-red",
-  info: "border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan",
-  neutral: "border-border-subtle bg-white/5 text-text-secondary",
-};
-
-const VARIANT_ICON: Record<BadgeVariant, ReactNode> = {
-  success: <CheckCircleIcon className="h-3.5 w-3.5" />,
-  warning: <AlertTriangleIcon className="h-3.5 w-3.5" />,
-  danger: <XCircleIcon className="h-3.5 w-3.5" />,
-  info: <InfoIcon className="h-3.5 w-3.5" />,
-  neutral: <InfoIcon className="h-3.5 w-3.5" />,
+  success: "border-border-subtle border-l-accent-emerald text-accent-emerald",
+  warning: "border-border-subtle border-l-accent-amber text-accent-amber",
+  danger: "border-border-subtle border-l-accent-red text-accent-red",
+  info: "border-border-subtle border-l-accent-cyan text-accent-cyan",
+  neutral: "border-border-subtle border-l-text-muted text-text-secondary",
 };
 
 type BadgeProps = Omit<ComponentPropsWithoutRef<"span">, "children"> & {
@@ -36,10 +27,10 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded border border-l-2 bg-surface-strong px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
     >
-      {!hideIcon ? (icon ?? VARIANT_ICON[variant]) : null}
+      {!hideIcon ? icon : null}
       {children}
     </span>
   );

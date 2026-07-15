@@ -9,6 +9,7 @@ from app.ingestion.adapters.base import AdapterError
 from app.db.models import Event
 from app.db.session import session_scope
 from app.ingestion.pipeline import IngestionPipeline, event_to_contract
+from app.ingestion.runtime_label_guard import contains_forbidden_label
 
 
 @dataclass(frozen=True)
@@ -21,9 +22,7 @@ class IngestionOutcome:
 class IngestionSink(Protocol):
     def ingest(self, source: str, raw: dict) -> IngestionOutcome: ...
 
-    def ingest_group(
-        self, records: Sequence[tuple[str, dict]]
-    ) -> list[IngestionOutcome]: ...
+    def ingest_group(self, records: Sequence[tuple[str, dict]]) -> list[IngestionOutcome]: ...
 
 
 class AdapterValidationSink:
@@ -33,19 +32,21 @@ class AdapterValidationSink:
         self.accepted_events: list[CanonicalEvent] = []
 
     def ingest(self, source: str, raw: dict) -> IngestionOutcome:
+        if contains_forbidden_label(raw):
+            return IngestionOutcome("quarantined", reason_code="DATASET_LABEL_FIELD_FORBIDDEN")
         adapter = ADAPTERS.get(source)
         if adapter is None:
             return IngestionOutcome("quarantined", reason_code="UNKNOWN_SOURCE")
         try:
             event = adapter.adapt(raw)
         except (AdapterError, ValueError) as exc:
-            return IngestionOutcome("quarantined", reason_code=getattr(exc, "reason_code", "VALIDATION_ERROR"))
+            return IngestionOutcome(
+                "quarantined", reason_code=getattr(exc, "reason_code", "VALIDATION_ERROR")
+            )
         self.accepted_events.append(event)
         return IngestionOutcome("accepted", event=event)
 
-    def ingest_group(
-        self, records: Sequence[tuple[str, dict]]
-    ) -> list[IngestionOutcome]:
+    def ingest_group(self, records: Sequence[tuple[str, dict]]) -> list[IngestionOutcome]:
         return [self.ingest(source, raw) for source, raw in records]
 
 
@@ -55,9 +56,7 @@ class PersistentIngestionSink:
     def ingest(self, source: str, raw: dict) -> IngestionOutcome:
         return self.ingest_group(((source, raw),))[0]
 
-    def ingest_group(
-        self, records: Sequence[tuple[str, dict]]
-    ) -> list[IngestionOutcome]:
+    def ingest_group(self, records: Sequence[tuple[str, dict]]) -> list[IngestionOutcome]:
         """Persist one simulator timestamp group and publish it as one batch.
 
         All accepted rows are visible before detection/incident attachment begins.
@@ -81,9 +80,7 @@ class PersistentIngestionSink:
                 )
                 if result.status == "quarantined":
                     reason = result.reason_codes[0] if result.reason_codes else "UNKNOWN"
-                    outcomes.append(
-                        IngestionOutcome("quarantined", reason_code=reason)
-                    )
+                    outcomes.append(IngestionOutcome("quarantined", reason_code=reason))
                     continue
                 if result.status == "collapsed":
                     outcomes.append(IngestionOutcome("collapsed"))
@@ -107,7 +104,4 @@ class PersistentIngestionSink:
             separators=(",", ":"),
             default=str,
         )
-        return (
-            "simulator:"
-            + hashlib.sha256(request_material.encode("utf-8")).hexdigest()[:24]
-        )
+        return "simulator:" + hashlib.sha256(request_material.encode("utf-8")).hexdigest()[:24]

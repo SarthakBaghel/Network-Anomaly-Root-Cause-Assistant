@@ -1,36 +1,35 @@
-const SEGMENT_COUNT = 20;
-
 type EvidenceScoreBarProps = {
   score: number;
+  available?: number;
+  expected?: number;
 };
 
-export function EvidenceScoreBar({ score }: EvidenceScoreBarProps) {
+export function EvidenceScoreBar({ score, available, expected }: EvidenceScoreBarProps) {
   const clamped = Math.max(0, Math.min(100, score));
   const displayScore = (Math.round(clamped * 10) / 10).toFixed(1);
-  const filledSegments = Math.round((clamped / 100) * SEGMENT_COUNT);
   const filledClass =
-    clamped >= 75 ? "bg-accent-emerald" : clamped >= 45 ? "bg-accent-amber" : "bg-accent-red";
+    clamped >= 85 ? "bg-accent-emerald" : clamped < 70 ? "bg-accent-amber" : "bg-slate-400";
 
   return (
     <div className="w-full min-w-36">
       <div className="mb-1.5 flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+        <span className="text-xs font-medium text-text-secondary">
           Evidence score
         </span>
-        <span className="text-sm font-bold tabular-nums text-text-primary">{displayScore}</span>
+        <span className="font-data text-xl font-semibold text-text-primary">{displayScore}</span>
       </div>
       <div
-        className="flex h-2 w-full items-center gap-0.5"
+        className="h-1.5 w-full overflow-hidden rounded-sm bg-white/10"
         role="img"
         aria-label={`Evidence score ${displayScore} out of 100`}
       >
-        {Array.from({ length: SEGMENT_COUNT }, (_, index) => (
-          <span
-            key={index}
-            className={`h-full flex-1 rounded-full ${index < filledSegments ? filledClass : "bg-white/10"}`}
-          />
-        ))}
+        <span className={`block h-full ${filledClass}`} style={{ width: `${clamped}%` }} />
       </div>
+      {available !== undefined && expected !== undefined ? (
+        <p className="font-data mt-1.5 text-xs text-text-muted">
+          {available}/{expected} expected signals observed
+        </p>
+      ) : null}
     </div>
   );
 }

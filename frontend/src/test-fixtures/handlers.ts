@@ -9,6 +9,7 @@ const SOURCE_HEALTH = [
   ['simulator.syslog', 'logs'],
   ['simulator.alertmanager', 'alerts'],
   ['simulator.config_audit', 'config_changes'],
+  ['simulator.trace', 'traces'],
   ['fixture.cmdb_topology', 'topology'],
 ] as const
 
@@ -48,7 +49,7 @@ function simulatorStatus() {
       accepted: source_id === 'fixture.cmdb_topology' ? 1 : 0,
       collapsed: 0,
       quarantined: 0,
-      fixture_version: source_id === 'fixture.cmdb_topology' ? 'topology-1.1' : null,
+      fixture_version: source_id === 'fixture.cmdb_topology' ? 'topology-1.2' : null,
     })),
     last_reset_at: lastResetAt,
   }
@@ -87,11 +88,16 @@ export const handlers = [
   http.get('*/api/v1/simulator/scenarios', () => HttpResponse.json({
     generated_at: new Date().toISOString(),
     items: [
-      { scenario_id: 'gateway_rate_limit_disabled', title: 'Gateway rate-limit disabled', description: 'Gateway configuration regression.', affected_entity_ids: ['api-gateway-01', 'checkout-api-01'], duration_seconds: 120, expected_signals: ['forwarded request spike'], difficulty: 'introductory' },
-      { scenario_id: 'database_connection_pool_exhaustion', title: 'Database connection-pool exhaustion', description: 'The payment database pool saturates.', affected_entity_ids: ['payment-db-01', 'payment-api-01'], duration_seconds: 90, expected_signals: ['database utilization', 'pool waits'], difficulty: 'intermediate' },
-      { scenario_id: 'network_path_congestion', title: 'Network path congestion', description: 'Packet loss affects the checkout path.', affected_entity_ids: ['api-gateway-01', 'checkout-api-01'], duration_seconds: 75, expected_signals: ['packet loss', 'TCP retransmissions'], difficulty: 'advanced' },
-      { scenario_id: 'dns_resolution_failure', title: 'DNS resolution failure', description: 'Checkout DNS lookups fail.', affected_entity_ids: ['checkout-api-01', 'payment-api-01'], duration_seconds: 60, expected_signals: ['DNS resolver errors'], difficulty: 'intermediate' },
-      { scenario_id: 'tls_certificate_failure', title: 'TLS certificate failure', description: 'Payment TLS handshakes fail.', affected_entity_ids: ['payment-api-01', 'checkout-api-01'], duration_seconds: 60, expected_signals: ['TLS handshake failure'], difficulty: 'intermediate' },
+      { scenario_id: 'gateway_rate_limit_disabled', title: 'Gateway rate-limit disabled', description: 'Gateway configuration regression.', affected_entity_ids: ['api-gateway-01', 'checkout-api-01'], duration_seconds: 120, expected_signals: ['forwarded request spike'], difficulty: 'introductory', reference_datasets: [], transformation_version: 'synthetic-scenario-1.0', quality_flag: 'SYNTHETIC' },
+      { scenario_id: 'network_path_congestion', title: 'Network-path degradation', description: 'Packet loss affects the checkout path.', affected_entity_ids: ['api-gateway-01', 'checkout-api-01'], duration_seconds: 75, expected_signals: ['packet loss', 'TCP retransmissions'], difficulty: 'advanced', reference_datasets: ['GAIA MicroSS', 'UNSW-NB15'], transformation_version: 'reference-scenario-builder-1.0', quality_flag: 'REFERENCE_DERIVED' },
+      { scenario_id: 'ddos_syn_flood', title: 'DDoS / SYN flood', description: 'A traffic and SYN surge reaches the gateway.', affected_entity_ids: ['api-gateway-01', 'checkout-api-01'], duration_seconds: 90, expected_signals: ['ingress surge', 'SYN failures'], difficulty: 'advanced', reference_datasets: ['UNSW-NB15', 'NSL-KDD'], transformation_version: 'reference-scenario-builder-1.0', quality_flag: 'REFERENCE_DERIVED' },
+      { scenario_id: 'gaia_resource_saturation', title: 'GAIA resource saturation', description: 'Payment service resources saturate.', affected_entity_ids: ['payment-api-01', 'checkout-api-01'], duration_seconds: 90, expected_signals: ['CPU saturation', 'memory saturation'], difficulty: 'intermediate', reference_datasets: ['GAIA MicroSS'], transformation_version: 'reference-scenario-builder-1.0', quality_flag: 'REFERENCE_DERIVED' },
+      { scenario_id: 'port_scan_reconnaissance', title: 'Port scan / reconnaissance', description: 'A source probes many ports.', affected_entity_ids: ['api-gateway-01'], duration_seconds: 60, expected_signals: ['port fanout', 'connection rejection'], difficulty: 'intermediate', reference_datasets: ['UNSW-NB15', 'NSL-KDD'], transformation_version: 'reference-scenario-builder-1.0', quality_flag: 'REFERENCE_DERIVED' },
+      { scenario_id: 'hdfs_datanode_failure', title: 'HDFS DataNode failure', description: 'A DataNode and its replicas degrade.', affected_entity_ids: ['datanode-01', 'namenode-01'], duration_seconds: 90, expected_signals: ['DataNode failure', 'replica degradation'], difficulty: 'advanced', reference_datasets: ['Loghub HDFS'], transformation_version: 'reference-scenario-builder-1.0', quality_flag: 'REFERENCE_DERIVED' },
+      { scenario_id: 'trace_anomaly', title: 'Distributed trace anomaly', description: 'Trace latency and structure become anomalous.', affected_entity_ids: ['checkout-api-01', 'payment-api-01'], duration_seconds: 60, expected_signals: ['critical-path latency', 'missing parent span'], difficulty: 'advanced', reference_datasets: ['Sample traces'], transformation_version: 'reference-scenario-builder-1.0', quality_flag: 'REFERENCE_DERIVED' },
+      { scenario_id: 'database_connection_pool_exhaustion', title: 'Database connection-pool exhaustion', description: 'The payment database pool saturates.', affected_entity_ids: ['payment-db-01', 'payment-api-01'], duration_seconds: 90, expected_signals: ['database utilization', 'pool waits'], difficulty: 'intermediate', reference_datasets: [], transformation_version: 'synthetic-scenario-1.0', quality_flag: 'SYNTHETIC' },
+      { scenario_id: 'dns_resolution_failure', title: 'DNS resolution failure', description: 'Checkout DNS lookups fail.', affected_entity_ids: ['checkout-api-01', 'payment-api-01'], duration_seconds: 60, expected_signals: ['DNS resolver errors'], difficulty: 'intermediate', reference_datasets: [], transformation_version: 'synthetic-scenario-1.0', quality_flag: 'SYNTHETIC' },
+      { scenario_id: 'tls_certificate_failure', title: 'TLS certificate failure', description: 'Payment TLS handshakes fail.', affected_entity_ids: ['payment-api-01', 'checkout-api-01'], duration_seconds: 60, expected_signals: ['TLS handshake failure'], difficulty: 'intermediate', reference_datasets: [], transformation_version: 'synthetic-scenario-1.0', quality_flag: 'SYNTHETIC' },
     ],
   })),
   http.get('*/api/v1/incidents', () => HttpResponse.json({ generated_at: new Date().toISOString(), items: [incident], next_cursor: null })),

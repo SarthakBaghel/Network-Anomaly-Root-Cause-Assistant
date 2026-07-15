@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: detector-rules-1.1
+version: detector-rules-1.2
 log_rules:
   # ── Golden scenario rules (frozen, must remain stable) ──────────────────
   - template_id: payment_upstream_timeout
@@ -29,6 +29,20 @@ log_rules:
     anomaly_type: PACKET_LOSS_SPIKE
     normalized_severity: 0.65
     anomaly_score: 0.76
+    repeatable: true
+
+  - template_id: syn_flood_detected
+    event_code: SYN_FLOOD_DETECTED
+    anomaly_type: SYN_FLOOD_ACTIVITY
+    normalized_severity: 0.95
+    anomaly_score: 0.95
+    repeatable: true
+
+  - template_id: port_scan_detected
+    event_code: PORT_SCAN_DETECTED
+    anomaly_type: RECONNAISSANCE_ACTIVITY
+    normalized_severity: 0.92
+    anomaly_score: 0.92
     repeatable: true
 
   - template_id: dns_resolution_failure

@@ -17,6 +17,7 @@ BLUEPRINT compliance:
   §3.2:  EWMA alpha is a constant in ewma_detector.py — NOT in context
   §3.3.4: Signal aliases exposed in context for proxy resolution
 """
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -34,6 +35,8 @@ from app.detection.ewma_detector import EwmaDetector
 from app.detection.ewma_store import ewma_store
 from app.detection.log_rule import LogRuleDetector
 from app.detection.rolling_zscore import RollingZscoreDetector
+from app.detection.reference_threshold import ReferenceThresholdDetector
+from app.detection.trace_anomaly import TraceLatencyDetector, TraceStructureDetector
 from app.detection.topology_cascade import TopologyCascadeDetector
 from app.detection.topology_view import TopologyView
 
@@ -42,11 +45,14 @@ from app.detection.topology_view import TopologyView
 RECENT_ANOMALY_WINDOW_SECONDS = settings.detector_window_seconds * 2
 
 DETECTORS: tuple[Detector, ...] = (
+    ReferenceThresholdDetector(),
     RollingZscoreDetector(),
     EwmaDetector(),
     LogRuleDetector(),
     AlertSeverityDetector(),
     ConfigChangeMarker(),
+    TraceLatencyDetector(),
+    TraceStructureDetector(),
     TopologyCascadeDetector(),
 )
 
@@ -69,10 +75,13 @@ def _build_context(
 
     # 1. Rolling history window (unchanged from original)
     history_rows = session.scalars(
-        select(Event).where(
-            Event.timestamp >= event.timestamp - timedelta(seconds=settings.detector_window_seconds),
+        select(Event)
+        .where(
+            Event.timestamp
+            >= event.timestamp - timedelta(seconds=settings.detector_window_seconds),
             Event.timestamp < event.timestamp,
-        ).order_by(Event.timestamp, Event.id)
+        )
+        .order_by(Event.timestamp, Event.id)
     )
     history = [event_to_contract(row) for row in history_rows]
 
@@ -92,10 +101,14 @@ def _build_context(
     # 3. Recent actionable anomalies for cascade detection
     #    Only non-context_only anomalies can trigger downstream cascade signals
     recent_anomaly_rows = session.scalars(
-        select(Anomaly).where(
-            Anomaly.window_end >= event.timestamp - timedelta(seconds=RECENT_ANOMALY_WINDOW_SECONDS),
+        select(Anomaly)
+        .where(
+            Anomaly.window_end
+            >= event.timestamp - timedelta(seconds=RECENT_ANOMALY_WINDOW_SECONDS),
             Anomaly.context_only == False,  # noqa: E712
-        ).order_by(Anomaly.window_end.desc()).limit(50)
+        )
+        .order_by(Anomaly.window_end.desc())
+        .limit(50)
     ).all()
 
     # Build lightweight anomaly objects for the cascade detector
@@ -219,7 +232,9 @@ class DetectionPublisher:
             _flush_ewma_updates(ctx, self.session)
         ewma_store.flush(self.session)
 
-    def _evaluate_and_persist(self, event: CanonicalEvent, ctx: DetectionContext) -> list[AnomalyRecord]:
+    def _evaluate_and_persist(
+        self, event: CanonicalEvent, ctx: DetectionContext
+    ) -> list[AnomalyRecord]:
         records: list[AnomalyRecord] = []
         for detector in self.detectors:
             for anomaly in detector.evaluate(event, ctx):

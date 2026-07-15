@@ -69,12 +69,19 @@ def validate_explanation_detailed(
         return _invalid("HYPOTHESIS_INCIDENT_MISMATCH")
     if parsed.hypothesis_id != hypothesis.hypothesis_id:
         return _invalid("HYPOTHESIS_ID_MISMATCH")
+    active_statuses = {
+        AnalysisRunStatus.BUILDING,
+        AnalysisRunStatus.CURRENT,
+    }
     if require_current and (
-        run.status is not AnalysisRunStatus.CURRENT
+        run.status not in active_statuses
         or current_analysis_run_id != run.analysis_run_id
     ):
         return _invalid("STALE_ANALYSIS_RUN")
-    if "probable root cause" not in parsed.summary.lower():
+    if (
+        "probable root cause" not in parsed.summary.lower()
+        or len(parsed.summary.split()) < 8
+    ):
         return _invalid("CAUSAL_WORDING_INVALID")
     if "confirmed" in parsed.summary.lower():
         return _invalid("CAUSAL_WORDING_INVALID")

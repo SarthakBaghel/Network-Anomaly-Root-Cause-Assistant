@@ -43,7 +43,9 @@ Every claim must cite one or more supplied evidence_id values.
 Use only supplied playbook step_id values.
 Do not create evidence, recommendations, scores, ranks, or identifiers.
 Do not change or restate evidence_score or rank as output fields.
-The summary must say 'probable root cause' and must never say 'confirmed'.
+The summary must use exactly this sentence structure:
+'The probable root cause is <readable hypothesis> affecting <candidate entity>
+because <evidence-based reason>.' It must never say 'confirmed'.
 Return JSON only, with no markdown or commentary."""
 
 
@@ -66,6 +68,86 @@ def _message_content(response: Any) -> Any:
     if isinstance(message, Mapping):
         return message.get("content")
     return getattr(message, "content", None)
+
+
+def _restrict_array_to_ids(schema: dict[str, Any], allowed_ids: list[str]) -> None:
+    schema["uniqueItems"] = True
+    if allowed_ids:
+        schema["items"] = {
+            "type": "string",
+            "enum": allowed_ids,
+        }
+    else:
+        schema["maxItems"] = 0
+
+
+def _constrained_output_schema(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """Bind every opaque identifier to values from the structured bundle."""
+
+    hypothesis = bundle.get("hypothesis")
+    evidence = bundle.get("evidence")
+    recommendations = bundle.get("recommendations")
+    if (
+        not isinstance(hypothesis, Mapping)
+        or not isinstance(evidence, list)
+        or not isinstance(recommendations, list)
+    ):
+        raise OllamaProviderError("Ollama input bundle has an invalid shape")
+
+    required_ids = {
+        "analysis_run_id": hypothesis.get("analysis_run_id"),
+        "incident_id": hypothesis.get("incident_id"),
+        "hypothesis_id": hypothesis.get("hypothesis_id"),
+    }
+    if any(not isinstance(value, str) or not value for value in required_ids.values()):
+        raise OllamaProviderError("Ollama input bundle is missing required identifiers")
+
+    evidence_ids = sorted(
+        {
+            str(item["evidence_id"])
+            for item in evidence
+            if isinstance(item, Mapping) and item.get("evidence_id")
+        }
+    )
+    step_ids_by_type = {
+        step_type: sorted(
+            {
+                str(item["step_id"])
+                for item in recommendations
+                if isinstance(item, Mapping)
+                and item.get("step_type") == step_type
+                and item.get("step_id")
+            }
+        )
+        for step_type in ("diagnostic", "remediation")
+    }
+
+    schema = ExplanationOutput.model_json_schema()
+    properties = schema["properties"]
+    for field, value in required_ids.items():
+        properties[field]["const"] = value
+    properties["generator"]["const"] = "llm"
+    properties["summary"]["minLength"] = 60
+    properties["summary"]["maxLength"] = 600
+    properties["summary"]["pattern"] = (
+        r"^The probable root cause is .+ affecting .+ because .+\.$"
+    )
+
+    claim_ids = schema["$defs"]["ExplanationClaim"]["properties"][
+        "evidence_ids"
+    ]
+    _restrict_array_to_ids(claim_ids, evidence_ids)
+    if not evidence_ids:
+        properties["claims"]["maxItems"] = 0
+    _restrict_array_to_ids(
+        properties["diagnostic_step_ids"],
+        step_ids_by_type["diagnostic"],
+    )
+    _restrict_array_to_ids(
+        properties["remediation_step_ids"],
+        step_ids_by_type["remediation"],
+    )
+    return schema
 
 
 class OllamaExplanationProvider:
@@ -120,7 +202,7 @@ class OllamaExplanationProvider:
                     {"role": "system", "content": _SYSTEM_PROMPT},
                     {"role": "user", "content": serialized_bundle},
                 ],
-                format=ExplanationOutput.model_json_schema(),
+                format=_constrained_output_schema(bundle),
                 options={"temperature": 0, "seed": 0},
                 stream=False,
             )

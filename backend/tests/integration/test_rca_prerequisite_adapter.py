@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db import models
 from app.db.repositories import AnalysisRunRepository, IncidentRepository
+from app.explanation import ExplanationService
 from app.orchestration import AnalysisBuildContext, AnalysisOrchestrator
 from app.orchestration.rca_adapter import RcaAdapterError, RcaAnalysisAdapter
 from tests.support.rca_prerequisites import (
@@ -29,6 +30,44 @@ class GoldenPureEngine:
 class FailingPureEngine:
     def analyse(self, incident_bundle):
         raise RuntimeError("internal database password must never be persisted")
+
+
+class ValidNarrationProvider:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def generate(self, bundle):
+        self.calls += 1
+        hypothesis = bundle["hypothesis"]
+        evidence = bundle["evidence"]
+        observed = next(item for item in evidence if item["kind"] == "observed")
+        recommendations = bundle["recommendations"]
+        return {
+            "analysis_run_id": hypothesis["analysis_run_id"],
+            "incident_id": hypothesis["incident_id"],
+            "hypothesis_id": hypothesis["hypothesis_id"],
+            "generator": "llm",
+            "summary": (
+                "The probable root cause is a configuration regression at "
+                f"{hypothesis['candidate_entity_id']}."
+            ),
+            "claims": [
+                {
+                    "claim": "Observed evidence supports the probable root cause.",
+                    "evidence_ids": [observed["evidence_id"]],
+                }
+            ],
+            "diagnostic_step_ids": [
+                item["step_id"]
+                for item in recommendations
+                if item["step_type"] == "diagnostic"
+            ],
+            "remediation_step_ids": [
+                item["step_id"]
+                for item in recommendations
+                if item["step_type"] == "remediation"
+            ],
+        }
 
 
 def _database() -> tuple[object, Session]:
@@ -104,6 +143,41 @@ def test_orchestrator_publishes_adapter_result_and_repeated_fingerprint_is_noop(
         orchestrator.recompute("inc_001", session)
         assert pure.calls == 1
         assert len(AnalysisRunRepository(session).list_for_incident("inc_001")) == 1
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_llm_narration_is_published_for_the_active_building_run() -> None:
+    engine, session = _database()
+    try:
+        provider = ValidNarrationProvider()
+        explanations = ExplanationService(mode="llm", optional_provider=provider)
+        orchestrator = AnalysisOrchestrator()
+        orchestrator.register_analysis_engine(
+            RcaAnalysisAdapter(
+                GoldenPureEngine(),
+                explanations=explanations,
+            )
+        )
+
+        orchestrator.recompute("inc_001", session)
+
+        current = AnalysisRunRepository(session).get_current_for_incident("inc_001")
+        assert current is not None
+        rows = session.execute(
+            select(models.Explanation).where(
+                models.Explanation.analysis_run_id == current.id
+            )
+        ).scalars().all()
+        assert provider.calls == 1
+        assert {row.generator for row in rows} == {"template", "llm"}
+        assert not session.execute(
+            select(models.AuditLog).where(
+                models.AuditLog.action == "EXPLANATION_FALLBACK_USED",
+                models.AuditLog.object_id == "inc_001",
+            )
+        ).scalars().all()
     finally:
         session.close()
         engine.dispose()

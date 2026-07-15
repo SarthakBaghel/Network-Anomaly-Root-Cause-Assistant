@@ -112,6 +112,7 @@ class ExplanationService:
         recommendations: Sequence[RecommendationLike],
         *,
         candidate_entity_type: str | None,
+        current_run_id_provider: Callable[[str], str | None] | None = None,
     ) -> ExplanationServiceResult:
         template = self.deterministic_engine.generate(
             hypothesis, evidence, recommendations
@@ -158,7 +159,10 @@ class ExplanationService:
                     explanation_fallback_attempt_count=attempt,
                 )
 
-            current_run_id = self._current_run_id(run)
+            current_run_id = self._current_run_id(
+                run,
+                current_run_id_provider=current_run_id_provider,
+            )
             if current_run_id != run.analysis_run_id:
                 return ExplanationServiceResult(
                     explanation_rows=rows,
@@ -203,9 +207,15 @@ class ExplanationService:
 
         raise AssertionError("unreachable explanation retry state")
 
-    def _current_run_id(self, run: AnalysisRun) -> str | None:
-        if self.current_run_id_provider is not None:
-            return self.current_run_id_provider(run.incident_id)
+    def _current_run_id(
+        self,
+        run: AnalysisRun,
+        *,
+        current_run_id_provider: Callable[[str], str | None] | None = None,
+    ) -> str | None:
+        provider = current_run_id_provider or self.current_run_id_provider
+        if provider is not None:
+            return provider(run.incident_id)
         if run.status is AnalysisRunStatus.CURRENT:
             return run.analysis_run_id
         return None

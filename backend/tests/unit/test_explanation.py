@@ -7,6 +7,7 @@ from typing import Any
 
 from app.contracts import (
     AnalysisRun,
+    AnalysisRunStatus,
     EvidenceItem,
     EvidenceKind,
     ExplanationOutput,
@@ -261,6 +262,30 @@ def test_result_is_discarded_when_incident_pointer_becomes_stale() -> None:
     assert result.explanation_fallback_reason == "LLM_RESULT_STALE"
 
 
+def test_active_building_run_accepts_valid_llm_result() -> None:
+    provider = FakeProvider([_llm_payload()])
+    building_run = _run().model_copy(
+        update={
+            "status": AnalysisRunStatus.BUILDING,
+            "completed_at": None,
+        }
+    )
+    result = ExplanationService(mode="llm", optional_provider=provider).generate(
+        building_run,
+        _hypothesis(),
+        _evidence(),
+        _recommendations(),
+        candidate_entity_type="gateway",
+        current_run_id_provider=lambda _incident_id: building_run.analysis_run_id,
+    )
+
+    assert [row.output.generator for row in result.explanation_rows] == [
+        "template",
+        "llm",
+    ]
+    assert result.explanation_fallback_reason is None
+
+
 def test_llm_generation_failure_retries_once_then_keeps_template() -> None:
     provider = FakeProvider([RuntimeError("offline"), RuntimeError("offline")])
     result = ExplanationService(mode="llm", optional_provider=provider).generate(
@@ -312,6 +337,20 @@ def test_validator_rejects_score_override_and_unapproved_playbook_step() -> None
     assert invalid_schema.reason_code == "SCHEMA_INVALID"
 
     payload = _llm_payload()
+    payload["summary"] = "probable root cause"
+    invalid_summary = validate_explanation_detailed(
+        payload,
+        _run(),
+        _hypothesis(),
+        _evidence(),
+        _recommendations(),
+        candidate_entity_type="gateway",
+        current_analysis_run_id="run_007",
+        expected_generator="llm",
+    )
+    assert invalid_summary.reason_code == "CAUSAL_WORDING_INVALID"
+
+    payload = _llm_payload()
     payload["diagnostic_step_ids"] = ["invented-step"]
     invalid_step = validate_explanation_detailed(
         payload,
@@ -355,7 +394,28 @@ def test_ollama_provider_sends_only_structured_schema_constrained_input() -> Non
     assert call["model"] == "test-model"
     assert call["stream"] is False
     assert call["options"] == {"temperature": 0, "seed": 0}
-    assert call["format"] == ExplanationOutput.model_json_schema()
+    output_schema = call["format"]
+    output_properties = output_schema["properties"]
+    assert output_properties["analysis_run_id"]["const"] == "run_007"
+    assert output_properties["incident_id"]["const"] == "inc_001"
+    assert output_properties["hypothesis_id"]["const"] == "hyp_001"
+    assert output_properties["generator"]["const"] == "llm"
+    assert output_properties["summary"]["minLength"] == 60
+    assert output_properties["summary"]["maxLength"] == 600
+    assert output_properties["summary"]["pattern"] == (
+        r"^The probable root cause is .+ affecting .+ because .+\.$"
+    )
+    assert set(
+        output_schema["$defs"]["ExplanationClaim"]["properties"][
+            "evidence_ids"
+        ]["items"]["enum"]
+    ) == {"ev_001", "ev_002"}
+    assert output_properties["diagnostic_step_ids"]["items"]["enum"] == [
+        "inspect-config-diff"
+    ]
+    assert output_properties["remediation_step_ids"]["items"]["enum"] == [
+        "propose-config-rollback"
+    ]
     assert json.loads(call["messages"][1]["content"]) == bundle
     assert "raw_payload" not in call["messages"][1]["content"].lower()
     assert "do not create evidence" in call["messages"][0]["content"].lower()

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.explanation.service import ExplanationService
 
 import yaml
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.contracts import (
@@ -113,6 +114,7 @@ class RcaAnalysisAdapter:
                 bundle=bundle,
                 run_row=run_row,
                 context=context,
+                session=session,
             )
         except RcaAdapterError:
             raise
@@ -126,6 +128,7 @@ class RcaAnalysisAdapter:
         bundle: IncidentAnalysisBundle,
         run_row: models.AnalysisRun,
         context: AnalysisBuildContext,
+        session: Session,
     ) -> AnalysisResult:
         if not computed.ranked_hypotheses:
             raise RcaAdapterError("pure RCA computation returned no hypotheses")
@@ -282,12 +285,31 @@ class RcaAnalysisAdapter:
             completed_at=None,
             algorithm_version=run_row.algorithm_version,
         )
+
+        def active_build_run_id(incident_id: str) -> str | None:
+            """Resolve the still-active pending publication after LLM latency.
+
+            The new run intentionally remains ``building`` until every child
+            output has validated and the atomic publisher swaps the incident's
+            current pointer. Treating only an already-current row as valid here
+            makes every production LLM result stale by construction.
+            """
+
+            return session.scalar(
+                select(models.AnalysisRun.id).where(
+                    models.AnalysisRun.id == context.analysis_run_id,
+                    models.AnalysisRun.incident_id == incident_id,
+                    models.AnalysisRun.status == "building",
+                )
+            )
+
         explanation_result = self.explanations.generate(
             run,
             contract_hypotheses[top.hypothesis_id],
             contract_evidence[top.hypothesis_id],
             playbooks_by_hypothesis[top.hypothesis_id],
             candidate_entity_type=entity_types[top.candidate_entity_id],
+            current_run_id_provider=active_build_run_id,
         )
         node_states = {
             item.entity_id: item.state for item in computed.topology_states.nodes

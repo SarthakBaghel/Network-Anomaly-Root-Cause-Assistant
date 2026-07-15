@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.db import models
@@ -43,6 +43,34 @@ class IncidentRepository:
         if ts > row.last_event_at:
             row.last_event_at = ts
             self.session.flush()
+
+    def update_started_at_if_earlier(self, incident_id: str, ts: datetime) -> None:
+        row = self._get_or_raise(incident_id)
+        if ts < row.started_at:
+            row.started_at = ts
+            self.session.flush()
+
+    def update_severity(self, incident_id: str, severity: float) -> None:
+        row = self._get_or_raise(incident_id)
+        rounded = round(severity, 2)
+        if rounded > row.severity:
+            row.severity = rounded
+            self.session.flush()
+
+    def add_affected_entity(self, incident_id: str, entity_id: str) -> None:
+        row = self._get_or_raise(incident_id)
+        affected = list(row.affected_entity_ids or [])
+        if entity_id not in affected:
+            affected.append(entity_id)
+            row.affected_entity_ids = affected
+            self.session.flush()
+
+    def add_anomaly_count(self, incident_id: str, amount: int = 1) -> None:
+        if amount < 0:
+            raise ValueError("anomaly count increment cannot be negative")
+        row = self._get_or_raise(incident_id)
+        row.anomaly_count += amount
+        self.session.flush()
 
     def set_current_analysis_run(
         self,
@@ -85,9 +113,7 @@ class IncidentRepository:
         return row
 
     def increment_anomaly_count(self, incident_id: str) -> None:
-        row = self._get_or_raise(incident_id)
-        row.anomaly_count += 1
-        self.session.flush()
+        self.add_anomaly_count(incident_id)
 
     # ------------------------------------------------------------------
     # Reads
@@ -118,8 +144,53 @@ class IncidentRepository:
         stmt = select(models.Incident)
         if status:
             stmt = stmt.where(models.Incident.status == status)
-        stmt = stmt.order_by(models.Incident.started_at.desc()).limit(limit).offset(offset)
+        stmt = stmt.order_by(
+            models.Incident.started_at.desc(), models.Incident.id.desc()
+        ).limit(limit).offset(offset)
         return list(self.session.execute(stmt).scalars())
+
+    def list_page(
+        self,
+        *,
+        status: str | None = None,
+        primary_entity_id: str | None = None,
+        min_severity: float | None = None,
+        before_started_at: datetime | None = None,
+        before_incident_id: str | None = None,
+        limit: int = 50,
+    ) -> list[models.Incident]:
+        """Return one cursor page ordered by ``(started_at DESC, id DESC)``.
+
+        The API owns opaque cursor encoding; this repository owns incident
+        filtering and ordering so feature routes do not duplicate incident SQL.
+        """
+
+        stmt = select(models.Incident)
+        if status is not None:
+            stmt = stmt.where(models.Incident.status == status)
+        if primary_entity_id is not None:
+            stmt = stmt.where(models.Incident.primary_entity_id == primary_entity_id)
+        if min_severity is not None:
+            stmt = stmt.where(models.Incident.severity >= min_severity)
+        if before_started_at is not None:
+            if before_incident_id is None:
+                raise ValueError("before_incident_id is required with before_started_at")
+            stmt = stmt.where(
+                or_(
+                    models.Incident.started_at < before_started_at,
+                    and_(
+                        models.Incident.started_at == before_started_at,
+                        models.Incident.id < before_incident_id,
+                    ),
+                )
+            )
+        return list(
+            self.session.execute(
+                stmt.order_by(
+                    models.Incident.started_at.desc(), models.Incident.id.desc()
+                ).limit(limit)
+            ).scalars()
+        )
 
     def get_attached_events(self, incident_id: str) -> list[models.IncidentEvent]:
         stmt = select(models.IncidentEvent).where(
@@ -134,6 +205,11 @@ class IncidentRepository:
             models.IncidentEventEvaluation.incident_id == incident_id
         )
         return list(self.session.execute(stmt).scalars())
+
+    def get_evaluation(
+        self, incident_id: str, event_id: str
+    ) -> models.IncidentEventEvaluation | None:
+        return self.session.get(models.IncidentEventEvaluation, (incident_id, event_id))
 
     def is_event_attached(self, incident_id: str, event_id: str) -> bool:
         row = self.session.get(models.IncidentEvent, (incident_id, event_id))

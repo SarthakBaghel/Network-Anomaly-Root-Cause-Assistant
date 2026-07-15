@@ -78,10 +78,34 @@ This file tracks all modifications, additions, and validation gates performed by
 
 ---
 
+## 🔬 Phase 2/3 Compatibility Scan & Verification Actions
+
+We performed a methodical compatibility check of Person 1 and 3 tasks and resolved the following integration issues:
+
+1. **Standardized HTTPExceptions:**
+   - Modified endpoints `/review` and `/recompute` to raise standard FastAPI `HTTPException` with explicit `detail` dictionary objects rather than raw JSONResponses.
+2. **Review Validation Rules:**
+   - Enforced stale analysis detection checking that `req.analysis_run_id` matches `incident.current_analysis_run_id`.
+   - Added validation check to reject evidence request decisions if the requested evidence item is not found or is not of kind `"missing"` (raising a 422 error).
+3. **Enum Alignment & Incident Resolution:**
+   - Standardized review decision comparisons to use `ReviewDecision` enum values (`"confirmed"`/`"rejected"`/`"evidence_requested"` instead of `"confirm"`/`"reject"`/`"request_evidence"`), allowing incident status to resolve properly.
+4. **Timeline Relevance Mapping:**
+   - Populated `hypothesis_relevance` in the timeline dynamically using evidence reason codes in `/investigation`.
+5. **Cursor-based Pagination:**
+   - Replaced offset pagination with full cursor-based encoding and decoding in `/incidents`.
+6. **Audit Scope Scanning:**
+   - Updated `/audit` to fetch both parent incident audit records and child action audit records by parsing JSON payload dictionaries.
+7. **Pydantic Validation Alignment:**
+   - Removed `failure_reason` argument from `AnalysisRun` contract parsing and joined playbook step list instructions to string format.
+8. **Topology DB Connection:**
+   - Reverted `/topology` parameter dependency overrides to keep it independent, ensuring unit tests' mock-patching remains compatible.
+
+---
+
 ## 🚦 Verification Results
 
-All local validation gates are green:
-1. **Total Test Suite:** `pytest` - **Passed** (All 76/76 unit, contract, and integration tests passed cleanly in the `.venv` context).
+All local and integration validation gates are green:
+1. **Total Test Suite:** `pytest` - **Passed** (All **91/91** unit, contract, and integration tests passed cleanly in the `.venv` context).
 2. **Incident Manager Unit Tests:** `pytest tests/unit/test_incident_manager.py` - **Passed**.
 3. **Simulator Phase 1 Tests:** `pytest tests/test_simulator_phase1.py` - **Passed**.
 

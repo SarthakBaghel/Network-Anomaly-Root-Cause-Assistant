@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   Background,
   ReactFlow,
@@ -119,18 +126,53 @@ const CHART_COLORS = {
   excludedDot: "#475569",
 };
 
-const EDGE_LABEL_STYLE = { fill: "#e2e8f0", stroke: "#1e293b" };
+const EDGE_RELATION_STYLE: Record<string, CSSProperties> = {
+  sends_traffic_to: {
+    stroke: "#38bdf8",
+    strokeWidth: 1.75,
+  },
+  depends_on: {
+    stroke: "#a78bfa",
+    strokeDasharray: "6 4",
+    strokeWidth: 1.75,
+  },
+};
 
 const NODE_BASE_CLASS =
-  "font-data w-[180px] rounded border-l-4 px-3 py-2.5 text-center text-xs font-semibold text-white shadow-glass";
+  "font-data w-[180px] rounded px-3 py-2.5 text-center text-xs font-semibold shadow-glass";
 
-const NODE_STATE_CLASS: Record<string, string> = {
-  suspected_root: "border-accent-amber bg-amber-950",
-  primary_affected: "border-accent-red bg-red-950",
-  impact_path: "border-accent-emerald bg-emerald-950",
-  blast_radius: "border-accent-purple bg-violet-950",
+const NODE_STATE_STYLE: Record<string, CSSProperties> = {
+  suspected_root: {
+    backgroundColor: "#3b2605",
+    border: "1px solid #92400e",
+    borderLeft: "4px solid #f59e0b",
+    color: "#fef3c7",
+  },
+  primary_affected: {
+    backgroundColor: "#3b1117",
+    border: "1px solid #991b1b",
+    borderLeft: "4px solid #f87171",
+    color: "#fee2e2",
+  },
+  impact_path: {
+    backgroundColor: "#052e25",
+    border: "1px solid #047857",
+    borderLeft: "4px solid #4ade80",
+    color: "#d1fae5",
+  },
+  blast_radius: {
+    backgroundColor: "#2e1b4f",
+    border: "1px solid #6d28d9",
+    borderLeft: "4px solid #a78bfa",
+    color: "#ede9fe",
+  },
 };
-const NODE_STATE_FALLBACK_CLASS = "bg-white/10 border-white/20";
+const NODE_STATE_FALLBACK_STYLE: CSSProperties = {
+  backgroundColor: "#111827",
+  border: "1px solid #475569",
+  borderLeft: "4px solid #64748b",
+  color: "#e2e8f0",
+};
 
 const TOPOLOGY_POSITIONS: Record<string, { x: number; y: number }> = {
   "api-gateway-01": { x: 330, y: 20 },
@@ -780,7 +822,8 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
             </div>
             <p className="mt-2 text-sm text-text-secondary">
               Topology is rendered from the single investigation snapshot;
-              edges show relation_type and node state.
+              edge color and line style encode relation_type, while node color
+              encodes investigation state.
             </p>
             <div
               className="glass-inset mt-6 h-[420px] overflow-hidden"
@@ -795,23 +838,29 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                     y: Math.floor(index / 3) * 150 + 40,
                   },
                   data: { label: `${node.name}` },
-                  className: `${NODE_BASE_CLASS} ${
-                    NODE_STATE_CLASS[String(node.state)] ??
-                    NODE_STATE_FALLBACK_CLASS
-                  }`,
+                  className: NODE_BASE_CLASS,
+                  style:
+                    NODE_STATE_STYLE[String(node.state)] ??
+                    NODE_STATE_FALLBACK_STYLE,
                 }))}
                 edges={investigation.topology.edges.map((edge, index) => ({
                   id: `${edge.source}-${edge.target}-${edge.relation_type}-${index}`,
                   source: edge.source,
                   target: edge.target,
                   type: "smoothstep",
-                  label: edge.relation_type,
-                  labelBgPadding: [6, 4],
-                  labelBgBorderRadius: 4,
-                  labelBgStyle: EDGE_LABEL_STYLE,
+                  ariaLabel: `${edge.source} ${edge.relation_type} ${edge.target}`,
+                  pathOptions: {
+                    offset: edge.relation_type === "depends_on" ? 24 : 12,
+                  },
+                  style:
+                    EDGE_RELATION_STYLE[edge.relation_type] ?? {
+                      stroke: "#64748b",
+                      strokeWidth: 1.5,
+                    },
                   animated: false,
                 }))}
                 fitView
+                fitViewOptions={{ padding: 0.16 }}
               >
                 <Background gap={16} />
               </ReactFlow>
@@ -821,6 +870,8 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-red" />primary_affected</span>
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-emerald" />impact_path</span>
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-purple" />blast_radius</span>
+              <span className="flex items-center gap-1.5"><span className="w-5 border-t-2 border-accent-cyan" />sends_traffic_to</span>
+              <span className="flex items-center gap-1.5"><span className="w-5 border-t-2 border-dashed border-accent-purple" />depends_on</span>
               <details className="ml-auto">
                 <summary className="cursor-pointer text-accent-cyan">Edge semantics</summary>
                 <p className="mt-2 max-w-xl text-text-secondary">depends_on follows service dependencies; sends_traffic_to follows traffic impact. Reverse traversal identifies affected upstream services.</p>

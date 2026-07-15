@@ -21,7 +21,25 @@ import {
 } from '../src/test-fixtures/testid-manifest'
 
 vi.mock('@xyflow/react', () => ({
-  ReactFlow: ({ children }: { children: ReactNode }) => <div data-testid="react-flow-canvas">{children}</div>,
+  ReactFlow: ({ children, nodes = [], edges = [] }: {
+    children: ReactNode
+    nodes?: Array<{ style?: Record<string, unknown> }>
+    edges?: Array<{
+      label?: unknown
+      style?: Record<string, unknown>
+    }>
+  }) => (
+    <div
+      data-testid="react-flow-canvas"
+      data-node-styles={JSON.stringify(nodes.map((node) => node.style))}
+      data-edge-styles={JSON.stringify(edges.map((edge) => ({
+        hasInlineLabel: Boolean(edge.label),
+        path: edge.style,
+      })))}
+    >
+      {children}
+    </div>
+  ),
   Background: () => null,
   Controls: () => null,
 }))
@@ -54,6 +72,26 @@ describe('Person 2 Phase 0', () => {
     expect(screen.getByTestId(hypothesisConfirmTestId('hyp_001'))).toBeInTheDocument()
     expect(screen.getByTestId(hypothesisRejectTestId('hyp_001'))).toBeInTheDocument()
     expect(screen.getByTestId(evidenceRequestTestId('hyp_001'))).toBeInTheDocument()
+
+    const graph = screen.getByTestId('react-flow-canvas')
+    const nodeStyles = JSON.parse(graph.dataset.nodeStyles ?? '[]') as Array<{
+      backgroundColor: string
+      color: string
+    }>
+    const edgeStyles = JSON.parse(graph.dataset.edgeStyles ?? '[]') as Array<{
+      hasInlineLabel: boolean
+      path: { stroke: string }
+    }>
+    expect(nodeStyles).not.toHaveLength(0)
+    expect(nodeStyles.every((style) => style.backgroundColor !== '#ffffff')).toBe(true)
+    expect(nodeStyles.every((style) => style.color !== style.backgroundColor)).toBe(true)
+    expect(edgeStyles).not.toHaveLength(0)
+    expect(edgeStyles.every((style) => !style.hasInlineLabel)).toBe(true)
+    expect(new Set(edgeStyles.map((style) => style.path.stroke))).toEqual(
+      new Set(['#38bdf8', '#a78bfa']),
+    )
+    expect(screen.getByText('sends_traffic_to')).toBeInTheDocument()
+    expect(screen.getByText('depends_on')).toBeInTheDocument()
   })
 
   it('provides stable test IDs for every Phase 0 control', async () => {

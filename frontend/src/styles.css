@@ -152,6 +152,11 @@
     --xy-edge-stroke-selected: #22d3ee;
     --xy-edge-label-background-color: #0b1120;
     --xy-edge-label-color: #e2e8f0;
+    --xy-node-background-color: #111827;
+    --xy-node-border: 1px solid #475569;
+    --xy-node-color: #e2e8f0;
+    --xy-node-boxshadow-hover: 0 0 0 1px rgba(56, 189, 248, 0.7);
+    --xy-node-boxshadow-selected: 0 0 0 2px rgba(56, 189, 248, 0.9);
     --xy-controls-button-background-color: #161b27;
     --xy-controls-button-background-color-hover: rgba(34, 211, 238, 0.2);
     --xy-controls-button-color: #e2e8f0;

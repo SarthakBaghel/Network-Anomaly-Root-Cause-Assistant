@@ -113,3 +113,94 @@ All local and integration validation gates are green:
 
 ## 📋 tasks.md Checklist Updated
 - Marked **P1-16** to **P1-19** (Milestones 2, 3, 4, and 5) as completed (`[x]`).
+
+---
+
+## 🔗 Concise Layer Integration Map
+
+How each layer connects end-to-end, from dataset reference to the frontend:
+
+```
+data/ (reference-only, offline)
+  ↓ informed signal names, ranges, log templates, attack vocab
+scripts/build_scenario_bundle.py
+  ↓ generates deterministic JSONL fixture files
+fixtures/scenarios/gateway_rate_limit/inputs/
+  ├── metrics.jsonl       (Prometheus-format — NSL-KDD/UNSW-NB15 ranges)
+  ├── logs.jsonl          (Syslog-format — Loghub templates)
+  ├── alerts.jsonl        (Alertmanager-format)
+  └── config_changes.jsonl (Config audit — GAIA run.zip format)
+  ↓
+SimulatorEngine (app/simulator/engine.py)
+  Reads JSONL timeline groups → emits via PersistentIngestionSink
+  ↓
+PersistentIngestionSink (app/simulator/ingestion.py)
+  Calls IngestionPipeline.ingest(source, raw) per record
+  ↓
+IngestionPipeline (app/ingestion/pipeline.py)
+  Routes raw dict → matching SourceAdapter via ADAPTERS[source]
+  Validates, deduplicates, collapses repeatable events
+  Persists accepted CanonicalEvent → events table
+  Calls AcceptedEventPublisher.publish(event)
+  ↓
+OrchestrationPublisher (app/orchestration/publisher.py)
+  Calls AnalysisOrchestrator.process_event(event, session)
+  ↓
+AnalysisOrchestrator (app/orchestration/orchestrator.py)
+  Acquires in-process analysis lock
+  Runs: DetectorService → IncidentManager → AnalysisEngine atomically
+  SHA-256 fingerprint for idempotency
+  Atomic publication: marks prior run superseded, switches incident pointer
+  ↓
+API Layer (app/api/incidents.py)
+  GET /incidents           → cursor-paginated list
+  GET /investigation       → full snapshot (hypotheses, evidence, timeline)
+  POST /review             → ReviewDecision transitions + AuditLog entries
+  GET /audit               → per-incident action trail
+  ↓
+Frontend (polling @ 1500ms)
+  Consumes /incidents + /investigation + /topology endpoints
+```
+
+### Adapter–Source Mapping
+
+| Source string | Adapter | Key raw fields | Output |
+|---|---|---|---|
+| `simulator.prometheus` | `PrometheusAdapter` | `sample_id`, `metric`, `value`, `labels.entity_id` | `signal_name/value`, `entity_id`, `event_type` |
+| `simulator.syslog` | `SyslogAdapter` | `record_id`, `host`, `code`, `level`, `trace_id` | `event_type`, `severity` from LEVEL_SEVERITY map |
+| `simulator.alertmanager` | `AlertmanagerAdapter` | `fingerprint`, `startsAt`, `labels.entity_id/severity` | `severity=0.95` for critical, alert dedup |
+| `simulator.config_audit` | `ConfigAuditAdapter` | `change_id`, `changed_at`, `target_entity_id` | `CONFIG_VALUE_CHANGED`, `severity=0.0`, `context_only=True` |
+
+---
+
+## 📦 Dataset Ingestion Capability Research
+
+### Finding: Datasets Are Reference-Only at Runtime
+
+Per `DatasetDescription.md` and blueprint §3.3: **"None are loaded at runtime. The live demo runs entirely from the deterministic simulator scenario bundle."**
+
+The ingestion pipeline is architecturally capable of reading real dataset records but the current wiring uses only the simulator as the emitter.
+
+### What the Adapters CAN Handle
+
+| Adapter | Dataset equivalent | Mapping feasibility |
+|---|---|---|
+| `PrometheusAdapter` | NSL-KDD / UNSW-NB15 | ✅ Columns (`count`, `src_bytes`, `dst_host_count`) map directly to `signal_name/value` via derivation rules in `DatasetDescription.md §1` |
+| `SyslogAdapter` | Loghub HDFS / BGL | ✅ Each log line can be parsed into `record_id`, `host`, `code`, `level` using template matching |
+| `AlertmanagerAdapter` | NSL-KDD `neptune`/UNSW `DoS` attack rows | ✅ Attack records map to alert payloads via `attack_cat → alertname` |
+| `ConfigAuditAdapter` | GAIA `run.zip` injection records | ✅ `service + anomaly_type + start_time` maps directly to `change_id`, `changed_at`, `target_entity_id` |
+
+### Gap: No Live Dataset Reader
+
+There is no `DatasetReader` class or batch-ingest script reading raw CSVs/ARFFs/log files into the `ADAPTERS` pipeline. The `build_scenario_bundle.py` script generates fixed JSONL fixtures offline.
+
+To enable live dataset ingestion the following would be needed:
+1. `MetricDatasetReader` — reads `data/nsl_kdd/KDDTrain+.txt`, applies synthetic column derivation rules, emits Prometheus-format dicts.
+2. `LogDatasetReader` — parses `HDFS.log`/`BGL.log` raw lines into SyslogAdapter-compatible dicts.
+3. `GaiaRunReader` — parses `run.zip` injection records into ConfigAuditAdapter-compatible dicts.
+4. A CLI script or `POST /api/v1/ingest/batch` endpoint wiring these readers to `IngestionPipeline`.
+
+### Verdict
+
+The ingestion pipeline **is capable** of handling real dataset records as long as they are shaped correctly. The four adapters cover all dataset modalities. Only the offline → online data reader bridge is missing. Adding dataset readers would be a self-contained extension with no contract changes required.
+

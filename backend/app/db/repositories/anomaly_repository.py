@@ -37,6 +37,17 @@ class AnomalyRepository:
         stmt = select(models.Anomaly).where(models.Anomaly.event_id == event_id)
         return list(self.session.execute(stmt).scalars())
 
+    def list_by_events(self, event_ids: list[str]) -> list[models.Anomaly]:
+        """Return anomalies for an ordered incident-event set in one query."""
+        if not event_ids:
+            return []
+        stmt = (
+            select(models.Anomaly)
+            .where(models.Anomaly.event_id.in_(event_ids))
+            .order_by(models.Anomaly.detected_at.asc(), models.Anomaly.id.asc())
+        )
+        return list(self.session.execute(stmt).scalars())
+
     def list_recent(self, *, limit: int = 20) -> list[models.Anomaly]:
         stmt = (
             select(models.Anomaly)

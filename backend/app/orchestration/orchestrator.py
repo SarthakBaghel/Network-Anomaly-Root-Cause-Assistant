@@ -33,8 +33,12 @@ import threading
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
 
+import yaml
 from sqlalchemy.orm import Session
 
 from app.contracts import ExplanationOutput
@@ -47,6 +51,8 @@ from app.db.repositories import (
     HypothesisRepository,
     IncidentRepository,
 )
+from app.rca.contracts import TopologyStates
+from app.topology.graph import get_topology_graph
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +116,7 @@ class IncidentManagerProtocol(Protocol):
 
 @runtime_checkable
 class AnalysisEngineProtocol(Protocol):
-    """Implemented by app.rca (Person 4) — pure function, no DB commits."""
+    """Implemented by Person 1's adapter around Person 4's pure RCA engine."""
 
     def analyse(
         self,
@@ -118,7 +124,7 @@ class AnalysisEngineProtocol(Protocol):
         session: Session,
         context: AnalysisBuildContext,
     ) -> "AnalysisResult":
-        """Return a complete analysis result without opening a DB transaction."""
+        """Assemble and map a complete result without committing the session."""
         ...
 
 
@@ -128,10 +134,11 @@ class AnalysisEngineProtocol(Protocol):
 
 
 class AnalysisResult:
-    """Typed container returned by AnalysisEngineProtocol.analyse().
+    """Publisher-facing container returned by AnalysisEngineProtocol.analyse().
 
     Hypothesis, evidence, recommendation, and explanation rows are pre-built
-    ORM objects (without PKs committed). The orchestrator inserts them.
+    ORM objects (without PKs committed). Pure computation uses the separate
+    ``RcaComputationResult`` boundary; the adapter creates this container.
     """
 
     def __init__(
@@ -144,6 +151,9 @@ class AnalysisResult:
         explanation_rows: list[ExplanationDraft] | None = None,
         explanation_fallback_reason: str | None = None,
         explanation_fallback_attempt_count: int = 0,
+        topology_states: TopologyStates | None = None,
+        conflict_reason_codes: tuple[str, ...] = (),
+        evidence_requirements: dict[str, tuple[str, ...]] | None = None,
     ) -> None:
         if explanation_payload is not None and explanation_rows is not None:
             raise ValueError(
@@ -165,6 +175,14 @@ class AnalysisResult:
         self.explanation_payload = explanation_payload
         self.explanation_fallback_reason = explanation_fallback_reason
         self.explanation_fallback_attempt_count = explanation_fallback_attempt_count
+        self.topology_states = topology_states or TopologyStates()
+        self.conflict_reason_codes = tuple(conflict_reason_codes)
+        self.evidence_requirements = MappingProxyType(
+            {
+                key: tuple(requirements)
+                for key, requirements in (evidence_requirements or {}).items()
+            }
+        )
         self._validate_fallback_metadata()
 
     def _validate_fallback_metadata(self) -> None:
@@ -440,6 +458,7 @@ class AnalysisOrchestrator:
         top_hypothesis_id: str | None = None
 
         if analysis_result is not None:
+            self._validate_analysis_result(new_run, incident, analysis_result)
             self._validate_explanation_rows(new_run, incident, analysis_result)
 
             # Insert hypotheses
@@ -531,6 +550,104 @@ class AnalysisOrchestrator:
                 "algorithm_version": ALGORITHM_VERSION,
             },
         )
+
+    @staticmethod
+    def _validate_analysis_result(
+        new_run: models.AnalysisRun,
+        incident: models.Incident,
+        analysis_result: AnalysisResult,
+    ) -> None:
+        """Reject cross-run, dangling, or non-catalogue publisher input."""
+
+        hypotheses = analysis_result.hypotheses
+        hypothesis_ids = {item.id for item in hypotheses}
+        if len(hypothesis_ids) != len(hypotheses):
+            raise ValueError("analysis result hypothesis IDs must be unique")
+        ranks = sorted(item.rank for item in hypotheses)
+        if ranks != list(range(1, len(ranks) + 1)):
+            raise ValueError("analysis result ranks must be unique and consecutive")
+        for hypothesis in hypotheses:
+            if hypothesis.analysis_run_id != new_run.id:
+                raise ValueError("hypothesis analysis_run_id does not match pending run")
+            if hypothesis.incident_id != incident.id:
+                raise ValueError("hypothesis incident_id does not match pending incident")
+
+        conflicting_codes: set[str] = set()
+        for evidence in analysis_result.evidence_rows:
+            if evidence.analysis_run_id != new_run.id:
+                raise ValueError("evidence analysis_run_id does not match pending run")
+            if evidence.incident_id != incident.id:
+                raise ValueError("evidence incident_id does not match pending incident")
+            if evidence.hypothesis_id not in hypothesis_ids:
+                raise ValueError("evidence references an unknown pending hypothesis")
+            if evidence.kind == "conflicting":
+                conflicting_codes.add(evidence.reason_code)
+
+        for recommendation in analysis_result.recommendation_rows:
+            if recommendation.analysis_run_id != new_run.id:
+                raise ValueError(
+                    "recommendation analysis_run_id does not match pending run"
+                )
+            if recommendation.incident_id != incident.id:
+                raise ValueError(
+                    "recommendation incident_id does not match pending incident"
+                )
+            if recommendation.hypothesis_id not in hypothesis_ids:
+                raise ValueError(
+                    "recommendation references an unknown pending hypothesis"
+                )
+
+        declared_conflicts = set(analysis_result.conflict_reason_codes)
+        known_conflicts = AnalysisOrchestrator._catalogue_conflict_reason_codes()
+        if not declared_conflicts.issubset(known_conflicts):
+            raise ValueError("analysis result contains a non-catalogue conflict code")
+        if not declared_conflicts.issubset(conflicting_codes):
+            raise ValueError("declared conflict code has no conflicting evidence row")
+
+        valid_requirement_keys = hypothesis_ids | {item.type for item in hypotheses}
+        if not set(analysis_result.evidence_requirements).issubset(
+            valid_requirement_keys
+        ):
+            raise ValueError("evidence requirements reference an unknown hypothesis")
+        if any(
+            len(requirements) != len(set(requirements))
+            for requirements in analysis_result.evidence_requirements.values()
+        ):
+            raise ValueError("evidence requirements must be unique per hypothesis")
+
+        topology = get_topology_graph()
+        node_ids = set(topology.graph.nodes)
+        seen_nodes: set[str] = set()
+        for state in analysis_result.topology_states.nodes:
+            if state.entity_id not in node_ids:
+                raise ValueError("topology state references an unknown entity")
+            if state.entity_id in seen_nodes:
+                raise ValueError("topology node state is duplicated")
+            seen_nodes.add(state.entity_id)
+        edge_ids = {
+            (row["source"], row["target"], row["relation_type"])
+            for row in topology.edge_records
+        }
+        seen_edges: set[tuple[str, str, str]] = set()
+        for state in analysis_result.topology_states.edges:
+            identity = (state.source, state.target, state.relation_type.value)
+            if identity not in edge_ids:
+                raise ValueError("topology state references an unknown typed edge")
+            if identity in seen_edges:
+                raise ValueError("topology edge state is duplicated")
+            seen_edges.add(identity)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def _catalogue_conflict_reason_codes() -> set[str]:
+        path = Path(__file__).resolve().parents[1] / "fixtures" / "hypotheses.yaml"
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        return {
+            str(pattern["pattern_id"])
+            for hypothesis in payload.get("hypotheses", [])
+            for pattern in hypothesis.get("conflict_patterns", [])
+            if isinstance(pattern, dict) and pattern.get("pattern_id")
+        }
 
     @staticmethod
     def _validate_explanation_rows(

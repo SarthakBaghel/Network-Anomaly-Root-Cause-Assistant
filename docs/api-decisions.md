@@ -100,3 +100,23 @@ contracts only when its affected owners have reviewed it.
 - **Compatibility:** `explanation_payload` remains a deprecated constructor
   input for one transition window and is converted to a validated draft.
 - **Affected owners:** Persons 1, 4, and 5
+
+## M0-010 — Pure RCA computation and database-aware adapter
+
+- **Status:** accepted for Milestone 0
+- **Decision:** Person 4's engine accepts an immutable
+  `IncidentAnalysisBundle` and returns an immutable `RcaComputationResult`.
+  Neither contract imports SQLAlchemy, repositories, or ORM models. Person 1's
+  `RcaAnalysisAdapter` performs repository reads, binds pending run/incident
+  IDs, invokes the Person 5 evidence/playbook/explanation services, and returns
+  the existing publisher-facing `AnalysisResult`.
+- **Historical matching:** exact fingerprint plus confirmed cause scores `1.0`;
+  the same confirmed cause with at least half of the historical row's declared
+  features scores `0.5`; otherwise it scores `0.0`. Ordering is deterministic.
+- **Metadata persistence:** topology states, conflict reason codes, and evidence
+  requirements are immutable publication metadata for API assembly and
+  validation. They are not duplicated into new database columns in P0.
+- **Conflict evidence:** pure computation emits run-agnostic conflict drafts.
+  The adapter creates the run-scoped evidence representation, avoiding a
+  pending database-run dependency inside the pure engine.
+- **Affected owners:** Persons 1, 4, and 5

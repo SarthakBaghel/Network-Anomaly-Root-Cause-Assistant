@@ -46,7 +46,7 @@ flowchart LR
         TOP["Topology engine"]
         RCA["Candidate generation and ranking"]
         EVD["Evidence and playbooks"]
-        EXP["Template / validated Ollama explanation"]
+        EXP["Validated Ollama explanation / template resilience fallback"]
         REV["Review, audit, and handover reports"]
         DB[("SQLite")]
     end
@@ -80,10 +80,12 @@ flowchart LR
     CHAT -. "independent local questions" .-> Ollama["Local Ollama"]
 ```
 
-The optional LLM does not own RCA. Deterministic services create hypotheses,
-scores, evidence, and recommendations. Ollama may narrate a validated
-structured bundle, and invalid or unavailable output falls back to the template
-explanation.
+Ollama is the system's integral local-AI layer. It generates validated incident
+narratives and powers the stateless network-concepts assistant. It does not own
+RCA decisions: deterministic services remain authoritative for hypotheses,
+scores, evidence, and recommendations. If Ollama is temporarily unavailable or
+returns invalid output, the template generator preserves incident availability
+as a resilience fallback.
 
 ## Technology stack
 
@@ -98,7 +100,7 @@ explanation.
 | Visualization | Recharts, React Flow | Incident timeline and topology graph |
 | HTTP client | Axios with generated OpenAPI types | Typed frontend/backend communication |
 | Reports | ReportLab | Timestamped PDF shift-handover export |
-| Optional local AI | Ollama (`qwen2.5:3b` by default) | Validated narration and independent concept questions |
+| Local AI | Ollama (`qwen2.5:3b` by default) | Core validated incident narration and network-concepts assistant |
 | Backend testing | Pytest, Ruff, MyPy | Unit, contract, integration, lint, format, type checks |
 | Frontend testing | Vitest, Testing Library, MSW | Components, state, API contract fixtures |
 | End-to-end testing | Playwright | MSW-disabled live browser verification |
@@ -362,7 +364,7 @@ explanations, review, and audit behaviour.
 - Python 3.12 or newer
 - Node.js 22 LTS (`nvm use` reads `.nvmrc`)
 - npm 10 or newer
-- Ollama only if local AI features are required
+- Ollama with the `qwen2.5:3b` model for the integrated local-AI experience
 
 ### First-time setup
 
@@ -390,16 +392,15 @@ The script treats the two services as one process group: if one service fails
 or cannot bind its port, the other is stopped to avoid a misleading half-running
 application.
 
-### Optional Ollama setup
+### Ollama setup
 
 ```bash
 .venv/bin/python -m pip install -e "backend[llm]"
 ollama pull qwen2.5:3b
 ```
 
-The stateless concepts assistant uses local Ollama whenever it is available.
-Template incident explanations remain the default. To enable validated Ollama
-narration for incident explanations too:
+Ollama powers the stateless concepts assistant and the system's validated
+incident narration. Start the complete application in LLM mode with:
 
 ```bash
 EXPLANATION_MODE=llm OLLAMA_MODEL=qwen2.5:3b ./scripts/dev.sh

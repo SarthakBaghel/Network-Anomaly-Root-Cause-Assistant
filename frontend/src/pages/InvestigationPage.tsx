@@ -120,6 +120,13 @@ const laneColor: Record<components["schemas"]["Modality"], string> = {
   config_change: "#a78bfa",
   trace: "#fb7185",
 };
+const laneDescription: Record<components["schemas"]["Modality"], string> = {
+  metric: "Numerical measurements such as latency, packet loss, CPU, and connections.",
+  log: "Application or infrastructure messages explaining observed failures.",
+  alert: "Monitoring rules fired after thresholds were crossed.",
+  config_change: "Configuration or deployment activity that may have initiated the incident.",
+  trace: "Distributed tracing spans showing request propagation.",
+};
 
 const CHART_COLORS = {
   gridStroke: "rgba(148, 163, 184, 0.14)",
@@ -865,6 +872,37 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+            <div
+              className="mt-4 grid gap-2 border-t border-border-subtle pt-4 sm:grid-cols-2 xl:grid-cols-5"
+              role="group"
+              aria-label="Timeline color legend"
+            >
+              {laneOrder.map((modality) => (
+                <div key={modality} className="flex items-start gap-2">
+                  <span
+                    className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: laneColor[modality] }}
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <p className="text-xs font-semibold text-text-primary">
+                      {laneLabels[modality]}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
+                      {laneDescription[modality]}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 flex items-center gap-2 text-[11px] text-text-muted">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: CHART_COLORS.excludedDot }}
+                aria-hidden="true"
+              />
+              Grey points are contextual events evaluated but excluded from the incident evidence.
+            </p>
           </Card>
 
           <Card interactive glow="purple" className="order-4 xl:col-span-2">

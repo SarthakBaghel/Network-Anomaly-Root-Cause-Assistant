@@ -216,6 +216,22 @@ describe("InvestigationPage", () => {
     expect(excluded).toBeGreaterThan(0);
   });
 
+  it("explains the timeline color coding below the chart", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
+
+    render(<InvestigationPage incidentId="inc_001" />);
+
+    const legend = await screen.findByRole("group", { name: "Timeline color legend" });
+    expect(within(legend).getByText("Metric")).toBeInTheDocument();
+    expect(within(legend).getByText("Log")).toBeInTheDocument();
+    expect(within(legend).getByText("Alert")).toBeInTheDocument();
+    expect(within(legend).getByText("Config Change")).toBeInTheDocument();
+    expect(within(legend).getByText("Trace")).toBeInTheDocument();
+    expect(within(legend).getByText(/Numerical measurements/)).toBeInTheDocument();
+    expect(screen.getByText(/Grey points are contextual events/)).toBeInTheDocument();
+  });
+
   it("rejects an older generated_at response for the same analysis revision", async () => {
     let callCount = 0;
     vi.spyOn(incidentsApi, "getInvestigation").mockImplementation(async () => {

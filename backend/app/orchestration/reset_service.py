@@ -15,13 +15,15 @@ POST /simulator/reset sequence (blueprint §5.2):
 Ownership split: P3 owns emitter state and reset hook.
 Person 1 owns the cross-domain transaction, lock, DB clearing, and API wiring.
 """
+
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Callable, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from sqlalchemy import delete, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.audit.contracts import AuditWrite
@@ -30,6 +32,14 @@ from app.db import models
 from app.orchestration.orchestrator import AnalysisOrchestrator
 
 logger = logging.getLogger(__name__)
+
+
+class ResetBusyError(RuntimeError):
+    """Reset could not acquire SQLite's writer lock within the bounded wait."""
+
+
+def _is_database_locked(exc: OperationalError) -> bool:
+    return "database is locked" in str(exc).lower()
 
 
 @runtime_checkable
@@ -82,7 +92,15 @@ class ResetService:
 
         # Step 2 — Acquire the analysis lock (same lock the orchestrator uses)
         with self._orchestrator._lock:
-            return self._locked_reset(session)
+            try:
+                return self._locked_reset(session)
+            except OperationalError as exc:
+                if not _is_database_locked(exc):
+                    raise
+                session.rollback()
+                raise ResetBusyError(
+                    "another scenario or reset transaction is still completing"
+                ) from exc
 
     def _locked_reset(self, session: Session) -> dict[str, Any]:
         """All DB work happens inside the analysis lock."""
@@ -140,8 +158,6 @@ def _clear_demo_rows(session: Session) -> None:
     Preserved tables: entities, topology_edges, historical_incidents.
     This is the ONLY allowed bulk-purge path (blueprint §8.2).
     """
-    from sqlalchemy.exc import OperationalError
-
     # Disable FK checks temporarily for cascade safety
     session.execute(text("PRAGMA foreign_keys=OFF"))
     try:
@@ -159,7 +175,9 @@ def _clear_demo_rows(session: Session) -> None:
         session.execute(delete(models.Anomaly))
         try:
             with session.begin_nested():
-                session.execute(delete(models.EwmaBaseline))  # Adaptive baselines reset with demo state
+                session.execute(
+                    delete(models.EwmaBaseline)
+                )  # Adaptive baselines reset with demo state
         except OperationalError:
             # Table absent in pre-migration DB — safe to skip during test/dev
             pass
@@ -171,8 +189,6 @@ def _clear_demo_rows(session: Session) -> None:
         session.execute(text("PRAGMA foreign_keys=ON"))
 
 
-
-
 def _reload_topology(session: Session) -> None:
     """Reload entities and topology edges from the fixture file.
 
@@ -182,9 +198,7 @@ def _reload_topology(session: Session) -> None:
     import json
     from pathlib import Path
 
-    topo_path = (
-        Path(__file__).resolve().parents[1] / "fixtures" / "topology.json"
-    )
+    topo_path = Path(__file__).resolve().parents[1] / "fixtures" / "topology.json"
     topo = json.loads(topo_path.read_text(encoding="utf-8"))
 
     # Validate frozen entity IDs
@@ -197,9 +211,7 @@ def _reload_topology(session: Session) -> None:
         "auth-api-01",
     }
     if not required.issubset(node_ids):
-        raise RuntimeError(
-            f"topology.json is missing required entity IDs: {required - node_ids}"
-        )
+        raise RuntimeError(f"topology.json is missing required entity IDs: {required - node_ids}")
 
     # Re-insert entities
     session.execute(delete(models.TopologyEdge))
@@ -256,8 +268,7 @@ def _seed_historical_incident(session: Session) -> None:
             fingerprint="gateway-rate-limit-half-feature-match",
             confirmed_cause="configuration_regression",
             summary=(
-                "Prior gateway incident confirmed after a rate-limit "
-                "configuration regression."
+                "Prior gateway incident confirmed after a rate-limit configuration regression."
             ),
             feature_vector={
                 "entity_type": "gateway",

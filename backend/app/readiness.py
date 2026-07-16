@@ -22,8 +22,8 @@ SUPPORTED_CATALOGUE_VERSIONS = {
     "topology.json": ("1.0", "topology-1.2"),
     "detector_rules.yaml": ("1.0", "detector-rules-1.2"),
     "symptom_families.yaml": ("1.0", "symptom-families-1.2"),
-    "hypotheses.yaml": ("1.0", "hypotheses-1.4"),
-    "playbooks.yaml": ("1.0", "playbooks-1.3"),
+    "hypotheses.yaml": ("1.0", "hypotheses-1.5"),
+    "playbooks.yaml": ("1.0", "playbooks-1.4"),
 }
 
 

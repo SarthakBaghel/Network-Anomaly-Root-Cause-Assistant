@@ -51,6 +51,7 @@ REQUIREMENT_MATCHERS: dict[str, EventMatcher] = {
     "source_distribution": lambda event: _contains(event.signal_name, "raw_ingress")
     or _payload_contains(event, "source_distribution", "client_ip", "source_ip"),
     "connection_pressure": lambda event: _contains(event.signal_name, "connection_utilization"),
+    "active_connection_pressure": lambda event: _contains(event.signal_name, "active_connections"),
     "gateway_connection_and_tcp_metrics": lambda event: _contains(
         event.signal_name,
         "connection_utilization",
@@ -124,6 +125,7 @@ REASON_CODES = {
     "raw_ingress": "RAW_INGRESS_OBSERVED",
     "source_distribution": "SOURCE_DISTRIBUTION_OBSERVED",
     "connection_pressure": "CONNECTION_UTILIZATION_HIGH",
+    "active_connection_pressure": "ACTIVE_CONNECTION_PRESSURE_OBSERVED",
     "gateway_connection_and_tcp_metrics": "GATEWAY_CONNECTION_PRESSURE",
     "gateway_saturation_alert": "GATEWAY_SATURATION_ALERT",
     "downstream_latency": "DOWNSTREAM_LATENCY_INCREASE",
@@ -310,6 +312,7 @@ _CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
         "raw_ingress",
         "source_distribution",
         "connection_pressure",
+        "active_connection_pressure",
         "gateway_connection_and_tcp_metrics",
         "gateway_saturation_alert",
         "db_utilization",
@@ -350,9 +353,7 @@ def _in_hypothesis_scope(
     if requirement == "dependency_timeout":
         dependency_id = event.raw_payload.get("dependency_id")
         return event.entity_id == candidate_id or dependency_id == candidate_id
-    if requirement == "connection_pressure" and _contains(
-        event.signal_name, "connection_utilization"
-    ):
+    if requirement in {"connection_pressure", "active_connection_pressure"}:
         return event.signal_value is not None and event.signal_value >= 0.8
     return True
 

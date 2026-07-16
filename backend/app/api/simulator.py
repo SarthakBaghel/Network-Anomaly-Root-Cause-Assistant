@@ -54,13 +54,24 @@ def reset() -> SimulatorResetResponse:
     re-seeds history, resets the simulator clock, and writes DEMO_RESET audit.
     """
     from app.db.session import session_scope
-    from app.orchestration import reset_service
+    from app.orchestration import ResetBusyError, reset_service
 
     # Dynamically register the current simulator_engine reference to handle test monkeypatching
     reset_service.register_simulator(simulator_engine)
 
-    with session_scope() as session:
-        result = reset_service.execute(session)
+    try:
+        with session_scope() as session:
+            result = reset_service.execute(session)
+    except ResetBusyError as exc:
+        raise HTTPException(
+            503,
+            detail={
+                "code": "DATABASE_BUSY",
+                "message": (
+                    "Another scenario analysis is still finishing. Wait a moment and reset again."
+                ),
+            },
+        ) from exc
 
     return SimulatorResetResponse(
         **simulator_engine.status(),

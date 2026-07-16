@@ -36,8 +36,13 @@ _CLAIM_TEMPLATE = _ENVIRONMENT.from_string(
 _CAUSE_LABELS = {
     "configuration_regression": "a configuration regression",
     "dos_or_traffic_surge": "a denial-of-service or traffic surge",
+    "gateway_capacity_saturation": "gateway capacity saturation",
     "database_connection_exhaustion": "database connection exhaustion",
+    "database_resource_saturation": "database host resource saturation",
+    "database_query_regression": "a database query regression",
     "network_path_congestion": "network path congestion",
+    "storage_network_partition": "a storage-network partition",
+    "namenode_metadata_failure": "a NameNode metadata failure",
     "upstream_service_failure": "an upstream service failure",
     "dns_resolution_failure": "a DNS resolution failure",
     "certificate_or_tls_failure": "a certificate or TLS failure",
@@ -54,22 +59,14 @@ _CLAIM_PREFIX = {
 def _scope_check(hypothesis: Hypothesis, evidence: Sequence[EvidenceItem]) -> None:
     for item in evidence:
         if item.analysis_run_id != hypothesis.analysis_run_id:
-            raise TemplateExplanationError(
-                "evidence analysis_run_id does not match hypothesis"
-            )
+            raise TemplateExplanationError("evidence analysis_run_id does not match hypothesis")
         if item.incident_id != hypothesis.incident_id:
-            raise TemplateExplanationError(
-                "evidence incident_id does not match hypothesis"
-            )
+            raise TemplateExplanationError("evidence incident_id does not match hypothesis")
         if item.hypothesis_id != hypothesis.hypothesis_id:
-            raise TemplateExplanationError(
-                "evidence hypothesis_id does not match hypothesis"
-            )
+            raise TemplateExplanationError("evidence hypothesis_id does not match hypothesis")
 
 
-def _step_ids(
-    recommendations: Sequence[RecommendationLike], step_type: str
-) -> list[str]:
+def _step_ids(recommendations: Sequence[RecommendationLike], step_type: str) -> list[str]:
     return sorted(
         {
             recommendation.step_id

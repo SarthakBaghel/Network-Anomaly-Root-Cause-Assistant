@@ -79,21 +79,41 @@ golden scenario. The post-blueprint additions are:
 - scenario provenance fields in the API and generated frontend contract.
 
 The versioned catalogues are `detector-rules-1.2`,
-`symptom-families-1.2`, `hypotheses-1.4`, and `playbooks-1.3`.
+`symptom-families-1.2`, `hypotheses-1.5`, and `playbooks-1.4`.
 Recommendations remain suggestions only; every catalogue playbook requires
 human approval and the prototype never executes remediation automatically.
 
-### Port-scan competing hypotheses
+### Three evidence-backed contenders per scenario
 
-Reconnaissance incidents intentionally expose multiple plausible candidates
-instead of padding every incident to a fixed count. The normal port-scan
-fixture ranks `external_probe` first, followed by
-`authorized_security_scanner` and `dos_or_traffic_surge`. The authorized
-scanner candidate reports missing allow-list and change-ticket evidence, while
-the traffic-surge candidate reports missing volume, SYN, and source-distribution
-signals. If a source fingerprint is explicitly allow-listed with an approved
-scan ticket, `authorized_security_scanner` rises and that same record becomes
-conflicting evidence against `external_probe`.
+Every demonstration scenario publishes exactly three conditional, catalogue-
+backed contenders. They are not duplicate placeholders and are not selected by
+reading the scenario ID. Observed anomaly and log types open the candidate
+gates; topology, symptom compatibility, propagation, metrics, direct records,
+change causality, time, and history then produce the deterministic evidence
+score. Missing evidence remains visible and lowers the weaker alternatives.
+
+| Scenario | Ranked contender types |
+|---|---|
+| Gateway rate-limit disabled | `configuration_regression`, `dos_or_traffic_surge`, `database_connection_exhaustion` |
+| Network-path degradation | `network_path_congestion`, `upstream_service_failure`, `resource_saturation` |
+| DDoS / SYN flood | `dos_or_traffic_surge`, `gateway_capacity_saturation`, `external_probe` |
+| GAIA resource saturation | `resource_saturation`, `upstream_service_failure`, `network_path_congestion` |
+| Port scan / reconnaissance | `external_probe`, `authorized_security_scanner`, `dos_or_traffic_surge` |
+| HDFS DataNode failure | `distributed_storage_node_failure`, `storage_network_partition`, `namenode_metadata_failure` |
+| Distributed trace anomaly | `trace_latency_regression`, `upstream_service_failure`, `network_path_congestion` |
+| Database pool exhaustion | `database_connection_exhaustion`, `database_query_regression`, `database_resource_saturation` |
+| DNS resolution failure | `dns_resolution_failure`, `upstream_service_failure`, `network_path_congestion` |
+| TLS certificate failure | `certificate_or_tls_failure`, `upstream_service_failure`, `network_path_congestion` |
+
+The investigation UI labels the score as **evidence confidence** and shows a
+Strong, Moderate, or Limited tier plus the numeric score out of 100. This is a
+transparent evidence score, not a statistical probability of correctness.
+
+For reconnaissance, an explicit allow-list match and approved scan ticket can
+raise `authorized_security_scanner` above `external_probe`; that same record is
+also conflicting evidence against an external probe. Adversarial tests verify
+that these reconnaissance-specific contenders do not leak into unrelated
+incidents.
 
 ## Data-leakage boundary
 

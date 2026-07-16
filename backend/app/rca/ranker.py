@@ -417,6 +417,7 @@ _CANDIDATE_SCOPED_REQUIREMENTS = frozenset(
         "raw_ingress",
         "source_distribution",
         "connection_pressure",
+        "active_connection_pressure",
         "db_utilization",
         "pool_waits",
         "path_telemetry",
@@ -463,6 +464,7 @@ def _available_requirement(
             event, "raw_ingress", "source_distribution", "source_ip", "client_ip"
         ),
         "connection_pressure": lambda event: contains(event, "connection_utilization"),
+        "active_connection_pressure": lambda event: contains(event, "active_connections"),
         "downstream_latency": lambda event: contains(event, "latency"),
         "timeout_log": lambda event: event.modality is Modality.LOG and contains(event, "timeout"),
         "waf_decision_logs": lambda event: contains(event, "waf_decision"),
@@ -475,7 +477,10 @@ def _available_requirement(
         "path_telemetry": lambda event: contains(
             event, "packet_loss", "retransmission", "hop_latency"
         ),
-        "upstream_health": lambda event: contains(event, "upstream", "health"),
+        "upstream_health": lambda event: any(
+            value in (event.event_type or "").lower()
+            for value in ("health", "upstream_failure", "upstream_error")
+        ),
         "dns_queries": lambda event: contains(event, "dns", "resolver"),
         "certificate_state": lambda event: contains(event, "certificate", "tls"),
         "resource_usage": lambda event: contains(event, "cpu_usage", "memory_usage"),
@@ -494,8 +499,9 @@ def _available_requirement(
             event, "change_ticket", "authorization_ticket", "approved_scan_ticket"
         ),
         "connection_rejections": lambda event: contains(event, "rejected_connection_rate"),
-        "datanode_health": lambda event: contains(
-            event, "datanode_io_error", "hdfs_datanode_failure"
+        "datanode_health": lambda event: any(
+            value in ((event.signal_name or "") + " " + event.event_type).lower()
+            for value in ("datanode_io_error", "hdfs_datanode_failure")
         ),
         "replication_state": lambda event: contains(event, "replica", "datanode_failure"),
         "trace_critical_path": lambda event: event.modality is Modality.TRACE
@@ -523,7 +529,7 @@ def _available_requirement(
                 and dependency_id != candidate.candidate_entity_id
             ):
                 return False
-        if key == "connection_pressure":
+        if key in {"connection_pressure", "active_connection_pressure"}:
             return event.signal_value is not None and event.signal_value >= 0.8
         return True
 

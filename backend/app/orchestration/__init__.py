@@ -1,4 +1,5 @@
 """Person 1 analysis orchestration (blueprint §5.2)."""
+
 from .orchestrator import (
     AnalysisBuildContext,
     AnalysisOrchestrator,
@@ -8,7 +9,7 @@ from .orchestrator import (
 )
 from .analysis_bundle import AnalysisBundleError, build_incident_analysis_bundle
 from .rca_adapter import PureRcaEngine, RcaAdapterError, RcaAnalysisAdapter
-from .reset_service import ResetService, reset_service
+from .reset_service import ResetBusyError, ResetService, reset_service
 
 __all__ = [
     "AnalysisBuildContext",
@@ -20,6 +21,7 @@ __all__ = [
     "RcaAdapterError",
     "RcaAnalysisAdapter",
     "ResetService",
+    "ResetBusyError",
     "build_incident_analysis_bundle",
     "orchestrator",
     "reset_service",

@@ -206,6 +206,12 @@ one internally consistent snapshot rather than partially updated sections.
 | DNS resolution failure | Resolver errors preventing dependent connections |
 | TLS certificate failure | Certificate validation and handshake failure |
 
+Each scenario produces exactly three signal-gated contenders. The intended
+cause remains first, while the two alternatives expose why they are weaker
+through evidence confidence, coverage, factor scores, and missing or
+conflicting evidence. The score is an explainable 0–100 evidence score, not a
+probability estimate.
+
 The large source datasets remain under the git-ignored `data/` directory and
 are not loaded during a live demo. Versioned transforms produce small curated
 runtime profiles containing provenance and `REFERENCE_DERIVED` markers. Dataset

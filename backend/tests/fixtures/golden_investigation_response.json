@@ -5,7 +5,7 @@
     "completed_at": "2026-07-14T09:31:41.320Z",
     "created_at": "2026-07-14T09:31:41.000Z",
     "incident_id": "inc_001",
-    "input_fingerprint": "sha256:176740ac2f1ea9e5ee23c56207049565ccbe63946d58c95b257e1d774758a0db",
+    "input_fingerprint": "sha256:b93eae375048996ece42a5ee24ca8843856f5fefc0230991bd4fbbf572e16dc3",
     "revision": 7,
     "status": "current",
     "trigger_event_id": "evt_01kxfzfg304d8mqb7z4xpn48aj"

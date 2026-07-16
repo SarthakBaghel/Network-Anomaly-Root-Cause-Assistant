@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: hypotheses-1.4
+version: hypotheses-1.5
 pattern_definitions:
   symptoms:
     forwarded_traffic_spike:
@@ -22,6 +22,8 @@ pattern_definitions:
       anomaly_types: [TCP_RETRANSMISSION_SPIKE]
     upstream_errors:
       anomaly_types: [UPSTREAM_SERVICE_FAILURE]
+    service_failure_indicator:
+      anomaly_types: [NETWORK_LATENCY_HIGH, CPU_SATURATION, MEMORY_SATURATION, TRACE_LATENCY_ANOMALY, TRACE_STRUCTURE_ANOMALY, DNS_RESOLUTION_FAILURE, TLS_HANDSHAKE_FAILURE]
     dns_errors:
       anomaly_types: [DNS_RESOLUTION_FAILURE]
     tls_handshake_errors:
@@ -43,6 +45,9 @@ pattern_definitions:
       anomaly_types: [TRACE_LATENCY_ANOMALY]
     trace_structure:
       anomaly_types: [TRACE_STRUCTURE_ANOMALY]
+    namenode_failure:
+      anomaly_types: [NAMENODE_FAILURE]
+      event_types: [NAMENODE_HEALTH_FAILURE]
   propagation:
     gateway_pressure:
       anomaly_types: [FORWARDED_TRAFFIC_SPIKE, ACTIVE_CONNECTION_SPIKE, CONNECTION_UTILIZATION_HIGH]
@@ -128,6 +133,26 @@ hypotheses:
     summary: "An external traffic surge or SYN flood may explain the gateway pressure and downstream impact."
     diagnostic_step_ids: [inspect-ingress-distribution]
     remediation_step_ids: [propose-edge-rate-limit]
+  - hypothesis_type: gateway_capacity_saturation
+    entity_types: [gateway]
+    traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: primary_entity
+      any_anomaly_types: [SYN_ERROR_RATE_HIGH]
+      any_log_event_types: [SYN_FLOOD_DETECTED]
+    change_based: false
+    metric_anomaly_types: [ACTIVE_CONNECTION_SPIKE, CONNECTION_UTILIZATION_HIGH, SYN_ERROR_RATE_HIGH]
+    required_symptoms: [forwarded_traffic_spike, resource_pressure]
+    expected_propagation: [gateway_pressure]
+    expected_evidence:
+      raw_ingress: "Obtain gateway raw-ingress metrics."
+      source_distribution: "Obtain client/source-distribution metrics."
+      active_connection_pressure: "Obtain gateway active-connection metrics."
+      resource_usage: "Obtain gateway CPU and memory utilization."
+    conflict_patterns: []
+    summary: "Gateway capacity saturation may explain connection pressure, but requires host-resource evidence to distinguish it from an external traffic surge."
+    diagnostic_step_ids: [inspect-ingress-patterns]
+    remediation_step_ids: []
   - hypothesis_type: database_connection_exhaustion
     entity_types: [database]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
@@ -156,12 +181,47 @@ hypotheses:
     summary: "A payment timeout references the database, but normal database utilization conflicts with connection exhaustion."
     diagnostic_step_ids: [inspect-db-pool]
     remediation_step_ids: [propose-db-pool-tuning]
+  - hypothesis_type: database_resource_saturation
+    entity_types: [database]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: primary_entity
+      any_anomaly_types: [DB_CONNECTION_UTILIZATION_HIGH, DB_POOL_EXHAUSTED]
+    change_based: false
+    metric_anomaly_types: [DB_CONNECTION_UTILIZATION_HIGH, DB_POOL_EXHAUSTED]
+    required_symptoms: [database_utilization_high, resource_pressure]
+    expected_propagation: [database_pressure, payment_timeout]
+    expected_evidence:
+      db_utilization: "Obtain database connection-utilization metrics."
+      resource_usage: "Obtain database host CPU and memory utilization."
+    conflict_patterns: []
+    summary: "Database host resource saturation may exhaust connection capacity, but host CPU and memory evidence is required to distinguish it from pool-specific exhaustion."
+    diagnostic_step_ids: [inspect-db-connections]
+    remediation_step_ids: []
+  - hypothesis_type: database_query_regression
+    entity_types: [database]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: primary_entity
+      any_anomaly_types: [DB_CONNECTION_UTILIZATION_HIGH, DB_POOL_EXHAUSTED]
+    change_based: false
+    metric_anomaly_types: [DB_CONNECTION_UTILIZATION_HIGH, DB_POOL_EXHAUSTED]
+    required_symptoms: [database_utilization_high, payment_timeout, service_latency]
+    expected_propagation: [database_pressure, payment_timeout]
+    expected_evidence:
+      db_utilization: "Obtain database connection-utilization metrics."
+      dependency_timeout: "Obtain dependency timeout logs."
+      service_latency: "Obtain query or database service latency telemetry."
+    conflict_patterns: []
+    summary: "A slow-query regression may hold connections long enough to exhaust the pool, but query latency evidence is currently missing."
+    diagnostic_step_ids: [review-query-latency]
+    remediation_step_ids: []
   - hypothesis_type: network_path_congestion
     entity_types: [gateway, service]
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
     generation:
       candidate_selector: primary_entity
-      any_anomaly_types: [PACKET_LOSS_SPIKE, NETWORK_PATH_CONGESTION]
+      any_anomaly_types: [PACKET_LOSS_SPIKE, NETWORK_PATH_CONGESTION, SERVICE_LATENCY_HIGH, TRACE_LATENCY_ANOMALY, DNS_RESOLUTION_FAILURE, TLS_HANDSHAKE_FAILURE]
     change_based: false
     metric_anomaly_types: [PACKET_LOSS_SPIKE, TCP_RETRANSMISSION_SPIKE]
     required_symptoms: [packet_loss, retransmissions]
@@ -176,7 +236,7 @@ hypotheses:
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 2}
     generation:
       candidate_selector: event_entity
-      any_anomaly_types: [CPU_SATURATION, MEMORY_SATURATION, RESOURCE_SATURATION_ANOMALY]
+      any_anomaly_types: [CPU_SATURATION, MEMORY_SATURATION, RESOURCE_SATURATION_ANOMALY, NETWORK_LATENCY_HIGH]
       any_log_event_types: [RESOURCE_SATURATION]
     change_based: false
     metric_anomaly_types: [CPU_SATURATION, MEMORY_SATURATION, SERVICE_LATENCY_HIGH]
@@ -195,8 +255,8 @@ hypotheses:
     traversal: {relation_type: sends_traffic_to, direction: forward, max_hops: 1}
     generation:
       candidate_selector: primary_entity
-      any_anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE, RECONNAISSANCE_ACTIVITY]
-      any_log_event_types: [PORT_SCAN_DETECTED]
+      any_anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE, RECONNAISSANCE_ACTIVITY, SYN_ERROR_RATE_HIGH]
+      any_log_event_types: [PORT_SCAN_DETECTED, SYN_FLOOD_DETECTED]
     change_based: false
     metric_anomaly_types: [PORT_FANOUT_HIGH, DESTINATION_FANOUT_HIGH, REJECTED_CONNECTION_SPIKE]
     required_symptoms: [reconnaissance_fanout, rejected_connections]
@@ -255,6 +315,42 @@ hypotheses:
     summary: "A failed HDFS DataNode may explain I/O errors and replica degradation."
     diagnostic_step_ids: [inspect-datanode-health, inspect-replication-state]
     remediation_step_ids: [propose-datanode-isolation]
+  - hypothesis_type: storage_network_partition
+    entity_types: [storage_node]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: event_entity
+      any_anomaly_types: [DATANODE_IO_ERRORS, DISTRIBUTED_SYSTEM_FAILURE]
+      any_log_event_types: [HDFS_DATANODE_FAILURE]
+    change_based: false
+    metric_anomaly_types: [DATANODE_IO_ERRORS]
+    required_symptoms: [datanode_failure, packet_loss]
+    expected_propagation: [storage_failure]
+    expected_evidence:
+      datanode_health: "Obtain DataNode health and I/O error telemetry."
+      path_telemetry: "Obtain storage-network packet loss and path telemetry."
+    conflict_patterns: []
+    summary: "A storage-network partition may make a healthy DataNode appear failed, but path telemetry is required to separate it from a local disk or node failure."
+    diagnostic_step_ids: [inspect-network-path]
+    remediation_step_ids: []
+  - hypothesis_type: namenode_metadata_failure
+    entity_types: [storage_service]
+    traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
+    generation:
+      candidate_selector: referenced_dependency
+      any_log_event_types: [HDFS_DATANODE_FAILURE]
+      referenced_entity_types: [storage_service]
+    change_based: false
+    metric_anomaly_types: [NAMENODE_FAILURE]
+    required_symptoms: [datanode_failure, namenode_failure]
+    expected_propagation: [storage_failure]
+    expected_evidence:
+      replication_state: "Obtain NameNode block-replication and namespace state."
+      datanode_health: "Obtain independent DataNode health to exclude a local node failure."
+    conflict_patterns: []
+    summary: "A NameNode metadata or replication-control failure could produce similar HDFS symptoms, but direct NameNode health evidence is absent."
+    diagnostic_step_ids: [inspect-replication-state]
+    remediation_step_ids: []
   - hypothesis_type: trace_latency_regression
     entity_types: [service]
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
@@ -278,11 +374,11 @@ hypotheses:
     traversal: {relation_type: depends_on, direction: forward, max_hops: 2}
     generation:
       candidate_selector: event_entity
-      any_anomaly_types: [UPSTREAM_SERVICE_FAILURE]
-      any_log_event_types: [UPSTREAM_SERVICE_ERROR]
+      any_anomaly_types: [UPSTREAM_SERVICE_FAILURE, NETWORK_LATENCY_HIGH, CPU_SATURATION, MEMORY_SATURATION, TRACE_LATENCY_ANOMALY, TRACE_STRUCTURE_ANOMALY, DB_POOL_EXHAUSTED, DNS_RESOLUTION_FAILURE, TLS_HANDSHAKE_FAILURE]
+      any_log_event_types: [UPSTREAM_SERVICE_ERROR, RESOURCE_SATURATION, DNS_RESOLUTION_ERROR, TLS_HANDSHAKE_ERROR, CERTIFICATE_INVALID]
     change_based: false
     metric_anomaly_types: [UPSTREAM_SERVICE_FAILURE]
-    required_symptoms: [upstream_errors]
+    required_symptoms: [upstream_errors, service_failure_indicator]
     expected_propagation: [upstream_error, caller_failure]
     expected_evidence: {upstream_health: "Obtain upstream health-check results."}
     conflict_patterns: []

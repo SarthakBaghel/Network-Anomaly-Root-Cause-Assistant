@@ -14,6 +14,7 @@ from app.db import models
 from app.db import session as db_session
 from app.main import app
 from app.orchestration import reset_service
+from app.orchestration.reset_service import ResetBusyError
 from app.orchestration.orchestrator import orchestrator
 from app.simulator.engine import SimulatorEngine
 
@@ -76,6 +77,28 @@ def _replay(client: TestClient) -> tuple[str, dict]:
     investigation = client.get(f"/api/v1/incidents/{incident_id}/investigation")
     assert investigation.status_code == 200, investigation.text
     return incident_id, investigation.json()
+
+
+def test_reset_database_contention_returns_retryable_error(monkeypatch) -> None:
+    with _production_client(monkeypatch) as (client, _session_factory):
+
+        def busy_reset(_session: Session) -> dict:
+            raise ResetBusyError("injected concurrent writer")
+
+        monkeypatch.setattr(reset_service, "execute", busy_reset)
+
+        response = client.post("/api/v1/simulator/reset")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "error": {
+            "code": "DATABASE_BUSY",
+            "message": (
+                "Another scenario analysis is still finishing. Wait a moment and reset again."
+            ),
+            "details": [],
+        }
+    }
 
 
 def _semantic_projection(payload: dict) -> dict:
@@ -173,18 +196,14 @@ def test_production_reset_replay_is_deterministic_and_run_consistent(
         assert _semantic_projection(first) == _semantic_projection(second)
         assert first_incident_id != second_incident_id
 
-        markdown_report = client.get(
-            f"/api/v1/incidents/{second_incident_id}/handover.md"
-        )
+        markdown_report = client.get(f"/api/v1/incidents/{second_incident_id}/handover.md")
         assert markdown_report.status_code == 200
         assert markdown_report.headers["content-type"].startswith("text/markdown")
         assert "attachment; filename=" in markdown_report.headers["content-disposition"]
         assert second["analysis_run_id"] in markdown_report.text
         assert "## Audit Trail" in markdown_report.text
 
-        pdf_report = client.get(
-            f"/api/v1/incidents/{second_incident_id}/handover.pdf"
-        )
+        pdf_report = client.get(f"/api/v1/incidents/{second_incident_id}/handover.pdf")
         assert pdf_report.status_code == 200
         assert pdf_report.headers["content-type"] == "application/pdf"
         assert pdf_report.content.startswith(b"%PDF-")
@@ -274,6 +293,63 @@ def test_additional_catalogue_scenarios_publish_matching_rca(
         investigation = client.get(f"/api/v1/incidents/{incidents[0]['incident_id']}/investigation")
         assert investigation.status_code == 200, investigation.text
         payload = investigation.json()
+        expected_rankings = {
+            "database_connection_pool_exhaustion": (
+                "database_connection_exhaustion",
+                "database_query_regression",
+                "database_resource_saturation",
+            ),
+            "network_path_congestion": (
+                "network_path_congestion",
+                "upstream_service_failure",
+                "resource_saturation",
+            ),
+            "ddos_syn_flood": (
+                "dos_or_traffic_surge",
+                "gateway_capacity_saturation",
+                "external_probe",
+            ),
+            "gaia_resource_saturation": (
+                "resource_saturation",
+                "upstream_service_failure",
+                "network_path_congestion",
+            ),
+            "port_scan_reconnaissance": (
+                "external_probe",
+                "authorized_security_scanner",
+                "dos_or_traffic_surge",
+            ),
+            "hdfs_datanode_failure": (
+                "distributed_storage_node_failure",
+                "storage_network_partition",
+                "namenode_metadata_failure",
+            ),
+            "trace_anomaly": (
+                "trace_latency_regression",
+                "upstream_service_failure",
+                "network_path_congestion",
+            ),
+            "dns_resolution_failure": (
+                "dns_resolution_failure",
+                "upstream_service_failure",
+                "network_path_congestion",
+            ),
+            "tls_certificate_failure": (
+                "certificate_or_tls_failure",
+                "upstream_service_failure",
+                "network_path_congestion",
+            ),
+        }
+        assert (
+            tuple(item["hypothesis_type"] for item in payload["hypotheses"])
+            == expected_rankings[scenario_id]
+        )
+        assert len(payload["hypotheses"]) == 3
+        assert [item["rank"] for item in payload["hypotheses"]] == [1, 2, 3]
+        scores = [item["evidence_score"] for item in payload["hypotheses"]]
+        assert scores == sorted(scores, reverse=True)
+        assert all(item["factor_scores"] for item in payload["hypotheses"])
+        assert all(item["evidence_coverage"]["expected"] > 0 for item in payload["hypotheses"])
         hypothesis_types = {item["hypothesis_type"] for item in payload["hypotheses"]}
         assert expected_hypothesis_type in hypothesis_types
         assert (

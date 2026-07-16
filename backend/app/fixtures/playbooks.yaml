@@ -1,5 +1,5 @@
 schema_version: "1.0"
-version: playbooks-1.3
+version: playbooks-1.4
 
 # This is the sole playbook catalogue consumed by app.playbooks.engine.
 # Every action remains a recommendation: a human must approve it before it
@@ -60,7 +60,7 @@ steps:
   - step_id: inspect-ingress-patterns
     title: Inspect ingress traffic patterns
     step_type: diagnostic
-    applicable_hypothesis_types: [dos_or_traffic_surge]
+    applicable_hypothesis_types: [dos_or_traffic_surge, gateway_capacity_saturation]
     applicable_entity_types: [gateway, service, load_balancer]
     preconditions: [ingress_telemetry_available]
     instructions:
@@ -112,7 +112,7 @@ steps:
   - step_id: inspect-db-connections
     title: Inspect database connections
     step_type: diagnostic
-    applicable_hypothesis_types: [database_connection_exhaustion]
+    applicable_hypothesis_types: [database_connection_exhaustion, database_resource_saturation]
     applicable_entity_types: [database]
     preconditions: [db_metrics_available]
     instructions:
@@ -125,7 +125,7 @@ steps:
   - step_id: review-query-latency
     title: Review query latency
     step_type: diagnostic
-    applicable_hypothesis_types: [database_connection_exhaustion]
+    applicable_hypothesis_types: [database_connection_exhaustion, database_query_regression]
     applicable_entity_types: [database]
     preconditions: [query_telemetry_available]
     instructions:
@@ -151,8 +151,8 @@ steps:
   - step_id: inspect-network-path
     title: Inspect network path
     step_type: diagnostic
-    applicable_hypothesis_types: [network_path_congestion]
-    applicable_entity_types: [gateway, service]
+    applicable_hypothesis_types: [network_path_congestion, storage_network_partition]
+    applicable_entity_types: [gateway, service, storage_node]
     preconditions: [path_metrics_available]
     instructions:
       - Inspect packet loss, retransmissions, and hop telemetry along the affected path.
@@ -307,8 +307,8 @@ steps:
   - step_id: inspect-replication-state
     title: Inspect HDFS replication state
     step_type: diagnostic
-    applicable_hypothesis_types: [distributed_storage_node_failure]
-    applicable_entity_types: [storage_node]
+    applicable_hypothesis_types: [distributed_storage_node_failure, namenode_metadata_failure]
+    applicable_entity_types: [storage_node, storage_service]
     preconditions: [namenode_metrics_available]
     instructions:
       - Review under-replicated and missing block counts.

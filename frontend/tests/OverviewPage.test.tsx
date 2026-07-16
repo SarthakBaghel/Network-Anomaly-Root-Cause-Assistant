@@ -62,6 +62,9 @@ describe('OverviewPage live contracts', () => {
     await waitFor(() => expect(trigger).not.toBeDisabled())
     fireEvent.click(trigger)
     await waitFor(() => expect(trigger).toBeDisabled())
+    expect(trigger).toHaveTextContent('Generating RCA…')
+    expect(screen.getByTestId(TEST_IDS.simulatorState)).toHaveTextContent('generating RCA')
+    expect(screen.getByText('Processing scenario evidence and generating the RCA explanation…')).toBeInTheDocument()
     expect(reset).toBeDisabled()
     resolveTrigger?.({
       ...status,

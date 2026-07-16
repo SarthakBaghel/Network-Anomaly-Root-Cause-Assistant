@@ -146,9 +146,14 @@ class SimulatorEngine:
             self.active_scenario = resolved_scenario_id
             self.state = "triggering"
             self.scenario_state = "triggering"
-            for group in groups:
-                self._emit_group(group.records)
+        # Ingestion can include RCA generation through local Ollama. Do not
+        # hold the simulator state lock during that external work: status
+        # requests must remain responsive while the trigger is processing.
+        for group in groups:
+            self._emit_group(group.records)
+            with self._lock:
                 self.virtual_clock = group.timestamp
+        with self._lock:
             self.state = "completed"
             self.scenario_state = "completed"
             return self.status()
@@ -220,12 +225,13 @@ class SimulatorEngine:
         )
         if len(outcomes) != len(records):
             raise RuntimeError("ingestion group returned the wrong number of outcomes")
-        for (source, raw), outcome in zip(records, outcomes, strict=True):
-            self.counters[source]["emitted"] += 1
-            self.counters[source][outcome.status] += 1
-            emitted_at = raw.get("emitted_at")
-            if isinstance(emitted_at, str):
-                self.last_ingest_at[source] = emitted_at
+        with self._lock:
+            for (source, raw), outcome in zip(records, outcomes, strict=True):
+                self.counters[source]["emitted"] += 1
+                self.counters[source][outcome.status] += 1
+                emitted_at = raw.get("emitted_at")
+                if isinstance(emitted_at, str):
+                    self.last_ingest_at[source] = emitted_at
 
     def _run(self) -> None:
         while not self._stop_event.is_set():

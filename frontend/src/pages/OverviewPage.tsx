@@ -126,6 +126,7 @@ export function OverviewPage() {
   const [incidents, setIncidents] = useState<IncidentSummary[]>([]);
   const [preferredScenario, setPreferredScenario] = useState("");
   const [transitioning, setTransitioning] = useState(false);
+  const [triggeringScenario, setTriggeringScenario] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [entityFilter, setEntityFilter] = useState("all");
@@ -181,7 +182,10 @@ export function OverviewPage() {
     }
   }, []);
 
-  usePolling(refresh);
+  // A scenario trigger is a deliberate long-running request in LLM mode.
+  // Suspend the regular dashboard poll while it is in flight so a short poll
+  // timeout cannot overwrite the useful progress state with ECONNABORTED.
+  usePolling(refresh, undefined, !transitioning);
 
   const runAction = async (action: "start" | "stop" | "reset") => {
     setTransitioning(true);
@@ -206,6 +210,7 @@ export function OverviewPage() {
   const triggerScenario = async () => {
     if (!preferredScenario) return;
     setTransitioning(true);
+    setTriggeringScenario(true);
     setApiError(null);
     try {
       setStatus(await simulatorApi.trigger(preferredScenario));
@@ -213,6 +218,7 @@ export function OverviewPage() {
     } catch (error) {
       setApiError(displayError(error));
     } finally {
+      setTriggeringScenario(false);
       setTransitioning(false);
     }
   };
@@ -305,7 +311,9 @@ export function OverviewPage() {
     ? Math.round((status.baseline_ticks_emitted / status.baseline_ticks_required) * 100)
     : 0;
 
-  const statusMessage = status?.last_reset_at === null
+  const statusMessage = triggeringScenario
+    ? "Processing scenario evidence and generating the RCA explanation…"
+    : status?.last_reset_at === null
     ? "Reset data before running the baseline."
     : scenarioTriggered
       ? `Scenario completed: ${status?.scenario_id}`
@@ -443,7 +451,7 @@ export function OverviewPage() {
               Reset data
             </Button>
             <Button variant="warning" data-testid={TEST_IDS.scenarioTrigger} disabled={transitioning || !canTrigger || !preferredScenario} onClick={() => void triggerScenario()}>
-              Trigger scenario
+              {triggeringScenario ? "Generating RCA…" : "Trigger scenario"}
             </Button>
           </div>
 
@@ -512,7 +520,7 @@ export function OverviewPage() {
 
           <p data-testid={TEST_IDS.simulatorState} aria-live="polite" className="glass-inset font-data flex items-center gap-2 px-4 py-3 text-sm text-text-secondary">
             <RadioIcon className="h-4 w-4 text-accent-cyan" aria-hidden="true" />
-            State: <strong className="text-text-primary">{transitioning ? "transitioning" : status?.state ?? "loading"}</strong>
+            State: <strong className="text-text-primary">{triggeringScenario ? "generating RCA" : transitioning ? "transitioning" : status?.state ?? "loading"}</strong>
           </p>
           <div>
             <div className="mb-1 flex justify-between text-xs text-text-muted">

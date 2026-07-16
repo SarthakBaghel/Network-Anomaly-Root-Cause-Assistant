@@ -1,5 +1,6 @@
 import inspect
 import json
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -160,6 +161,45 @@ def test_trigger_emits_complete_golden_stream_only_through_ingestion():
     assert [event.model_dump() for event in events] == [event.model_dump() for event in expected]
     assert "app.db" not in inspect.getsource(type(engine))
     assert "analysis" not in inspect.getsource(type(engine)).lower()
+
+
+def test_status_remains_responsive_while_scenario_ingestion_is_blocked():
+    class BlockingSink(AdapterValidationSink):
+        def __init__(self) -> None:
+            super().__init__()
+            self.block = False
+            self.entered = threading.Event()
+            self.release = threading.Event()
+
+        def ingest_group(self, records):
+            if self.block:
+                self.entered.set()
+                assert self.release.wait(timeout=2)
+            return super().ingest_group(records)
+
+    sink = BlockingSink()
+    engine = SimulatorEngine(sink, background=False)
+    engine.reset()
+    engine.start()
+    engine.complete_baseline()
+    sink.block = True
+
+    trigger_thread = threading.Thread(
+        target=engine.trigger,
+        args=("gateway_rate_limit",),
+        daemon=True,
+    )
+    trigger_thread.start()
+    assert sink.entered.wait(timeout=1)
+
+    status_result = engine.status()
+    assert status_result["state"] == "triggering"
+    assert status_result["scenario_state"] == "triggering"
+
+    sink.release.set()
+    trigger_thread.join(timeout=2)
+    assert not trigger_thread.is_alive()
+    assert engine.status()["state"] == "completed"
 
 
 def test_required_simulator_api_handlers(monkeypatch):

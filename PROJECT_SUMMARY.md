@@ -6,6 +6,8 @@ The Network Anomaly Root-Cause Assistant is an explainable network-operations
 prototype that converts mixed operational telemetry into ranked, evidence-backed
 root-cause hypotheses.
 
+[View the project resource on Google Drive](https://drive.google.com/file/d/1wm-Vwy6pdFj1MRrt7Q0EA_3JNz5U29nJ/view?usp=sharing).
+
 Modern incidents rarely appear in one monitoring system. A gateway problem can
 surface as elevated connection counts, application timeouts, alerts,
 configuration changes, and downstream service degradation. Looking at those
@@ -33,7 +35,8 @@ which safe next steps an operator can consider.
   approval.
 - Immutable analysis snapshots, human review, and an append-only audit trail.
 - Downloadable Markdown and ReportLab PDF shift-handover reports.
-- Optional local Ollama narration and a stateless Network Concepts Assistant.
+- Integral local Ollama narration and a stateless Network Concepts Assistant,
+  with deterministic template generation retained for resilience.
 
 ## Demonstration scenarios
 

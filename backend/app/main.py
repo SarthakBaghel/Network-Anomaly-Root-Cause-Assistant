@@ -90,6 +90,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Accept", "Content-Type"],
+    expose_headers=["Content-Disposition", "X-Analysis-Run-ID"],
 )
 
 

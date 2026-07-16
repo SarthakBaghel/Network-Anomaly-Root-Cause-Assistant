@@ -1,4 +1,4 @@
-import { request, type JsonRequest, type JsonResponse } from './client'
+import { downloadFile, request, type JsonRequest, type JsonResponse } from './client'
 
 export const incidentsApi = {
   list: (signal?: AbortSignal) => request<JsonResponse<'list_incidents_api_v1_incidents_get'>>({ method: 'GET', url: '/incidents', signal }),
@@ -28,4 +28,12 @@ export const incidentsApi = {
       url: `/incidents/${encodeURIComponent(incidentId)}/audit`,
       signal,
     }),
+  downloadHandover: (incidentId: string, format: 'md' | 'pdf') =>
+    downloadFile(
+      {
+        method: 'GET',
+        url: `/incidents/${encodeURIComponent(incidentId)}/handover.${format}`,
+      },
+      `incident-${incidentId}-shift-handover.${format}`,
+    ),
 }

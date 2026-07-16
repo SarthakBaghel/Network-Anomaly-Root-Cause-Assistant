@@ -130,6 +130,15 @@ The strongest two-run comparison is:
 This comparison shows that the prototype is not returning one hardcoded RCA
 for every gateway incident.
 
+## Optional post-blueprint handover export
+
+After opening a completed incident, use **Markdown** or **PDF handover** in the
+incident header. Explain that this is an additive post-blueprint feature which
+packages the immutable investigation snapshot and append-only audit history
+into a timestamped operator handover. The full scope and safety boundary are
+recorded in
+[`shift-handover-report-extension.md`](./shift-handover-report-extension.md).
+
 ## 🚨 Demo Fallback Procedures
 
 In case of live failures during presentation, follow these instructions:

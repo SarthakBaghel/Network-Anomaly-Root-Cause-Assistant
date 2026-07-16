@@ -55,6 +55,7 @@ import {
   CheckIcon,
   ClipboardListIcon,
   ClockIcon,
+  FileTextIcon,
   HelpCircleIcon,
   InfoIcon,
   LinkIcon,
@@ -306,6 +307,7 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
   const latestRevisionRef = useRef<number | null>(null);
   const latestGeneratedAtRef = useRef(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [exportingHandover, setExportingHandover] = useState<"md" | "pdf" | null>(null);
   const modalRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -544,6 +546,34 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
     }
   }
 
+  async function downloadHandover(format: "md" | "pdf") {
+    setExportingHandover(format);
+    setApiError(null);
+    try {
+      const file = await incidentsApi.downloadHandover(incidentId, format);
+      const url = window.URL.createObjectURL(file.blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.filename;
+      document.body.appendChild(link);
+      try {
+        link.click();
+      } finally {
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
+      setBanner(`${format === "pdf" ? "PDF" : "Markdown"} shift-handover report downloaded.`);
+    } catch (error) {
+      setApiError(
+        error instanceof ApiClientError
+          ? `${error.payload.code}: ${error.payload.message}`
+          : "UNEXPECTED_ERROR: Unable to generate shift-handover report",
+      );
+    } finally {
+      setExportingHandover(null);
+    }
+  }
+
   if (!investigation) {
     if (apiError) {
       return <EmptyState message={apiError} />;
@@ -605,13 +635,37 @@ export function InvestigationPage({ incidentId }: InvestigationPageProps) {
               </span>
             </div>
           </div>
-          <div className="glass-inset shrink-0 px-4 py-3 text-sm text-text-secondary md:max-w-xs">
-            Affected entities:{" "}
-            <span className="font-data font-semibold text-text-primary">
-              {Array.from(
-                new Set(investigation.incident.affected_entity_ids),
-              ).join(", ")}
-            </span>
+          <div className="flex shrink-0 flex-col gap-3 md:max-w-sm">
+            <div className="glass-inset px-4 py-3 text-sm text-text-secondary">
+              Affected entities:{" "}
+              <span className="font-data font-semibold text-text-primary">
+                {Array.from(
+                  new Set(investigation.incident.affected_entity_ids),
+                ).join(", ")}
+              </span>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2" aria-label="Export shift-handover report">
+              <Button
+                variant="secondary"
+                icon={<FileTextIcon aria-hidden="true" />}
+                loading={exportingHandover === "md"}
+                disabled={exportingHandover !== null}
+                data-testid={TEST_IDS.handoverMarkdown}
+                onClick={() => void downloadHandover("md")}
+              >
+                Markdown
+              </Button>
+              <Button
+                variant="primary"
+                icon={<FileTextIcon aria-hidden="true" />}
+                loading={exportingHandover === "pdf"}
+                disabled={exportingHandover !== null}
+                data-testid={TEST_IDS.handoverPdf}
+                onClick={() => void downloadHandover("pdf")}
+              >
+                PDF handover
+              </Button>
+            </div>
           </div>
         </div>
         {banner ? (

@@ -89,3 +89,44 @@ export async function request<Response>(config: AxiosRequestConfig): Promise<Res
     throw normalizeError(error)
   }
 }
+
+export type DownloadedFile = {
+  blob: Blob
+  filename: string
+}
+
+function filenameFromDisposition(value: string | undefined, fallback: string) {
+  if (!value) return fallback
+  const encoded = value.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded)
+    } catch {
+      return fallback
+    }
+  }
+  return value.match(/filename="?([^";]+)"?/i)?.[1] ?? fallback
+}
+
+export async function downloadFile(
+  config: AxiosRequestConfig,
+  fallbackFilename: string,
+): Promise<DownloadedFile> {
+  try {
+    const response = await apiClient.request<Blob>({ ...config, responseType: 'blob' })
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(response.headers['content-disposition'], fallbackFilename),
+    }
+  } catch (error) {
+    if (error instanceof AxiosError && error.response?.data instanceof Blob) {
+      try {
+        const payload = toErrorPayload(JSON.parse(await error.response.data.text()))
+        if (payload) throw new ApiClientError(error.response.status, payload)
+      } catch (parsedError) {
+        if (parsedError instanceof ApiClientError) throw parsedError
+      }
+    }
+    throw normalizeError(error)
+  }
+}

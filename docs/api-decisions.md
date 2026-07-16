@@ -326,3 +326,25 @@ contracts only when its affected owners have reviewed it.
   identical semantic digest
   `sha256:9a404aa2a00ad103bf4a421c3b54ff5421fe45c154fa84ee1d0c30c01a3651aa`.
 - **Affected owners:** Persons 3, 4, and 5
+
+## EXT-003 — Operator shift-handover report export
+
+- **Status:** accepted and implemented on 2026-07-16
+- **Scope relationship:** additive post-blueprint demonstration capability;
+  `BLUEPRINT.md` does not require downloadable handover documents.
+- **Decision:** incident pages expose one-click Markdown and PDF exports built
+  from one immutable `InvestigationResponse` plus the complete append-only
+  incident audit history. The report does not recompute RCA or mutate state.
+- **Contracts:** `GET /api/v1/incidents/{incident_id}/handover.md` returns
+  `text/markdown`; `GET /api/v1/incidents/{incident_id}/handover.pdf` returns
+  `application/pdf`. Both include a timestamped `Content-Disposition` filename
+  and `X-Analysis-Run-ID` snapshot identity.
+- **PDF boundary:** PDFs are generated locally with pinned
+  `reportlab==5.0.0`; report generation does not require Ollama, the raw
+  reference datasets, or network access.
+- **Authoritative extension record:**
+  `docs/shift-handover-report-extension.md`.
+- **Verification:** renderer, production endpoint, browser-download,
+  generated-contract, full backend/frontend, build, and rendered-page visual
+  checks pass.
+- **Affected owners:** Persons 1, 2, and 5

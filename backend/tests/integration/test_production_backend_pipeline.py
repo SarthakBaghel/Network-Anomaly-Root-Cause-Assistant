@@ -173,6 +173,23 @@ def test_production_reset_replay_is_deterministic_and_run_consistent(
         assert _semantic_projection(first) == _semantic_projection(second)
         assert first_incident_id != second_incident_id
 
+        markdown_report = client.get(
+            f"/api/v1/incidents/{second_incident_id}/handover.md"
+        )
+        assert markdown_report.status_code == 200
+        assert markdown_report.headers["content-type"].startswith("text/markdown")
+        assert "attachment; filename=" in markdown_report.headers["content-disposition"]
+        assert second["analysis_run_id"] in markdown_report.text
+        assert "## Audit Trail" in markdown_report.text
+
+        pdf_report = client.get(
+            f"/api/v1/incidents/{second_incident_id}/handover.pdf"
+        )
+        assert pdf_report.status_code == 200
+        assert pdf_report.headers["content-type"] == "application/pdf"
+        assert pdf_report.content.startswith(b"%PDF-")
+        assert len(pdf_report.content) > 5_000
+
         # Nine primary detector findings plus six independent EWMA
         # corroborations over the same metric events.
         assert first["incident"]["anomaly_count"] == 15

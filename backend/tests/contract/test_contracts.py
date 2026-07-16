@@ -153,6 +153,8 @@ def test_openapi_contains_every_frozen_endpoint() -> None:
         "/api/v1/incidents/{incident_id}/recompute",
         "/api/v1/incidents/{incident_id}/review",
         "/api/v1/incidents/{incident_id}/audit",
+        "/api/v1/incidents/{incident_id}/handover.md",
+        "/api/v1/incidents/{incident_id}/handover.pdf",
         "/api/v1/topology",
         "/api/v1/topology/path",
         "/api/v1/topology/blast-radius/{entity_id}",

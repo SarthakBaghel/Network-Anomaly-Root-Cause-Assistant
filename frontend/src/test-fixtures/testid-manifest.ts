@@ -13,6 +13,8 @@ export const TEST_IDS = {
   quarantineBanner: "quarantine-banner",
   investigationPanel: "investigation-panel",
   incidentStatus: "incident-status",
+  handoverMarkdown: "handover-markdown-btn",
+  handoverPdf: "handover-pdf-btn",
   evidencePanel: "evidence-panel",
   topologyGraph: "topology-graph",
   timelinePanel: "timeline-panel",

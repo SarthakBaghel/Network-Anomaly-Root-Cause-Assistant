@@ -3,7 +3,9 @@
 Hackathon prototype implementing the original contract in
 [`BLUEPRINT.md`](./BLUEPRINT.md), plus the documented post-blueprint scenario
 extensions described in
-[`docs/reference-scenario-extensions.md`](./docs/reference-scenario-extensions.md).
+[`docs/reference-scenario-extensions.md`](./docs/reference-scenario-extensions.md)
+and the post-blueprint
+[`shift-handover report extension`](./docs/shift-handover-report-extension.md).
 
 ## Prerequisites
 
@@ -60,6 +62,18 @@ To validate the local dataset bridges independently:
 ```bash
 .venv/bin/python scripts/validate_dataset_pipeline.py
 ```
+
+## Shift-handover report export
+
+This is an additive post-blueprint demonstration feature. From an incident
+page, an operator can download a timestamped Markdown or ReportLab-generated
+PDF handover containing the immutable incident snapshot, timeline, top-ranked
+hypothesis, evidence, operator actions, recommendations, and chronological
+audit trail.
+
+See the
+[shift-handover extension record](./docs/shift-handover-report-extension.md)
+for its scope, contracts, safety boundary, and verification record.
 
 ## Optional local LLM explanation
 

@@ -81,6 +81,33 @@ describe("InvestigationPage", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("downloads timestamped Markdown and PDF shift-handover reports", async () => {
+    vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);
+    vi.spyOn(incidentsApi, "getAudit").mockResolvedValue({ generated_at: "2026-07-14T09:32:00Z", items: [], next_cursor: null });
+    const download = vi.spyOn(incidentsApi, "downloadHandover").mockImplementation(async (_incidentId, format) => ({
+      blob: new Blob([format], { type: format === "pdf" ? "application/pdf" : "text/markdown" }),
+      filename: `handover.${format}`,
+    }));
+    const createObjectUrl = vi.fn(() => "blob:handover");
+    const revokeObjectUrl = vi.fn();
+    Object.defineProperty(window.URL, "createObjectURL", { configurable: true, value: createObjectUrl });
+    Object.defineProperty(window.URL, "revokeObjectURL", { configurable: true, value: revokeObjectUrl });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(<InvestigationPage incidentId="inc_001" />);
+
+    fireEvent.click(await screen.findByTestId(TEST_IDS.handoverMarkdown));
+    await waitFor(() => expect(download).toHaveBeenCalledWith("inc_001", "md"));
+    await waitFor(() => expect(screen.getByText("Markdown shift-handover report downloaded.")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId(TEST_IDS.handoverPdf));
+    await waitFor(() => expect(download).toHaveBeenCalledWith("inc_001", "pdf"));
+    await waitFor(() => expect(screen.getByText("PDF shift-handover report downloaded.")).toBeInTheDocument());
+    expect(createObjectUrl).toHaveBeenCalledTimes(2);
+    expect(revokeObjectUrl).toHaveBeenCalledTimes(2);
+    expect(click).toHaveBeenCalledTimes(2);
+  });
+
   it("disables confirm button and posts with client_action_id", async () => {
     const postSpy = vi.spyOn(incidentsApi, "submitReview").mockResolvedValue({} as any);
     vi.spyOn(incidentsApi, "getInvestigation").mockResolvedValue(investigationFixture as any);

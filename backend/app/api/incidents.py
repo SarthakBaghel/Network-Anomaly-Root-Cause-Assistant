@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Annotated, Any, Never
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,7 +17,6 @@ from app.contracts import (
     AnalysisRun,
     AuditListResponse,
     AuditRecord,
-    CanonicalEvent,
     EvidenceItem,
     ExplanationOutput,
     Hypothesis,
@@ -44,6 +43,7 @@ from app.ingestion.pipeline import event_to_contract
 from app.orchestration.orchestrator import orchestrator
 from app.audit.service import audit_service
 from app.reviews.service import ReviewServiceError, review_service
+from app.reporting import handover_filename, render_handover_markdown, render_handover_pdf
 
 from .dependencies import get_session
 from .error_responses import ERROR_RESPONSES
@@ -367,6 +367,28 @@ def _decode_audit_cursor(cursor: str | None) -> tuple[datetime | None, str | Non
             "Audit cursor is malformed",
         )
 
+
+def _all_audit_records(session: Session, incident_id: str) -> list[AuditRecord]:
+    """Read the complete append-only incident audit in deterministic order."""
+
+    records: list[AuditRecord] = []
+    before_timestamp: datetime | None = None
+    before_audit_id: str | None = None
+    while True:
+        page = audit_service.list_for_incident(
+            incident_id,
+            session,
+            limit=200,
+            before_timestamp=before_timestamp,
+            before_audit_id=before_audit_id,
+        )
+        records.extend(page)
+        if len(page) < 200:
+            break
+        before_timestamp = page[-1].timestamp
+        before_audit_id = page[-1].audit_id
+    return sorted(records, key=lambda item: (_utc(item.timestamp), item.audit_id))
+
 @router.get("", response_model=IncidentListResponse)
 def list_incidents(
     status_filter: Annotated[IncidentStatus | None, Query(alias="status")] = None,
@@ -510,6 +532,60 @@ def audit(
         generated_at=datetime.now(tz=timezone.utc),
         items=page,
         next_cursor=_encode_audit_cursor(page[-1]) if len(rows) > limit else None,
+    )
+
+
+@router.get(
+    "/{incident_id}/handover.md",
+    response_class=Response,
+    responses={200: {"content": {"text/markdown": {}}}},
+)
+def handover_markdown(
+    incident_id: str,
+    session: DatabaseSession,
+) -> Response:
+    generated_at = datetime.now(tz=timezone.utc)
+    snapshot = investigation(incident_id, session)
+    content = render_handover_markdown(
+        snapshot,
+        _all_audit_records(session, incident_id),
+        generated_at=generated_at,
+    )
+    filename = handover_filename(snapshot, generated_at, "md")
+    return Response(
+        content=content,
+        media_type="text/markdown",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Analysis-Run-ID": snapshot.analysis_run_id,
+        },
+    )
+
+
+@router.get(
+    "/{incident_id}/handover.pdf",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+def handover_pdf(
+    incident_id: str,
+    session: DatabaseSession,
+) -> Response:
+    generated_at = datetime.now(tz=timezone.utc)
+    snapshot = investigation(incident_id, session)
+    content = render_handover_pdf(
+        snapshot,
+        _all_audit_records(session, incident_id),
+        generated_at=generated_at,
+    )
+    filename = handover_filename(snapshot, generated_at, "pdf")
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Analysis-Run-ID": snapshot.analysis_run_id,
+        },
     )
 
 @router.post("/{incident_id}/recompute", response_model=RecomputeResponse)

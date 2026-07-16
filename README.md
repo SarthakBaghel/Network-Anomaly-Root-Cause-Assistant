@@ -8,7 +8,7 @@ For a short non-technical introduction, see
 [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md). The original scope and frozen
 contracts are recorded in [BLUEPRINT.md](./BLUEPRINT.md).
 
-[View the project resource on Google Drive](https://drive.google.com/file/d/1wm-Vwy6pdFj1MRrt7Q0EA_3JNz5U29nJ/view?usp=sharing).
+[View Demo Video Link](https://drive.google.com/file/d/1wm-Vwy6pdFj1MRrt7Q0EA_3JNz5U29nJ/view?usp=sharing).
 
 ## Contents
 

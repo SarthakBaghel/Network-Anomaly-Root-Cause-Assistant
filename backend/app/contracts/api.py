@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import Field, JsonValue
+from pydantic import Field, JsonValue, field_validator
 
 from .analysis import AnalysisRun
 from .base import AuditActorType, TopologyRelation, UtcModel
@@ -42,6 +42,22 @@ class ReadinessResponse(UtcModel):
     status: Literal["ready", "not_ready"]
     generated_at: datetime
     components: dict[str, str | dict[str, str | bool] | ReadinessComponentError]
+
+
+class ConceptAssistantRequest(UtcModel):
+    question: str = Field(min_length=3, max_length=500)
+
+    @field_validator("question", mode="before")
+    @classmethod
+    def strip_question(cls, value: Any) -> Any:
+        return value.strip() if isinstance(value, str) else value
+
+
+class ConceptAssistantResponse(UtcModel):
+    generated_at: datetime
+    answer: str
+    model: str
+    context_used: Literal[False] = False
 
 
 class AuditRecord(UtcModel):

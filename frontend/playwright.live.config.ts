@@ -3,6 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 const databaseUrl =
   process.env.LIVE_E2E_DATABASE_URL ??
   "sqlite:////tmp/network-anomaly-rca-playwright-live.db";
+const apiPort = process.env.LIVE_E2E_API_PORT ?? "8000";
+const frontendPort = process.env.LIVE_E2E_FRONTEND_PORT ?? "4173";
+const apiOrigin = `http://127.0.0.1:${apiPort}`;
+const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -12,7 +16,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: frontendOrigin,
     actionTimeout: 20_000,
     trace: "on-first-retry",
   },
@@ -21,16 +25,16 @@ export default defineConfig({
       command: [
         "cd ..",
         `DATABASE_URL=${databaseUrl} .venv/bin/alembic -c backend/alembic.ini upgrade head`,
-        `DATABASE_URL=${databaseUrl} PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000`,
+        `DATABASE_URL=${databaseUrl} PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port ${apiPort}`,
       ].join(" && "),
-      url: "http://127.0.0.1:8000/api/v1/health",
+      url: `${apiOrigin}/api/v1/health`,
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
       command:
-        "VITE_ENABLE_MSW=false VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1 npm run dev -- --host 127.0.0.1 --port 4173",
-      url: "http://127.0.0.1:4173",
+        `VITE_ENABLE_MSW=false VITE_API_BASE_URL=${apiOrigin}/api/v1 npm run dev -- --host 127.0.0.1 --port ${frontendPort}`,
+      url: frontendOrigin,
       reuseExistingServer: false,
       timeout: 60_000,
     },

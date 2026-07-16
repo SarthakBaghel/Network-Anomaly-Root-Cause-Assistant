@@ -5,7 +5,9 @@ Hackathon prototype implementing the original contract in
 extensions described in
 [`docs/reference-scenario-extensions.md`](./docs/reference-scenario-extensions.md)
 and the post-blueprint
-[`shift-handover report extension`](./docs/shift-handover-report-extension.md).
+[`shift-handover report extension`](./docs/shift-handover-report-extension.md),
+plus the stateless
+[`Network Concepts Assistant`](./docs/network-concepts-assistant-extension.md).
 
 ## Prerequisites
 
@@ -74,6 +76,25 @@ audit trail.
 See the
 [shift-handover extension record](./docs/shift-handover-report-extension.md)
 for its scope, contracts, safety boundary, and verification record.
+
+## Network Concepts Assistant
+
+The lower-left **Network Concepts Assistant** answers one independent general
+networking or observability question at a time through local Ollama. It receives
+no page, incident, telemetry, file, or conversation-history context, and its
+answer never participates in deterministic RCA.
+
+Install and pull the optional model once, then use the normal combined run
+command:
+
+```bash
+.venv/bin/python -m pip install -e "backend[llm]"
+ollama pull qwen2.5:3b
+./scripts/dev.sh
+```
+
+See the [assistant extension record](./docs/network-concepts-assistant-extension.md)
+for its contract, stateless boundary, and failure behaviour.
 
 ## Optional local LLM explanation
 

@@ -56,6 +56,15 @@ function simulatorStatus() {
 }
 
 export const handlers = [
+  http.post('*/api/v1/assistant/query', async ({ request }) => {
+    const body = await request.json() as { question: string }
+    return HttpResponse.json({
+      generated_at: new Date().toISOString(),
+      answer: `General explanation for: ${body.question}`,
+      model: 'qwen2.5:3b',
+      context_used: false,
+    })
+  }),
   http.get('*/api/v1/events', () => HttpResponse.json({
     generated_at: new Date().toISOString(),
     items: goldenEvents,

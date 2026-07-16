@@ -348,3 +348,23 @@ contracts only when its affected owners have reviewed it.
   generated-contract, full backend/frontend, build, and rendered-page visual
   checks pass.
 - **Affected owners:** Persons 1, 2, and 5
+
+## EXT-004 — Stateless Network Concepts Assistant
+
+- **Status:** accepted and implemented on 2026-07-16
+- **Scope relationship:** additive post-blueprint demonstration capability;
+  `BLUEPRINT.md` does not require an interactive concepts assistant.
+- **Decision:** the application exposes a small global assistant for independent
+  educational questions about networking, telemetry, observability, and RCA
+  terminology. It is not an incident copilot and does not receive page,
+  incident, telemetry, file, or conversation-history context.
+- **Contract:** `POST /api/v1/assistant/query` accepts only a bounded `question`
+  string. Its response identifies the local model, explicitly reports
+  `context_used: false`, and contains one validated plain-text answer.
+- **Runtime boundary:** every request sends exactly one fixed system message and
+  the current user question to the configured local Ollama model. Failure or
+  timeout returns `ASSISTANT_UNAVAILABLE` and cannot block simulator polling,
+  mutate RCA state, or alter deterministic explanations.
+- **Authoritative extension record:**
+  `docs/network-concepts-assistant-extension.md`.
+- **Affected owners:** Persons 1, 2, and 5

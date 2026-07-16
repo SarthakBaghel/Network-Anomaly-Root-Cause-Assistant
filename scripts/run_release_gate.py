@@ -25,10 +25,12 @@ AUDITED_PYTHON_SURFACE = [
     "backend/app/db/repositories/audit_repository.py",
     "backend/app/db/repositories/review_repository.py",
     "backend/app/api/error_responses.py",
+    "backend/app/api/assistant.py",
     "backend/app/api/events.py",
     "backend/app/api/simulator.py",
     "backend/app/simulator/engine.py",
     "backend/app/simulator/scenario_catalogue.py",
+    "backend/app/concepts",
 ]
 
 

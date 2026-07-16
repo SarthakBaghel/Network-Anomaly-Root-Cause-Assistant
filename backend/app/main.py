@@ -10,7 +10,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import events_router, incidents_router, simulator_router, topology_router
+from app.api import (
+    assistant_router,
+    events_router,
+    incidents_router,
+    simulator_router,
+    topology_router,
+)
 from app.contracts import ErrorBody, ErrorDetail, ErrorEnvelope, HealthResponse, ReadinessResponse
 from app.readiness import catalogue_status, readiness_report
 
@@ -152,5 +158,11 @@ def ready(response: Response) -> ReadinessResponse:
     )
 
 
-for router in (events_router, simulator_router, incidents_router, topology_router):
+for router in (
+    assistant_router,
+    events_router,
+    simulator_router,
+    incidents_router,
+    topology_router,
+):
     app.include_router(router, prefix="/api/v1")

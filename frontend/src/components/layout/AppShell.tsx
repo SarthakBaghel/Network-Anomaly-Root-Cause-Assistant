@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ConceptAssistant } from "../ConceptAssistant";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -16,6 +17,7 @@ export function AppShell({ children }: AppShellProps) {
         <Topbar activePath={activePath} />
         <div className="flex-1">{children}</div>
       </div>
+      <ConceptAssistant />
     </div>
   );
 }

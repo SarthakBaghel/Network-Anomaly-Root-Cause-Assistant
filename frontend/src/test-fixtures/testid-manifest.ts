@@ -35,6 +35,12 @@ export const TEST_IDS = {
   sidebarToggle: "sidebar-toggle-btn",
   mobileOverviewLink: "mobile-overview-link",
   mobileIncidentLink: "mobile-incident-link",
+  conceptsAssistantToggle: "concepts-assistant-toggle",
+  conceptsAssistantPanel: "concepts-assistant-panel",
+  conceptsAssistantClose: "concepts-assistant-close",
+  conceptsAssistantInput: "concepts-assistant-input",
+  conceptsAssistantSubmit: "concepts-assistant-submit",
+  conceptsAssistantAnswer: "concepts-assistant-answer",
 } as const;
 
 export const incidentRowTestId = (incidentId: string) =>

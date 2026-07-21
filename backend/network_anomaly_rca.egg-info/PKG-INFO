@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: network-anomaly-rca
+Version: 0.1.0
+Requires-Python: >=3.12
+Requires-Dist: fastapi==0.115.5
+Requires-Dist: pydantic==2.10.2
+Requires-Dist: sqlalchemy==2.0.43
+Requires-Dist: alembic==1.16.5
+Requires-Dist: uvicorn==0.32.0
+Requires-Dist: PyYAML==6.0.2
+Requires-Dist: Jinja2==3.1.6
+Requires-Dist: numpy==2.5.1
+Requires-Dist: pandas==3.0.3
+Requires-Dist: pyarrow==21.0.0
+Requires-Dist: reportlab==5.0.0
+Requires-Dist: ulid-py==1.1.0
+Requires-Dist: networkx==3.5
+Provides-Extra: llm
+Requires-Dist: ollama==0.6.2; extra == "llm"
+Provides-Extra: test
+Requires-Dist: httpx==0.28.1; extra == "test"
+Requires-Dist: mypy==1.17.1; extra == "test"
+Requires-Dist: pytest==8.4.1; extra == "test"
+Requires-Dist: ruff==0.12.11; extra == "test"
